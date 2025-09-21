@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Display total, low, medium, and high cloud cover percentages for any location using the Open‑Meteo and met.no APIs. Perfect for photographers and astronomy enthusiasts.
+Display total, low, medium, and high cloud cover percentages for any location using the Open‑Meteo and met.no APIs.
 
 == Description ==
 
