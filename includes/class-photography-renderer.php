@@ -552,7 +552,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 
 		if ( $is_astro_dark ) {
 			if ( $total_cloud < 10 && ! $moon_up ) {
-				return '🌌 Excellent night sky';
+				return '🌌 Excellent for astro';
 			} elseif ( $total_cloud < 10 && $moon_up ) {
 				return '🌌 Clear sky, moon visible (interference)';
 			} elseif ( $total_cloud < 30 && ! $moon_up ) {
@@ -560,7 +560,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			} elseif ( $total_cloud < 30 && $moon_up ) {
 				return '🌌 Some clouds, moon visible';
 			} else {
-				return '🌌 Too cloudy for night sky';
+				return '🌌 Too cloudy for astro';
 			}
 		}
 
