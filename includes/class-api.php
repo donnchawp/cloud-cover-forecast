@@ -311,7 +311,7 @@ class Cloud_Cover_Forecast_API {
 			return new WP_Error( 'cloud_cover_forecast_empty_location', __( 'Location name cannot be empty.', 'cloud-cover-forecast' ) );
 		}
 
-		// Check cache first (24 hour cache)
+		// Check cache first (15 minute cache)
 		$cache_key = $this->plugin::GEOCODING_PREFIX . md5( strtolower( trim( $location_name ) ) );
 		$cached = get_transient( $cache_key );
 		if ( $cached ) {
@@ -357,7 +357,7 @@ class Cloud_Cover_Forecast_API {
 			);
 
 			// Cache for 24 hours
-			set_transient( $cache_key, $geocoded, 24 * HOUR_IN_SECONDS );
+			set_transient( $cache_key, $geocoded, 15 * MINUTE_IN_SECONDS );
 
 			return $geocoded;
 		}
