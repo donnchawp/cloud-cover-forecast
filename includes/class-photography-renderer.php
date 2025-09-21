@@ -169,7 +169,11 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 					</tr>
 				</thead>
 				<tbody>
-				<?php foreach ( $rows as $r ) : ?>
+				<?php
+				$timezone = new DateTimeZone( $stats['timezone'] );
+				$current_timestamp = ( new DateTime( 'now', $timezone ) )->getTimestamp();
+				foreach ( $rows as $r ) :
+					?>
 					<?php
 					// Skip daylight hours except for golden hour periods
 					if ( ! $this->should_show_hour_in_photography_mode( $r['ts'], $photo_times, $moon_today ) ) {
@@ -180,12 +184,25 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 					$event_data = $this->get_hour_event_data( $r['ts'], $photo_times, $moon_today );
 					$photo_condition = $this->get_hour_photo_condition( $r, $photo_times, $moon_today );
 					$row_class = $this->get_hour_row_class( $r['ts'], $photo_times );
+					$hour_start = intval( $r['ts'] );
+					$hour_end = $hour_start + HOUR_IN_SECONDS;
+					if ( $current_timestamp >= $hour_start && $current_timestamp < $hour_end ) {
+						$time_state_class = 'current-hour-row';
+					} elseif ( $current_timestamp >= $hour_end ) {
+						$time_state_class = 'past-hour-row';
+					} else {
+						$time_state_class = 'future-hour-row';
+					}
+					$row_classes = implode( ' ', array_filter( array( $row_class, $time_state_class ) ) );
 					?>
-					<tr class="<?php echo esc_attr( $row_class ); ?>">
+					<tr class="<?php echo esc_attr( $row_classes ); ?>">
 						<td class="cloud-cover-forecast-td"><?php
 							$hour_dt = new DateTime( '@' . $r['ts'] );
-							$hour_dt->setTimezone( new DateTimeZone( $stats['timezone'] ) );
+							$hour_dt->setTimezone( $timezone );
 							echo esc_html( $hour_dt->format( 'H:i' ) );
+							if ( 'current-hour-row' === $time_state_class ) {
+								echo ' <span class="cloud-cover-current-hour-label">' . esc_html__( 'Now', 'cloud-cover-forecast' ) . '</span>';
+							}
 						?></td>
 						<td class="cloud-cover-forecast-td event-cell"><?php
 							if ( ! empty( $event_data ) ) {

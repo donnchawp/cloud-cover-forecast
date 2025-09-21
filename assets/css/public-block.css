@@ -198,6 +198,39 @@
     box-shadow: none;
 }
 
+/* Hour highlighting */
+.cloud-cover-forecast-photography-table .past-hour-row {
+    opacity: 0.65;
+}
+
+.cloud-cover-forecast-photography-table .past-hour-row td {
+    color: #6b7280;
+}
+
+.cloud-cover-forecast-photography-table .current-hour-row td {
+    background: #dbeafe;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.cloud-cover-forecast-photography-table .current-hour-row td:first-child {
+    border-left: 4px solid #2563eb;
+}
+
+.cloud-cover-current-hour-label {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
 /* Accessibility improvements */
 .cloud-cover-forecast-public-lookup .location-search-input:focus,
 .cloud-cover-forecast-public-lookup .location-search-button:focus {
