@@ -103,13 +103,16 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<?php if ( ! empty( $photo_ratings ) ) : ?>
 				<div class="cloud-cover-forecast-ratings">
 					🌄 <?php esc_html_e( 'Sunrise Photography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ) . str_repeat( '☆', 5 - ( $photo_ratings['sunrise_rating'] ?? 3 ) ); ?>
+					<?php echo str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ) . str_repeat( '☆', 5 - ( $photo_ratings['sunrise_rating'] ?? 3 ) ); ?><br />
 
 					🌅 <?php esc_html_e( 'Sunset Photography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['sunset_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['sunset_rating'] ); ?>
+					<?php echo str_repeat( '★', $photo_ratings['sunset_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['sunset_rating'] ); ?><br />
 
 					🌌 <?php esc_html_e( 'Astrophotography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['astro_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['astro_rating'] ); ?>
+					<?php echo str_repeat( '★', $photo_ratings['astro_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['astro_rating'] ); ?><br />
+
+					🌌 <?php esc_html_e( 'Milky Way Photography:', 'cloud-cover-forecast' ); ?>
+					<?php echo str_repeat( '★', $photo_ratings['milky_way_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['milky_way_rating'] ); ?>
 				</div>
 				<?php endif; ?>
 
@@ -167,11 +170,11 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<thead>
 					<tr>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Time', 'cloud-cover-forecast' ); ?></th>
-						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Event', 'cloud-cover-forecast' ); ?></th>
-						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Total', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Low', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Mid', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'High', 'cloud-cover-forecast' ); ?></th>
+						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Total', 'cloud-cover-forecast' ); ?></th>
+						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Event', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Photo Condition', 'cloud-cover-forecast' ); ?></th>
 					</tr>
 				</thead>
@@ -211,15 +214,19 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 								echo ' <span class="cloud-cover-current-hour-label">' . esc_html__( 'Now', 'cloud-cover-forecast' ) . '</span>';
 							}
 						?></td>
-						<td class="cloud-cover-forecast-td event-cell"><?php
-							if ( ! empty( $event_data ) ) {
-								echo esc_html( $event_data['icon'] . ' ' . $event_data['description'] );
-							}
-						?></td>
-						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'low' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'mid' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'high' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
+					<td class="cloud-cover-forecast-td event-cell"><?php
+						if ( ! empty( $event_data ) ) {
+							printf(
+								'<span class="event-icon" aria-hidden="true">%1$s</span><span class="event-label">%2$s</span>',
+								esc_html( $event_data['icon'] ),
+								esc_html( $event_data['description'] )
+							);
+						}
+					?></td>
 						<td class="cloud-cover-forecast-td condition-cell"><?php echo esc_html( $photo_condition ); ?></td>
 					</tr>
 				<?php endforeach; ?>
@@ -537,7 +544,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 
 		if ( $is_astro_dark ) {
 			if ( $total_cloud < 10 && ! $moon_up ) {
-				return '🌌 EXCELLENT for astrophotography';
+				return '🌌 Excellent night sky';
 			} elseif ( $total_cloud < 10 && $moon_up ) {
 				return '🌌 Clear sky, moon visible (interference)';
 			} elseif ( $total_cloud < 30 && ! $moon_up ) {
@@ -545,7 +552,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			} elseif ( $total_cloud < 30 && $moon_up ) {
 				return '🌌 Some clouds, moon visible';
 			} else {
-				return '🌌 Too cloudy for astrophotography';
+				return '🌌 Too cloudy for night sky';
 			}
 		}
 
@@ -803,12 +810,26 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			? esc_html__( '—', 'cloud-cover-forecast' )
 			: esc_html( intval( $value ) . '%' );
 
-		if ( empty( $row['provider_diff'][ $level ] ) ) {
-			return $output;
-		}
+			if ( empty( $row['provider_diff'][ $level ] ) ) {
+				return $output;
+			}
 
-		$diff         = $row['provider_diff'][ $level ];
-		$diff_value   = intval( $diff['difference'] );
+			if ( 'total' === $level && ! empty( $row['provider_diff'] ) ) {
+				$non_total_diffs = array_filter(
+					$row['provider_diff'],
+					function ( $diff, $diff_level ) {
+						return 'total' !== $diff_level && ! empty( $diff );
+					},
+					ARRAY_FILTER_USE_BOTH
+				);
+
+				if ( 1 === count( $non_total_diffs ) ) {
+					return $output;
+				}
+			}
+
+			$diff         = $row['provider_diff'][ $level ];
+			$diff_value   = intval( $diff['difference'] );
 		$open_value   = intval( $diff['open_meteo'] );
 		$metno_value  = intval( $diff['met_no'] );
 		$tooltip_text = sprintf(

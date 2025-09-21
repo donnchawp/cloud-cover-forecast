@@ -392,10 +392,10 @@ class Cloud_Cover_Forecast_Public_Block {
 				<thead>
 					<tr>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Time', 'cloud-cover-forecast' ); ?></th>
-						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Total', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Low', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Mid', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'High', 'cloud-cover-forecast' ); ?></th>
+						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Total', 'cloud-cover-forecast' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -406,10 +406,10 @@ class Cloud_Cover_Forecast_Public_Block {
 							$hour_dt->setTimezone( new DateTimeZone( $stats['timezone'] ) );
 							echo esc_html( $hour_dt->format( 'M j, H:i' ) );
 						?></td>
-						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'low' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'mid' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'high' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -519,12 +519,26 @@ class Cloud_Cover_Forecast_Public_Block {
 			? esc_html__( '—', 'cloud-cover-forecast' )
 			: esc_html( intval( $value ) . '%' );
 
-		if ( empty( $row['provider_diff'][ $level ] ) ) {
-			return $output;
-		}
+			if ( empty( $row['provider_diff'][ $level ] ) ) {
+				return $output;
+			}
 
-		$diff       = $row['provider_diff'][ $level ];
-		$diff_value = intval( $diff['difference'] );
+			if ( 'total' === $level && ! empty( $row['provider_diff'] ) ) {
+				$non_total_diffs = array_filter(
+					$row['provider_diff'],
+					function ( $diff, $diff_level ) {
+						return 'total' !== $diff_level && ! empty( $diff );
+					},
+					ARRAY_FILTER_USE_BOTH
+				);
+
+				if ( 1 === count( $non_total_diffs ) ) {
+					return $output;
+				}
+			}
+
+			$diff       = $row['provider_diff'][ $level ];
+			$diff_value = intval( $diff['difference'] );
 		$tooltip    = sprintf(
 			esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
 			intval( $diff['open_meteo'] ),

@@ -198,6 +198,77 @@
     box-shadow: none;
 }
 
+.cloud-cover-forecast-photography {
+    overflow-x: auto;
+}
+
+.cloud-cover-forecast-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e5e7eb;
+}
+
+.cloud-cover-forecast-table th,
+.cloud-cover-forecast-table td {
+    border: 1px solid #e5e7eb;
+}
+
+.cloud-cover-forecast-photography-table {
+    table-layout: auto;
+}
+
+.cloud-cover-forecast-photography-table th,
+.cloud-cover-forecast-photography-table td {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.cloud-cover-forecast-photography-table .event-cell {
+    white-space: nowrap;
+}
+
+.cloud-cover-forecast-photography-table .event-icon {
+    display: inline-flex;
+    margin-right: 6px;
+}
+
+.cloud-cover-forecast-photography-table .event-label {
+    display: inline;
+}
+
+.cloud-cover-forecast-photography-table .condition-cell {
+    white-space: normal;
+}
+
+@media (max-width: 768px) {
+    .cloud-cover-forecast-photography-table th,
+    .cloud-cover-forecast-photography-table td {
+        padding: 6px 8px;
+        font-size: 14px;
+    }
+
+    .cloud-cover-forecast-photography-table .condition-cell {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .cloud-cover-forecast-photography-table .event-cell {
+        text-align: center;
+    }
+
+    .cloud-cover-forecast-photography-table .event-label {
+        display: none;
+    }
+
+    .cloud-cover-current-hour-label,
+    .cloud-cover-diff-badge {
+        margin-left: 4px;
+        padding: 2px 6px;
+        font-size: 12px;
+    }
+}
+
 /* Hour highlighting */
 .cloud-cover-forecast-photography-table .past-hour-row {
     opacity: 0.65;
