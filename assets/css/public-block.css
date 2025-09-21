@@ -1,0 +1,234 @@
+/* Public Cloud Cover Lookup Block Styles */
+.cloud-cover-forecast-public-lookup {
+    max-width: 100%;
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cloud-cover-forecast-public-lookup .search-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.cloud-cover-forecast-public-lookup .location-search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.cloud-cover-forecast-public-lookup .location-search-input:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+}
+
+.cloud-cover-forecast-public-lookup .location-search-button {
+    padding: 12px 24px;
+    background: #0073aa;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    white-space: nowrap;
+}
+
+.cloud-cover-forecast-public-lookup .location-search-button:hover:not(:disabled) {
+    background: #005a87;
+}
+
+.cloud-cover-forecast-public-lookup .location-search-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.cloud-cover-forecast-public-lookup .loading-spinner {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.cloud-cover-forecast-public-lookup .loading-spinner::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.cloud-cover-forecast-public-lookup .error-message,
+.cloud-cover-forecast-public-lookup .rate-limit-message {
+    display: none;
+    margin: 15px 0;
+    padding: 12px 16px;
+    border-radius: 6px;
+}
+
+.cloud-cover-forecast-public-lookup .error-message .error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.cloud-cover-forecast-public-lookup .rate-limit-message .rate-limit-error {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.cloud-cover-forecast-public-lookup .forecast-results {
+    display: none;
+    margin-top: 20px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .cloud-cover-forecast-public-lookup .search-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cloud-cover-forecast-public-lookup .location-search-input {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .cloud-cover-forecast-public-lookup .location-search-button {
+        width: 100%;
+    }
+}
+
+/* Block alignment support */
+.cloud-cover-forecast-public-lookup.alignwide {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cloud-cover-forecast-public-lookup.alignfull {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 0;
+}
+
+/* Ensure block respects theme content width */
+.wp-block-cloud-cover-forecast-public-lookup {
+    max-width: 800px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    display: block !important;
+}
+
+/* Override any theme styles that might force full width */
+.wp-block-cloud-cover-forecast-public-lookup .cloud-cover-forecast-public-lookup {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* For themes with content width constraints */
+.entry-content .wp-block-cloud-cover-forecast-public-lookup,
+.post-content .wp-block-cloud-cover-forecast-public-lookup,
+.content .wp-block-cloud-cover-forecast-public-lookup,
+.entry-content .cloud-cover-forecast-public-lookup,
+.post-content .cloud-cover-forecast-public-lookup,
+.content .cloud-cover-forecast-public-lookup {
+    max-width: 800px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Ensure it doesn't break out of container */
+.container .wp-block-cloud-cover-forecast-public-lookup,
+.wp-block-group .wp-block-cloud-cover-forecast-public-lookup,
+.wp-block-column .wp-block-cloud-cover-forecast-public-lookup,
+.container .cloud-cover-forecast-public-lookup,
+.wp-block-group .cloud-cover-forecast-public-lookup,
+.wp-block-column .cloud-cover-forecast-public-lookup {
+    max-width: 100%;
+    width: 100%;
+}
+
+/* Force the block to respect content width */
+.wp-block-cloud-cover-forecast-public-lookup {
+    display: block !important;
+    clear: both !important;
+    max-width: 800px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Additional override for any theme that might force full width */
+.wp-block-cloud-cover-forecast-public-lookup,
+.wp-block-cloud-cover-forecast-public-lookup * {
+    max-width: 800px !important;
+    box-sizing: border-box !important;
+}
+
+/* Integration with existing cloud cover forecast styles */
+.cloud-cover-forecast-public-lookup .cloud-cover-forecast-wrap {
+    margin-top: 0;
+    border: none;
+    box-shadow: none;
+}
+
+/* Accessibility improvements */
+.cloud-cover-forecast-public-lookup .location-search-input:focus,
+.cloud-cover-forecast-public-lookup .location-search-button:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .cloud-cover-forecast-public-lookup {
+        border: 2px solid #000;
+    }
+
+    .cloud-cover-forecast-public-lookup .location-search-input {
+        border: 2px solid #000;
+    }
+
+    .cloud-cover-forecast-public-lookup .location-search-button {
+        background: #000;
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .cloud-cover-forecast-public-lookup .location-search-input,
+    .cloud-cover-forecast-public-lookup .location-search-button {
+        transition: none;
+    }
+
+    .cloud-cover-forecast-public-lookup .loading-spinner::after {
+        animation: none;
+    }
+}
