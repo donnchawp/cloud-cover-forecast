@@ -245,6 +245,16 @@
     text-transform: uppercase;
 }
 
+.cloud-cover-forecast-provider-note {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-left: 4px solid #f59e0b;
+    background: #fff7ed;
+    color: #92400e;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
 /* Accessibility improvements */
 .cloud-cover-forecast-public-lookup .location-search-input:focus,
 .cloud-cover-forecast-public-lookup .location-search-button:focus {

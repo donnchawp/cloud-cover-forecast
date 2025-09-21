@@ -379,6 +379,13 @@ class Cloud_Cover_Forecast_Public_Block {
 					);
 					?>
 				</div>
+
+				<?php
+				$provider_notice = $this->render_provider_diff_notice( $stats );
+				if ( $provider_notice ) {
+					echo $provider_notice; // already escaped
+				}
+				?>
 			</div>
 
 			<table class="cloud-cover-forecast-table" role="table">
@@ -421,6 +428,81 @@ class Cloud_Cover_Forecast_Public_Block {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render a user-friendly variance notice when providers disagree.
+	 *
+	 * @since 1.0.0
+	 * @param array $stats Stats array from forecast data.
+	 * @return string HTML markup or empty string.
+	 */
+	private function render_provider_diff_notice( array $stats ): string {
+		$summary = $stats['provider_diff_summary'] ?? array();
+		$rows_with_diff = intval( $summary['rows_with_differences'] ?? 0 );
+		if ( $rows_with_diff <= 0 ) {
+			return '';
+		}
+
+		$threshold = intval( $summary['threshold'] ?? 20 );
+		$hours_text = sprintf(
+			_n( '%s hour', '%s hours', $rows_with_diff, 'cloud-cover-forecast' ),
+			number_format_i18n( $rows_with_diff )
+		);
+		$intro = sprintf(
+			esc_html__( 'Heads-up: the forecast models disagree for %1$s (difference above %2$s%%).', 'cloud-cover-forecast' ),
+			esc_html( $hours_text ),
+			esc_html( number_format_i18n( $threshold ) )
+		);
+
+		$per_level = $summary['per_level'] ?? array();
+		$level_labels = array(
+			'total' => esc_html__( 'overall cloud cover', 'cloud-cover-forecast' ),
+			'low'   => esc_html__( 'low cloud', 'cloud-cover-forecast' ),
+			'mid'   => esc_html__( 'mid-level cloud', 'cloud-cover-forecast' ),
+			'high'  => esc_html__( 'high cloud', 'cloud-cover-forecast' ),
+		);
+		$highlights = array();
+		foreach ( $level_labels as $key => $label ) {
+			$count = intval( $per_level[ $key ] ?? 0 );
+			if ( $count > 0 ) {
+				$highlights[] = sprintf(
+					esc_html__( '%1$s (%2$s hrs)', 'cloud-cover-forecast' ),
+					$label,
+					number_format_i18n( $count )
+				);
+			}
+		}
+
+		$detail = '';
+		if ( ! empty( $highlights ) ) {
+			$detail = sprintf(
+				esc_html__( 'Largest differences in %s.', 'cloud-cover-forecast' ),
+				$this->natural_language_join( $highlights )
+			);
+		}
+
+		return '<div class="cloud-cover-forecast-provider-note">' . trim( $intro . ' ' . $detail ) . '</div>';
+	}
+
+	/**
+	 * Join phrases into a natural language list.
+	 *
+	 * @since 1.0.0
+	 * @param array $items List of phrases.
+	 * @return string
+	 */
+	private function natural_language_join( array $items ): string {
+		$items = array_values( array_filter( $items ) );
+		$count = count( $items );
+		if ( 0 === $count ) {
+			return '';
+		}
+		if ( 1 === $count ) {
+			return $items[0];
+		}
+		$last = array_pop( $items );
+		return implode( ', ', $items ) . ' ' . esc_html__( 'and', 'cloud-cover-forecast' ) . ' ' . $last;
 	}
 
 	/**
