@@ -227,29 +227,6 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						esc_html( number_format( $stats['lat'], 4 ) ),
 						esc_html( number_format( $stats['lon'], 4 ) )
 					);
-
-					// DEBUG: Show first and last row timestamps
-					if ( ! empty( $rows ) ) {
-						echo '<br>DEBUG: First row: ' . esc_html( date( 'Y-m-d H:i', $rows[0]['ts'] ) );
-						echo ' | Last row: ' . esc_html( date( 'Y-m-d H:i', $rows[count($rows)-1]['ts'] ) );
-						echo ' | Total rows: ' . count( $rows );
-
-						// Show current time for comparison
-						echo ' | Current time: ' . esc_html( date( 'Y-m-d H:i' ) );
-
-						// Show timezone info
-						echo ' | Timezone: ' . esc_html( $stats['timezone'] ?? 'unknown' );
-
-						// Show a few sample hours to see the problem
-						echo '<br>SAMPLE HOURS: ';
-						for ( $i = 0; $i < min( 3, count( $rows ) ); $i++ ) {
-							echo esc_html( date( 'H:i', $rows[$i]['ts'] ) ) . ' ';
-						}
-						echo '... ';
-						for ( $i = max( 0, count( $rows ) - 3 ); $i < count( $rows ); $i++ ) {
-							echo esc_html( date( 'H:i', $rows[$i]['ts'] ) ) . ' ';
-						}
-					}
 					?>
 				</div>
 			</div>
