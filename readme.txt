@@ -1,6 +1,6 @@
 === Cloud Cover Forecast ===
 Contributors: donnchawp
-Tags: weather, cloud cover, forecast, photography, astronomy, open-meteo
+Tags: weather, cloud cover, forecast, photography, astronomy
 Requires at least: 5.0
 Tested up to: 6.8
 Requires PHP: 7.4
