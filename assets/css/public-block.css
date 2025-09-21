@@ -231,6 +231,20 @@
     letter-spacing: 0.02em;
 }
 
+.cloud-cover-diff-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
 /* Accessibility improvements */
 .cloud-cover-forecast-public-lookup .location-search-input:focus,
 .cloud-cover-forecast-public-lookup .location-search-button:focus {

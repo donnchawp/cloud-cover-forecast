@@ -399,10 +399,10 @@ class Cloud_Cover_Forecast_Public_Block {
 							$hour_dt->setTimezone( new DateTimeZone( $stats['timezone'] ) );
 							echo esc_html( $hour_dt->format( 'M j, H:i' ) );
 						?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['total'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['low'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['mid'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['high'] . '%' ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'low' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'mid' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'high' ), $this->get_allowed_cloud_markup() ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -412,7 +412,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				<div class="cloud-cover-forecast-meta">
 					<?php
 					printf(
-						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo', 'cloud-cover-forecast' ),
+						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo + Met.no', 'cloud-cover-forecast' ),
 						esc_html( number_format( $stats['lat'], 4 ) ),
 						esc_html( number_format( $stats['lon'], 4 ) )
 					);
@@ -421,6 +421,56 @@ class Cloud_Cover_Forecast_Public_Block {
 			</div>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Format a cloud cover percentage with variance metadata badge.
+	 *
+	 * @since 1.0.0
+	 * @param array  $row   Hourly row data.
+	 * @param string $level Cloud level key (total|low|mid|high).
+	 * @return string Markup-safe HTML string.
+	 */
+	private function format_cloud_cover_value( array $row, string $level ): string {
+		$value = $row[ $level ] ?? null;
+		$output = ( null === $value || '' === $value )
+			? esc_html__( '—', 'cloud-cover-forecast' )
+			: esc_html( intval( $value ) . '%' );
+
+		if ( empty( $row['provider_diff'][ $level ] ) ) {
+			return $output;
+		}
+
+		$diff       = $row['provider_diff'][ $level ];
+		$diff_value = intval( $diff['difference'] );
+		$tooltip    = sprintf(
+			esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
+			intval( $diff['open_meteo'] ),
+			intval( $diff['met_no'] )
+		);
+
+		$badge = sprintf(
+			'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
+			esc_attr( $tooltip ),
+			esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
+		);
+
+		return $output . $badge;
+	}
+
+	/**
+	 * Allowed markup for cloud cover table cells.
+	 *
+	 * @since 1.0.0
+	 * @return array
+	 */
+	private function get_allowed_cloud_markup(): array {
+		return array(
+			'span' => array(
+				'class' => array(),
+				'title' => array(),
+			),
+		);
 	}
 
 	/**

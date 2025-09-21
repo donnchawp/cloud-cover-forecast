@@ -265,6 +265,25 @@ class Cloud_Cover_Forecast_API {
 			error_log( 'Final last row: ' . date( 'Y-m-d H:i', $rows[count($rows)-1]['ts'] ) );
 		}
 
+		$metno_merge_summary = array();
+		$metno_source = array();
+		$metno_threshold = 20;
+		$metno_data = $this->fetch_met_no_complete( $lat, $lon );
+		if ( ! is_wp_error( $metno_data ) && ! empty( $metno_data['hourly'] ) ) {
+			$merge_result = $this->merge_cloud_cover_rows( $rows, $metno_data['hourly'], $metno_threshold );
+			$rows = $merge_result['rows'];
+			$metno_merge_summary = $merge_result['summary'];
+			$metno_source = array(
+				'url'        => $metno_data['source_url'],
+				'updated_at' => $metno_data['updated_at'] ?? null,
+			);
+		} elseif ( is_wp_error( $metno_data ) ) {
+			$metno_source = array(
+				'url'        => $metno_data->get_error_data()['url'] ?? '',
+				'error'      => $metno_data->get_error_message(),
+			);
+		}
+
 		// Fetch moon data if photography mode is enabled
 		$today_date = gmdate( 'Y-m-d' );
 		$tomorrow_date = gmdate( 'Y-m-d', strtotime( '+1 day' ) );
@@ -284,6 +303,21 @@ class Cloud_Cover_Forecast_API {
 			'timezone'         => $timezone,
 			'timezone_abbr'    => $timezone_abbr,
 			'source_url'       => $url,
+			'sources'          => array_filter( array(
+				'open_meteo' => array(
+					'url' => $url,
+				),
+				'met_no'     => $metno_source,
+			) ),
+			'provider_diff_summary' => array_merge(
+				array(
+					'rows_with_differences' => $metno_merge_summary['rows_with_differences'] ?? 0,
+					'per_level'             => $metno_merge_summary['per_level'] ?? array(),
+				),
+				array(
+					'threshold' => $metno_threshold,
+				)
+			),
 			'daily_times'      => $daily_times,
 			'daily_sunrise'    => $daily_sunrise,
 			'daily_sunset'     => $daily_sunset,
@@ -478,6 +512,180 @@ class Cloud_Cover_Forecast_API {
 		set_transient( $cache_key, $moon_data, 24 * HOUR_IN_SECONDS );
 
 		return $moon_data;
+	}
+
+	/**
+	 * Fetch Met.no locationforecast (complete) data and normalise hourly cloud values.
+	 *
+	 * @since 1.0.0
+	 * @param float $lat Latitude.
+	 * @param float $lon Longitude.
+	 * @return array|WP_Error Normalised forecast data or error.
+	 */
+	private function fetch_met_no_complete( float $lat, float $lon ) {
+		$endpoint = 'https://api.met.no/weatherapi/locationforecast/2.0/complete';
+		$params   = array(
+			'lat' => $lat,
+			'lon' => $lon,
+		);
+		$url = add_query_arg( $params, $endpoint );
+
+		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'metno_' . md5( $url );
+		$res = get_transient( $cache_key );
+		if ( ! $res ) {
+			$res = wp_remote_get(
+				$url,
+				array(
+					'timeout'   => 15,
+					'user-agent' => $this->get_met_no_user_agent(),
+					'headers'   => array(
+						'Accept' => 'application/json',
+					),
+					'sslverify' => true,
+				)
+			);
+			if ( is_wp_error( $res ) ) {
+				return new WP_Error( 'cloud_cover_forecast_metno_network', __( 'Network error occurred while fetching Met.no data.', 'cloud-cover-forecast' ), array( 'url' => $url ) );
+			}
+			$code = wp_remote_retrieve_response_code( $res );
+			if ( 200 !== $code ) {
+				return new WP_Error( 'cloud_cover_forecast_metno_http', __( 'Met.no service temporarily unavailable.', 'cloud-cover-forecast' ), array( 'url' => $url, 'status' => $code ) );
+			}
+			set_transient( $cache_key, $res, 10 * MINUTE_IN_SECONDS );
+		}
+
+		$body = wp_remote_retrieve_body( $res );
+		$json = json_decode( $body, true );
+		if ( ! $json || empty( $json['properties']['timeseries'] ) ) {
+			return new WP_Error( 'cloud_cover_forecast_metno_json', __( 'Malformed Met.no API response.', 'cloud-cover-forecast' ), array( 'url' => $url ) );
+		}
+
+		$timeseries = $json['properties']['timeseries'];
+		$hourly     = array();
+		foreach ( $timeseries as $entry ) {
+			if ( empty( $entry['time'] ) ) {
+				continue;
+			}
+			$timestamp = strtotime( $entry['time'] );
+			if ( false === $timestamp ) {
+				continue;
+			}
+			$details = $entry['data']['instant']['details'] ?? array();
+			$key     = gmdate( 'Y-m-d H', $timestamp );
+			$hourly[ $key ] = array(
+				'ts'    => $timestamp,
+				'total' => isset( $details['cloud_area_fraction'] ) ? intval( round( $details['cloud_area_fraction'] ) ) : null,
+				'low'   => isset( $details['cloud_area_fraction_low'] ) ? intval( round( $details['cloud_area_fraction_low'] ) ) : null,
+				'mid'   => isset( $details['cloud_area_fraction_medium'] ) ? intval( round( $details['cloud_area_fraction_medium'] ) ) : null,
+				'high'  => isset( $details['cloud_area_fraction_high'] ) ? intval( round( $details['cloud_area_fraction_high'] ) ) : null,
+			);
+		}
+
+		return array(
+			'hourly'     => $hourly,
+			'source_url' => $url,
+			'updated_at' => $json['properties']['meta']['updated_at'] ?? null,
+		);
+	}
+
+	/**
+	 * Build a compliant User-Agent string for Met.no requests.
+	 *
+	 * @since 1.0.0
+	 * @return string
+	 */
+	private function get_met_no_user_agent(): string {
+		$site_name  = get_bloginfo( 'name' );
+		$site_url   = home_url();
+		$admin_email = get_bloginfo( 'admin_email' );
+		return sprintf( 'CloudCoverForecastPlugin/1.0 (%1$s; %2$s; contact:%3$s)', $site_name, $site_url, $admin_email );
+	}
+
+	/**
+	 * Merge cloud cover data from Open-Meteo and Met.no using worst-case values.
+	 *
+	 * @since 1.0.0
+	 * @param array $rows            Existing Open-Meteo rows.
+	 * @param array $metno_hourly    Normalised Met.no rows keyed by UTC hour.
+	 * @param int   $threshold       Difference threshold (percentage points) for highlighting.
+	 * @return array{'rows':array,'summary':array}
+	 */
+	private function merge_cloud_cover_rows( array $rows, array $metno_hourly, int $threshold ): array {
+		$levels   = array( 'total', 'low', 'mid', 'high' );
+		$summary  = array(
+			'rows_with_differences' => 0,
+			'per_level'             => array_fill_keys( $levels, 0 ),
+		);
+
+		foreach ( $rows as &$row ) {
+			$hour_key = gmdate( 'Y-m-d H', $row['ts'] );
+			if ( ! isset( $metno_hourly[ $hour_key ] ) ) {
+				continue;
+			}
+
+			$met_values  = $metno_hourly[ $hour_key ];
+			$open_values = array(
+				'total' => $row['total'],
+				'low'   => $row['low'],
+				'mid'   => $row['mid'],
+				'high'  => $row['high'],
+			);
+
+			$row['source_values'] = array(
+				'open_meteo' => $open_values,
+				'met_no'     => array(
+					'total' => $met_values['total'],
+					'low'   => $met_values['low'],
+					'mid'   => $met_values['mid'],
+					'high'  => $met_values['high'],
+				),
+			);
+
+			$row_has_diff = false;
+
+			foreach ( $levels as $level ) {
+				$open_val = $open_values[ $level ];
+				$met_val  = $met_values[ $level ];
+
+				if ( null === $met_val && null === $open_val ) {
+					continue;
+				}
+
+				if ( null === $open_val ) {
+					$row[ $level ] = $met_val;
+					continue;
+				}
+
+				if ( null === $met_val ) {
+					// Keep Open-Meteo value when Met.no lacks data.
+					continue;
+				}
+
+				$difference = abs( $open_val - $met_val );
+				if ( $difference > $threshold ) {
+					$row_has_diff = true;
+					$summary['per_level'][ $level ]++;
+					$row['provider_diff'][ $level ] = array(
+						'difference'  => $difference,
+						'open_meteo'  => $open_val,
+						'met_no'      => $met_val,
+						'selected'    => ( $met_val >= $open_val ) ? 'met_no' : 'open_meteo',
+					);
+				}
+
+				$row[ $level ] = max( $open_val, $met_val );
+			}
+
+			if ( $row_has_diff ) {
+				$summary['rows_with_differences']++;
+			}
+		}
+		unset( $row );
+
+		return array(
+			'rows'    => $rows,
+			'summary' => $summary,
+		);
 	}
 
 	/**

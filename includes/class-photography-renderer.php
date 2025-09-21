@@ -209,10 +209,10 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 								echo esc_html( $event_data['icon'] . ' ' . $event_data['description'] );
 							}
 						?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['total'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['low'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['mid'] . '%' ); ?></td>
-						<td class="cloud-cover-forecast-td"><?php echo esc_html( $r['high'] . '%' ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'low' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'mid' ), $this->get_allowed_cloud_markup() ); ?></td>
+						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'high' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td condition-cell"><?php echo esc_html( $photo_condition ); ?></td>
 					</tr>
 				<?php endforeach; ?>
@@ -223,7 +223,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<div class="cloud-cover-forecast-meta">
 					<?php
 					printf(
-						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo · Astronomy: IPGeolocation', 'cloud-cover-forecast' ),
+						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo + Met.no · Astronomy: IPGeolocation', 'cloud-cover-forecast' ),
 						esc_html( number_format( $stats['lat'], 4 ) ),
 						esc_html( number_format( $stats['lon'], 4 ) )
 					);
@@ -728,5 +728,57 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Format a cloud cover value with variance metadata badge.
+	 *
+	 * @since 1.0.0
+	 * @param array  $row   Hourly row data.
+	 * @param string $level Cloud level key (total|low|mid|high).
+	 * @return string Markup-safe HTML string.
+	 */
+	private function format_cloud_cover_value( array $row, string $level ): string {
+		$value = $row[ $level ] ?? null;
+		$output = ( null === $value || '' === $value )
+			? esc_html__( '—', 'cloud-cover-forecast' )
+			: esc_html( intval( $value ) . '%' );
+
+		if ( empty( $row['provider_diff'][ $level ] ) ) {
+			return $output;
+		}
+
+		$diff         = $row['provider_diff'][ $level ];
+		$diff_value   = intval( $diff['difference'] );
+		$open_value   = intval( $diff['open_meteo'] );
+		$metno_value  = intval( $diff['met_no'] );
+		$tooltip_text = sprintf(
+			esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
+			$open_value,
+			$metno_value
+		);
+
+		$badge = sprintf(
+			'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
+			esc_attr( $tooltip_text ),
+			esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
+		);
+
+		return $output . $badge;
+	}
+
+	/**
+	 * Allowed markup for cloud cover table cells.
+	 *
+	 * @since 1.0.0
+	 * @return array
+	 */
+	private function get_allowed_cloud_markup(): array {
+		return array(
+			'span' => array(
+				'class' => array(),
+				'title' => array(),
+			),
+		);
 	}
 }
