@@ -513,14 +513,16 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @param string $level Cloud level key (total|low|mid|high).
 	 * @return string Markup-safe HTML string.
 	 */
-	private function format_cloud_cover_value( array $row, string $level ): string {
-		$value = $row[ $level ] ?? null;
-		$output = ( null === $value || '' === $value )
-			? esc_html__( '—', 'cloud-cover-forecast' )
-			: esc_html( intval( $value ) . '%' );
+		private function format_cloud_cover_value( array $row, string $level ): string {
+			$value = $row[ $level ] ?? null;
+			$value_text = ( null === $value || '' === $value )
+				? esc_html__( '—', 'cloud-cover-forecast' )
+				: esc_html( intval( $value ) . '%' );
+			$value_markup = sprintf( '<span class="cloud-cover-value">%s</span>', $value_text );
+			$badge_markup = '';
 
 			if ( empty( $row['provider_diff'][ $level ] ) ) {
-				return $output;
+				return sprintf( '<span class="cloud-cover-value-wrap">%s</span>', $value_markup );
 			}
 
 			if ( 'total' === $level && ! empty( $row['provider_diff'] ) ) {
@@ -533,26 +535,26 @@ class Cloud_Cover_Forecast_Public_Block {
 				);
 
 				if ( 1 === count( $non_total_diffs ) ) {
-					return $output;
+					return sprintf( '<span class="cloud-cover-value-wrap">%s</span>', $value_markup );
 				}
 			}
 
 			$diff       = $row['provider_diff'][ $level ];
 			$diff_value = intval( $diff['difference'] );
-		$tooltip    = sprintf(
-			esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
-			intval( $diff['open_meteo'] ),
-			intval( $diff['met_no'] )
-		);
+			$tooltip    = sprintf(
+				esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
+				intval( $diff['open_meteo'] ),
+				intval( $diff['met_no'] )
+			);
 
-		$badge = sprintf(
-			'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
-			esc_attr( $tooltip ),
-			esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
-		);
+			$badge_markup = sprintf(
+				'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
+				esc_attr( $tooltip ),
+				esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
+			);
 
-		return $output . $badge;
-	}
+			return sprintf( '<span class="cloud-cover-value-wrap">%s%s</span>', $value_markup, $badge_markup );
+		}
 
 	/**
 	 * Allowed markup for cloud cover table cells.

@@ -204,13 +204,41 @@
 
 .cloud-cover-forecast-table {
     width: 100%;
-    border-collapse: collapse;
-    border: 1px solid #e5e7eb;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 16px 32px -18px rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(100, 116, 139, 0.35);
+    overflow: hidden;
 }
 
-.cloud-cover-forecast-table th,
-.cloud-cover-forecast-table td {
-    border: 1px solid #e5e7eb;
+.cloud-cover-forecast-table thead th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.cloud-cover-forecast-table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.cloud-cover-forecast-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.cloud-cover-forecast-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.cloud-cover-forecast-table tbody tr:hover {
+    background: rgba(241, 245, 249, 0.6);
 }
 
 .cloud-cover-forecast-photography-table {
@@ -219,7 +247,7 @@
 
 .cloud-cover-forecast-photography-table th,
 .cloud-cover-forecast-photography-table td {
-    padding: 8px 10px;
+    padding: 12px 14px;
     text-align: left;
     vertical-align: top;
 }
@@ -241,7 +269,25 @@
     white-space: normal;
 }
 
+.cloud-cover-value-wrap {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 6px;
+    row-gap: 4px;
+}
+
+.cloud-cover-value {
+    display: inline-block;
+    min-width: 2.5ch;
+}
+
 @media (max-width: 768px) {
+    .cloud-cover-forecast-table thead th,
+    .cloud-cover-forecast-table tbody td {
+        padding: 10px 12px;
+    }
+
     .cloud-cover-forecast-photography-table th,
     .cloud-cover-forecast-photography-table td {
         padding: 6px 8px;
@@ -261,8 +307,16 @@
         display: none;
     }
 
-    .cloud-cover-current-hour-label,
+    .cloud-cover-value-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
     .cloud-cover-diff-badge {
+        margin-top: 4px;
+    }
+
+    .cloud-cover-current-hour-label {
         margin-left: 4px;
         padding: 2px 6px;
         font-size: 12px;
@@ -305,7 +359,6 @@
 .cloud-cover-diff-badge {
     display: inline-flex;
     align-items: center;
-    margin-left: 6px;
     padding: 2px 6px;
     border-radius: 9999px;
     background: #fef3c7;
