@@ -174,8 +174,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Mid', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'High', 'cloud-cover-forecast' ); ?></th>
 						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Total', 'cloud-cover-forecast' ); ?></th>
-						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Event', 'cloud-cover-forecast' ); ?></th>
-						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Photo Condition', 'cloud-cover-forecast' ); ?></th>
+						<th class="cloud-cover-forecast-th"><?php esc_html_e( 'Event & Photo Condition', 'cloud-cover-forecast' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -218,16 +217,25 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'mid' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'high' ), $this->get_allowed_cloud_markup() ); ?></td>
 						<td class="cloud-cover-forecast-td"><?php echo wp_kses( $this->format_cloud_cover_value( $r, 'total' ), $this->get_allowed_cloud_markup() ); ?></td>
-					<td class="cloud-cover-forecast-td event-cell"><?php
-						if ( ! empty( $event_data ) ) {
-							printf(
-								'<span class="event-icon" aria-hidden="true">%1$s</span><span class="event-label">%2$s</span>',
-								esc_html( $event_data['icon'] ),
-								esc_html( $event_data['description'] )
-							);
-						}
+						<td class="cloud-cover-forecast-td event-condition-cell"><?php
+							if ( ! empty( $event_data ) ) {
+								printf(
+									'<span class="event-meta"><span class="event-icon" aria-hidden="true">%1$s</span><span class="event-label">%2$s</span></span>',
+									esc_html( $event_data['icon'] ),
+									esc_html( $event_data['description'] )
+								);
+							}
+
+							if ( ! empty( $photo_condition ) ) {
+								if ( ! empty( $event_data ) ) {
+									echo '<br />';
+								}
+								printf(
+									'<span class="condition-text">%s</span>',
+									esc_html( $photo_condition )
+								);
+							}
 					?></td>
-						<td class="cloud-cover-forecast-td condition-cell"><?php echo esc_html( $photo_condition ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
