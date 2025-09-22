@@ -158,30 +158,56 @@
                     return;
                 }
 
-                // Otherwise, geocode the location first
-                var geocodeUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
-                    encodeURIComponent(location) + '&count=5&format=json';
+                // Otherwise, geocode the location first via AJAX proxy
+                var ajaxUrl = blockData.ajaxUrl || (typeof window.ajaxurl !== 'undefined' ? window.ajaxurl : '');
+                if (!ajaxUrl) {
+                    showError(blockData.strings.geocodingErrorText || 'Unable to find location. Please check your internet connection and try again.');
+                    resetSearchUI();
+                    return;
+                }
 
-                $.get(geocodeUrl)
-                    .done(function(data) {
-                        if (data.results && data.results.length > 0) {
-                            if (data.results.length === 1) {
-                                var single = data.results[0];
-                                var singleLabel = buildLocationLabel(single);
-                                updateURL(singleLabel, single.latitude, single.longitude);
-                                fetchForecast(single.latitude, single.longitude, singleLabel).always(resetSearchUI);
-                                return;
-                            }
-
-                            showLocationChoices(data.results, location);
+                $.ajax({
+                    url: ajaxUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'cloud_cover_forecast_public_geocode',
+                        nonce: blockData.nonce,
+                        location: location
+                    }
+                })
+                    .done(function(response) {
+                        if (!response || !response.success) {
+                            var message = (response && response.data && response.data.message) ? response.data.message : (blockData.strings.geocodingErrorText || 'Unable to find location. Please check your internet connection and try again.');
+                            showError(message);
                             resetSearchUI();
-                        } else {
+                            return;
+                        }
+
+                        var results = (response.data && Array.isArray(response.data.results)) ? response.data.results : [];
+                        if (!results.length) {
                             showError(blockData.strings.locationNotFoundText || 'Location not found. Please try a different search term.');
                             resetSearchUI();
+                            return;
                         }
+
+                        if (results.length === 1) {
+                            var single = results[0];
+                            var singleLabel = buildLocationLabel(single);
+                            updateURL(singleLabel, single.latitude, single.longitude);
+                            fetchForecast(single.latitude, single.longitude, singleLabel).always(resetSearchUI);
+                            return;
+                        }
+
+                        showLocationChoices(results, location);
+                        resetSearchUI();
                     })
-                    .fail(function() {
-                        showError(blockData.strings.geocodingErrorText || 'Unable to find location. Please check your internet connection and try again.');
+                    .fail(function(jqXHR) {
+                        var message = blockData.strings.geocodingErrorText || 'Unable to find location. Please check your internet connection and try again.';
+                        if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.data && jqXHR.responseJSON.data.message) {
+                            message = jqXHR.responseJSON.data.message;
+                        }
+                        showError(message);
                         resetSearchUI();
                     });
             }

@@ -45,6 +45,7 @@ class Cloud_Cover_Forecast_Admin {
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'init', array( $this, 'register_gutenberg_block' ) );
+		add_action( 'wp_ajax_ccf_geocode', array( $this, 'ajax_geocode_location' ) );
 	}
 
 	/**
@@ -280,6 +281,10 @@ class Cloud_Cover_Forecast_Admin {
 	 * @since 1.0.0
 	 */
 	public function render_location_search_field() {
+		$ajax_data = array(
+			'ajaxUrl' => esc_url_raw( admin_url( 'admin-ajax.php' ) ),
+			'nonce'   => wp_create_nonce( 'ccf_admin_nonce' ),
+		);
 		?>
 		<div id="cloud-cover-forecast-location-search">
 			<input type="text" id="clf-location-input" placeholder="<?php esc_attr_e( 'Enter location name (e.g., London, UK)', 'cloud-cover-forecast' ); ?>" class="regular-text" />
@@ -291,6 +296,8 @@ class Cloud_Cover_Forecast_Admin {
 		</p>
 		<script type="text/javascript">
 		(function($) {
+			var ccfAdminAjax = <?php echo wp_json_encode( $ajax_data ); ?>;
+
 			function clfEscapeHtml(value) {
 				return $('<div/>').text(value || '').html();
 			}
@@ -303,101 +310,141 @@ class Cloud_Cover_Forecast_Admin {
 						return;
 					}
 
-					$('#clf-search-results').html('<em><?php echo esc_js( __( 'Searching...', 'cloud-cover-forecast' ) ); ?></em>');
+					var $resultsEl = $('#clf-search-results');
+					$resultsEl.html('<em><?php echo esc_js( __( 'Searching...', 'cloud-cover-forecast' ) ); ?></em>');
 
-					$.get('https://geocoding-api.open-meteo.com/v1/search', {
-						name: location,
-						count: 5,
-						format: 'json'
-					})
-					.done(function(data) {
-						if (data.results && data.results.length > 0) {
-							var htmlParts = [];
+					var ajaxUrl = (ccfAdminAjax && ccfAdminAjax.ajaxUrl) ? ccfAdminAjax.ajaxUrl : (typeof window.ajaxurl !== 'undefined' ? window.ajaxurl : '');
+					if (!ajaxUrl) {
+						$resultsEl.html('<div style="padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;"><?php echo esc_js( __( 'Search failed. Please try again.', 'cloud-cover-forecast' ) ); ?></div>');
+						return;
+					}
 
-							if (data.results.length === 1) {
-								// Single result - auto-select it
-								var result = data.results[0];
-								var nameParts = [result.name];
-								if (result.country) {
-									nameParts.push(result.country);
-								}
-								var displayName = nameParts.join(', ');
-
-								$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lat]"]').val(result.latitude);
-								$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lon]"]').val(result.longitude);
-
-								htmlParts.push(
-									'<div style="padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">' +
-									'<strong><?php echo esc_js( __( 'Found:', 'cloud-cover-forecast' ) ); ?></strong> ' + clfEscapeHtml(displayName) +
-									' (' + result.latitude + ', ' + result.longitude + ')' +
-									'</div>'
-								);
-							} else {
-								// Multiple results - show selection list
-								htmlParts.push(
-									'<div style="padding: 8px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">' +
-									'<strong><?php echo esc_js( __( 'Multiple locations found. Please select one:', 'cloud-cover-forecast' ) ); ?></strong><br><br>'
-								);
-
-								data.results.forEach(function(result, index) {
-									var locationParts = [result.name];
-									if (result.admin1) {
-										locationParts.push(result.admin1);
-									}
-									if (result.country) {
-										locationParts.push(result.country);
-									}
-									var displayName = locationParts.join(', ');
-
-									htmlParts.push(
-										'<label style="display: block; margin: 5px 0; cursor: pointer;">' +
-										'<input type="radio" name="clf-location-choice" value="' + index + '" style="margin-right: 8px;">' +
-										clfEscapeHtml(displayName) + ' <span style="color: #666;">(' + result.latitude + ', ' + result.longitude + ')</span>' +
-										'</label>'
-									);
-								});
-
-								htmlParts.push(
-									'<br><button type="button" id="clf-select-location" class="button button-primary" style="margin-top: 8px;">' +
-									'<?php echo esc_js( __( 'Use Selected Location', 'cloud-cover-forecast' ) ); ?>' +
-									'</button></div>'
-								);
-
-								// Store results data for later use
-								$('#clf-search-results').data('results', data.results);
-							}
-
-							$('#clf-search-results').html(htmlParts.join(''));
-						} else {
-							$('#clf-search-results').html(
-								'<div style="padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">' +
-								'<?php echo esc_js( __( 'Location not found. Please try a different search term.', 'cloud-cover-forecast' ) ); ?>' +
-								'</div>'
-							);
+					$.ajax({
+						url: ajaxUrl,
+						type: 'POST',
+						dataType: 'json',
+						data: {
+							action: 'ccf_geocode',
+							nonce: ccfAdminAjax.nonce,
+							location: location
 						}
 					})
-					.fail(function() {
-						$('#clf-search-results').html(
+					.done(function(response) {
+						if (!response || !response.success) {
+							var message = (response && response.data && response.data.message) ? response.data.message : '<?php echo esc_js( __( 'Search failed. Please try again.', 'cloud-cover-forecast' ) ); ?>';
+							$resultsEl.removeData('results').html('<div style="padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">' + clfEscapeHtml(message) + '</div>');
+							return;
+						}
+
+						var results = (response.data && Array.isArray(response.data.results)) ? response.data.results : [];
+
+						if (!results.length) {
+							$resultsEl.removeData('results').html('<div style="padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;"><?php echo esc_js( __( 'Location not found. Please try a different search term.', 'cloud-cover-forecast' ) ); ?></div>');
+							return;
+						}
+
+						var htmlParts = [];
+
+						if (results.length === 1) {
+							var result = results[0];
+							var nameParts = [];
+							if (result.name) {
+								nameParts.push(result.name);
+							}
+							if (result.country) {
+								nameParts.push(result.country);
+							}
+							var displayName = nameParts.join(', ');
+
+							var latValue = (result.latitude !== null && result.latitude !== undefined) ? result.latitude : '';
+							var lonValue = (result.longitude !== null && result.longitude !== undefined) ? result.longitude : '';
+
+							$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lat]"]').val(latValue);
+							$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lon]"]').val(lonValue);
+
+							htmlParts.push(
+								'<div style="padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">' +
+								'<strong><?php echo esc_js( __( 'Found:', 'cloud-cover-forecast' ) ); ?></strong> ' + clfEscapeHtml(displayName) +
+								' (' + latValue + ', ' + lonValue + ')' +
+								'</div>'
+							);
+
+							$resultsEl.removeData('results');
+						} else {
+							htmlParts.push(
+								'<div style="padding: 8px; background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">' +
+								'<strong><?php echo esc_js( __( 'Multiple locations found. Please select one:', 'cloud-cover-forecast' ) ); ?></strong><br><br>'
+							);
+
+							results.forEach(function(result, index) {
+								var locationParts = [];
+								if (result.name) {
+									locationParts.push(result.name);
+								}
+								if (result.admin1) {
+									locationParts.push(result.admin1);
+								}
+								if (result.country) {
+									locationParts.push(result.country);
+								}
+								var displayName = locationParts.join(', ');
+
+								var latText = (result.latitude !== null && result.latitude !== undefined) ? result.latitude : '';
+								var lonText = (result.longitude !== null && result.longitude !== undefined) ? result.longitude : '';
+
+								htmlParts.push(
+									'<label style="display: block; margin: 5px 0; cursor: pointer;">' +
+									'<input type="radio" name="clf-location-choice" value="' + index + '" style="margin-right: 8px;">' +
+									clfEscapeHtml(displayName) + ' <span style="color: #666;">(' + latText + ', ' + lonText + ')</span>' +
+									'</label>'
+								);
+							});
+
+							htmlParts.push(
+								'<br><button type="button" id="clf-select-location" class="button button-primary" style="margin-top: 8px;">' +
+								'<?php echo esc_js( __( 'Use Selected Location', 'cloud-cover-forecast' ) ); ?>' +
+								'</button></div>'
+							);
+
+							$resultsEl.data('results', results);
+						}
+
+						$resultsEl.html(htmlParts.join(''));
+					})
+					.fail(function(jqXHR) {
+						var message = '<?php echo esc_js( __( 'Search failed. Please try again.', 'cloud-cover-forecast' ) ); ?>';
+						if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.data && jqXHR.responseJSON.data.message) {
+							message = jqXHR.responseJSON.data.message;
+						}
+						$resultsEl.removeData('results').html(
 							'<div style="padding: 8px; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">' +
-							'<?php echo esc_js( __( 'Search failed. Please try again.', 'cloud-cover-forecast' ) ); ?>' +
+							clfEscapeHtml(message) +
 							'</div>'
 						);
 					});
 				});
 
-				// Handle location selection from multiple results
 				$(document).on('click', '#clf-select-location', function() {
 					var selectedIndex = $('input[name="clf-location-choice"]:checked').val();
 					if (selectedIndex !== undefined) {
+						var idx = parseInt(selectedIndex, 10);
 						var results = $('#clf-search-results').data('results');
-						var selected = results[selectedIndex];
+						if (!Array.isArray(results) || !results[idx]) {
+							alert('<?php echo esc_js( __( 'Please select a location from the list', 'cloud-cover-forecast' ) ); ?>');
+							return;
+						}
 
-						// Fill in the lat/lon fields
-						$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lat]"]').val(selected.latitude);
-						$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lon]"]').val(selected.longitude);
+						var selected = results[idx];
+						var latValue = (selected.latitude !== null && selected.latitude !== undefined) ? selected.latitude : '';
+						var lonValue = (selected.longitude !== null && selected.longitude !== undefined) ? selected.longitude : '';
 
-						// Show success message
-						var locationParts = [selected.name];
+						$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lat]"]').val(latValue);
+						$('input[name="<?php echo esc_js( $this->plugin::OPTION_KEY ); ?>[lon]"]').val(lonValue);
+
+						var locationParts = [];
+						if (selected.name) {
+							locationParts.push(selected.name);
+						}
 						if (selected.admin1) {
 							locationParts.push(selected.admin1);
 						}
@@ -406,18 +453,19 @@ class Cloud_Cover_Forecast_Admin {
 						}
 						var displayName = locationParts.join(', ');
 
-						$('#clf-search-results').html(
-							'<div style="padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">' +
-							'<strong><?php echo esc_js( __( 'Selected:', 'cloud-cover-forecast' ) ); ?></strong> ' + clfEscapeHtml(displayName) +
-							' (' + selected.latitude + ', ' + selected.longitude + ')' +
-							'</div>'
-						);
+						$('#clf-search-results')
+							.removeData('results')
+							.html(
+								'<div style="padding: 8px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px;">' +
+								'<strong><?php echo esc_js( __( 'Selected:', 'cloud-cover-forecast' ) ); ?></strong> ' + clfEscapeHtml(displayName) +
+								' (' + latValue + ', ' + lonValue + ')' +
+								'</div>'
+							);
 					} else {
 						alert('<?php echo esc_js( __( 'Please select a location from the list', 'cloud-cover-forecast' ) ); ?>');
 					}
 				});
 
-				// Allow Enter key to trigger search
 				$('#clf-location-input').on('keypress', function(e) {
 					if (e.which === 13) {
 						$('#clf-search-btn').click();
@@ -487,6 +535,100 @@ class Cloud_Cover_Forecast_Admin {
 		}
 
 		$this->plugin->clear_tracked_transients();
+	}
+
+	/**
+	 * Normalize geocoding data for AJAX responses
+	 *
+	 * @since 1.0.0
+	 * @param string $location Location name.
+	 * @return array|WP_Error
+	 */
+	private function get_geocode_results( string $location ) {
+		$api = $this->plugin->get_api();
+		if ( ! $api ) {
+			return new WP_Error( 'cloud_cover_forecast_api_unavailable', __( 'Geocoding service unavailable.', 'cloud-cover-forecast' ) );
+		}
+
+		$geocoded = $api->geocode_location( $location );
+		if ( is_wp_error( $geocoded ) ) {
+			return $geocoded;
+		}
+
+		if ( isset( $geocoded['lat'] ) && isset( $geocoded['lon'] ) ) {
+			$geocoded = array( $geocoded );
+		}
+
+		$results = array();
+		foreach ( (array) $geocoded as $item ) {
+			$results[] = array(
+				'name'      => isset( $item['name'] ) ? sanitize_text_field( $item['name'] ) : '',
+				'admin1'    => isset( $item['admin1'] ) ? sanitize_text_field( $item['admin1'] ) : '',
+				'admin2'    => isset( $item['admin2'] ) ? sanitize_text_field( $item['admin2'] ) : '',
+				'country'   => isset( $item['country'] ) ? sanitize_text_field( $item['country'] ) : '',
+				'timezone'  => isset( $item['timezone'] ) ? sanitize_text_field( $item['timezone'] ) : '',
+				'latitude'  => isset( $item['lat'] ) ? floatval( $item['lat'] ) : null,
+				'longitude' => isset( $item['lon'] ) ? floatval( $item['lon'] ) : null,
+			);
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Handle admin geocoding AJAX requests
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_geocode_location() {
+		check_ajax_referer( 'ccf_admin_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'You do not have permission to perform this action.', 'cloud-cover-forecast' ) ),
+				403
+			);
+		}
+
+		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
+		if ( '' === $location ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Please provide a location to search for.', 'cloud-cover-forecast' ) ),
+				400
+			);
+		}
+
+		$results = $this->get_geocode_results( $location );
+		if ( is_wp_error( $results ) ) {
+			$status = 500;
+			switch ( $results->get_error_code() ) {
+				case 'cloud_cover_forecast_empty_location':
+					$status = 400;
+					break;
+				case 'cloud_cover_forecast_geocoding_not_found':
+					$status = 404;
+					break;
+				case 'cloud_cover_forecast_rate_limit':
+					$status = 429;
+					break;
+				case 'cloud_cover_forecast_geocoding_network':
+				case 'cloud_cover_forecast_geocoding_http':
+				case 'cloud_cover_forecast_api_unavailable':
+					$status = 503;
+					break;
+			}
+
+			wp_send_json_error(
+				array( 'message' => $results->get_error_message() ),
+				$status
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'results' => $results,
+			)
+		);
 	}
 
 	/**

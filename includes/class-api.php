@@ -386,11 +386,13 @@ class Cloud_Cover_Forecast_API {
 		if ( 1 === count( $json['results'] ) ) {
 			$result = $json['results'][0];
 			$geocoded = array(
-				'lat'     => $result['latitude'],
-				'lon'     => $result['longitude'],
-				'name'    => $result['name'],
-				'country' => $result['country'] ?? '',
-				'admin1'  => $result['admin1'] ?? '',
+				'lat'      => $result['latitude'],
+				'lon'      => $result['longitude'],
+				'name'     => $result['name'],
+				'country'  => $result['country'] ?? '',
+				'admin1'   => $result['admin1'] ?? '',
+				'admin2'   => $result['admin2'] ?? '',
+				'timezone' => $result['timezone'] ?? '',
 			);
 
 			// Cache result for quicker lookups
@@ -404,12 +406,13 @@ class Cloud_Cover_Forecast_API {
 		$results = array();
 		foreach ( $json['results'] as $result ) {
 			$results[] = array(
-				'lat'     => $result['latitude'],
-				'lon'     => $result['longitude'],
-				'name'    => $result['name'],
-				'country' => $result['country'] ?? '',
-				'admin1'  => $result['admin1'] ?? '',
-				'admin2'  => $result['admin2'] ?? '',
+				'lat'      => $result['latitude'],
+				'lon'      => $result['longitude'],
+				'name'     => $result['name'],
+				'country'  => $result['country'] ?? '',
+				'admin1'   => $result['admin1'] ?? '',
+				'admin2'   => $result['admin2'] ?? '',
+				'timezone' => $result['timezone'] ?? '',
 			);
 		}
 
