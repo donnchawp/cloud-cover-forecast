@@ -286,9 +286,8 @@ class Cloud_Cover_Forecast_Public_Block {
 		// Fetch weather data
 		$weather_data = $this->api->fetch_open_meteo( $lat, $lon, $hours );
 		if ( is_wp_error( $weather_data ) ) {
-			wp_send_json_error( __( 'Unable to fetch weather data. Please try again later.', 'cloud-cover-forecast' ) );
+			wp_send_json_error( $weather_data->get_error_message() );
 		}
-		error_log( 'Weather data: ' . print_r( $weather_data, true ) );
 
 		// Add photography data if requested
 		if ( $show_photography ) {
@@ -332,7 +331,6 @@ class Cloud_Cover_Forecast_Public_Block {
 	 */
 	private function render_forecast_html( $data, $location, $show_photography ) {
 		ob_start();
-		error_log( 'Rendering forecast HTML: ' . print_r( $data, true ) );
 
 		if ( $show_photography ) {
 			$this->photography_renderer->render_photography_widget( $data, $location, 1 );

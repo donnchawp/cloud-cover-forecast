@@ -27,6 +27,18 @@ class Cloud_Cover_Forecast_API {
 	private $plugin;
 
 	/**
+	 * Per-service rate limit configuration (max requests within window seconds).
+	 *
+	 * @var array<string,array<string,int>>
+	 */
+	private const SERVICE_RATE_LIMITS = array(
+		'open_meteo_forecast'      => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 45 ),
+		'open_meteo_geocoding'     => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 20 ),
+		'met_no_forecast'          => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 15 ),
+		'ipgeolocation_astronomy'  => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 60 ),
+	);
+
+	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
@@ -61,25 +73,40 @@ class Cloud_Cover_Forecast_API {
 			'daily'     => 'sunrise,sunset',
 			'timezone'  => 'auto',
 		);
+		$hours = max( 1, min( 168, $hours ) );
 		$url = add_query_arg( $params, 'https://api.open-meteo.com/v1/forecast' );
 
-		$res = get_transient( "forecast_" . md5( $url ) );
-		if ( ! $res ) {
-		$res = wp_remote_get( $url, array(
-			'timeout' => 12,
-			'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-			'sslverify' => true
-		) );
-		if ( is_wp_error( $res ) ) {
-			return new WP_Error( 'cloud_cover_forecast_network', __( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' ) );
-		}
-		$code = wp_remote_retrieve_response_code( $res );
-		if ( 200 !== $code ) {
-			return new WP_Error( 'cloud_cover_forecast_http', __( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' ) );
-		}
-		set_transient( "forecast_" . md5( $url ), $res, 12 * HOUR_IN_SECONDS );
-		} else {
-			error_log( "found cached data");
+		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'open_meteo_' . md5( $url );
+		$res       = get_transient( $cache_key );
+
+		if ( false === $res ) {
+			$rate_check = $this->can_make_request( 'open_meteo_forecast' );
+			if ( is_wp_error( $rate_check ) ) {
+				return $rate_check;
+			}
+
+			$res = wp_remote_get(
+				$url,
+				array(
+					'timeout'    => 12,
+					'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+					'sslverify'  => true,
+				)
+			);
+			$this->increment_rate_counter( 'open_meteo_forecast' );
+
+			if ( is_wp_error( $res ) ) {
+				return new WP_Error( 'cloud_cover_forecast_network', __( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' ) );
+			}
+
+			$code = wp_remote_retrieve_response_code( $res );
+			if ( 200 !== $code ) {
+				return new WP_Error( 'cloud_cover_forecast_http', __( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' ) );
+			}
+
+			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
+			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
+			set_transient( $cache_key, $res, $cache_ttl_seconds );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -87,7 +114,6 @@ class Cloud_Cover_Forecast_API {
 		if ( ! $json || empty( $json['hourly']['time'] ) ) {
 			return new WP_Error( 'cloud_cover_forecast_json', __( 'Malformed API response', 'cloud-cover-forecast' ) );
 		}
-		error_log( "json: " . print_r( $json, true ) );
 
 		$times = $json['hourly']['time'];
 		$tcc   = $json['hourly']['cloudcover'] ?? array();
@@ -116,9 +142,6 @@ class Cloud_Cover_Forecast_API {
 		// Calculate today's start in the location's timezone
 		$location_now = new DateTime( 'now', new DateTimeZone( $timezone ) );
 		$today_start = $location_now->setTime( 0, 0, 0 )->getTimestamp();
-
-		// Debug: Add debug info about today_start calculation
-		error_log( 'Today start calculated as: ' . date( 'Y-m-d H:i:s', $today_start ) . ' (timezone: ' . $timezone . ')' );
 
 		// Determine relevant sunset/sunrise window for photography display
 		$last_sunset = null;
@@ -234,36 +257,12 @@ class Cloud_Cover_Forecast_API {
 		// Reset timezone to original value
 		date_default_timezone_set( $orig_timezone );
 
-		// Debug: Show first few and last few timestamps before sorting
-		error_log( 'Before sorting - Total rows: ' . count( $rows ) );
-		if ( count( $rows ) > 0 ) {
-			error_log( 'First row: ' . date( 'Y-m-d H:i', $rows[0]['ts'] ) . ' (ts: ' . $rows[0]['ts'] . ')' );
-			error_log( 'Last row: ' . date( 'Y-m-d H:i', $rows[count($rows)-1]['ts'] ) . ' (ts: ' . $rows[count($rows)-1]['ts'] . ')' );
-		}
-		//error_log( "before sortingrows: " . print_r( $rows, true ) );
-
 		// Sort rows by timestamp to ensure chronological order (past hours first, then future)
 		usort( $rows, function( $a, $b ) {
 			return $a['ts'] <=> $b['ts'];
 		});
-		//error_log( "after sorting rows: " . print_r( $rows, true ) );
-
-		// Debug: Show first few and last few timestamps after sorting
-		error_log( 'After sorting:' );
-		if ( count( $rows ) > 0 ) {
-			error_log( 'First row: ' . date( 'Y-m-d H:i', $rows[0]['ts'] ) . ' (ts: ' . $rows[0]['ts'] . ')' );
-			error_log( 'Last row: ' . date( 'Y-m-d H:i', $rows[count($rows)-1]['ts'] ) . ' (ts: ' . $rows[count($rows)-1]['ts'] . ')' );
-		}
-		error_log( "hours: " . $hours );
 		// Limit to requested number of hours (ensure we cover until selected sunrise)
 		$rows = array_slice( $rows, 0, $hours_limit );
-
-		// Debug: Show final result
-		error_log( 'After limiting to ' . $hours . ' hours: ' . count( $rows ) . ' rows' );
-		if ( count( $rows ) > 0 ) {
-			error_log( 'Final first row: ' . date( 'Y-m-d H:i', $rows[0]['ts'] ) );
-			error_log( 'Final last row: ' . date( 'Y-m-d H:i', $rows[count($rows)-1]['ts'] ) );
-		}
 
 		$metno_merge_summary = array();
 		$metno_source = array();
@@ -347,8 +346,8 @@ class Cloud_Cover_Forecast_API {
 
 		// Check cache first (15 minute cache)
 		$cache_key = $this->plugin::GEOCODING_PREFIX . md5( strtolower( trim( $location_name ) ) );
-		$cached = get_transient( $cache_key );
-		if ( $cached ) {
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
 			return $cached;
 		}
 
@@ -359,11 +358,20 @@ class Cloud_Cover_Forecast_API {
 		);
 		$url = add_query_arg( $params, 'https://geocoding-api.open-meteo.com/v1/search' );
 
-		$res = wp_remote_get( $url, array(
-			'timeout' => 10,
-			'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-			'sslverify' => true
-		) );
+		$rate_check = $this->can_make_request( 'open_meteo_geocoding' );
+		if ( is_wp_error( $rate_check ) ) {
+			return $rate_check;
+		}
+
+		$res = wp_remote_get(
+			$url,
+			array(
+				'timeout'    => 10,
+				'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+				'sslverify'  => true,
+			)
+		);
+		$this->increment_rate_counter( 'open_meteo_geocoding' );
 		if ( is_wp_error( $res ) ) {
 			return new WP_Error( 'cloud_cover_forecast_geocoding_network', __( 'Network error occurred while searching for location.', 'cloud-cover-forecast' ) );
 		}
@@ -390,7 +398,7 @@ class Cloud_Cover_Forecast_API {
 				'admin1'  => $result['admin1'] ?? '',
 			);
 
-			// Cache for 24 hours
+			// Cache result for quicker lookups
 			set_transient( $cache_key, $geocoded, 15 * MINUTE_IN_SECONDS );
 
 			return $geocoded;
@@ -409,6 +417,8 @@ class Cloud_Cover_Forecast_API {
 			);
 		}
 
+		set_transient( $cache_key, $results, 15 * MINUTE_IN_SECONDS );
+
 		return $results;
 	}
 
@@ -425,16 +435,18 @@ class Cloud_Cover_Forecast_API {
 		$settings = $this->plugin->get_settings();
 		$api_key = $settings['astro_api_key'] ?? '';
 
+		$empty_data = array(
+			'moon_illumination' => null,
+			'moon_phase_name'   => __( 'Unknown', 'cloud-cover-forecast' ),
+			'moonrise'          => null,
+			'moonset'           => null,
+			'moon_azimuth'      => null,
+			'moon_altitude'     => null,
+		);
+
 		// Return empty data if no API key provided
 		if ( empty( $api_key ) ) {
-			return array(
-				'moon_illumination' => null,
-				'moon_phase_name'   => 'Unknown',
-				'moonrise'          => null,
-				'moonset'           => null,
-				'moon_azimuth'      => null,
-				'moon_altitude'     => null,
-			);
+			return $empty_data;
 		}
 
 		if ( empty( $date ) ) {
@@ -444,8 +456,13 @@ class Cloud_Cover_Forecast_API {
 		// Check cache first (24 hour cache for moon data)
 		$cache_key = $this->plugin::GEOCODING_PREFIX . 'moon_' . md5( $lat . '|' . $lon . '|' . $date );
 		$cached = get_transient( $cache_key );
-		if ( $cached ) {
+		if ( false !== $cached ) {
 			return $cached;
+		}
+
+		$rate_check = $this->can_make_request( 'ipgeolocation_astronomy' );
+		if ( is_wp_error( $rate_check ) ) {
+			return array_merge( $empty_data, array( 'rate_limited' => true ) );
 		}
 
 		$params = array(
@@ -456,52 +473,35 @@ class Cloud_Cover_Forecast_API {
 		);
 		$url = add_query_arg( $params, 'https://api.ipgeolocation.io/astronomy' );
 
-		$res = wp_remote_get( $url, array(
-			'timeout' => 10,
-			'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-			'sslverify' => true
-		) );
+		$res = wp_remote_get(
+			$url,
+			array(
+				'timeout'    => 10,
+				'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+				'sslverify'  => true,
+			)
+		);
+		$this->increment_rate_counter( 'ipgeolocation_astronomy' );
 		if ( is_wp_error( $res ) ) {
 			// Return empty data on network failure - graceful degradation
-			return array(
-				'moon_illumination' => null,
-				'moon_phase_name'   => 'Unknown',
-				'moonrise'          => null,
-				'moonset'           => null,
-				'moon_azimuth'      => null,
-				'moon_altitude'     => null,
-			);
+			return $empty_data;
 		}
 
 		$code = wp_remote_retrieve_response_code( $res );
 		if ( 200 !== $code ) {
 			// Return empty data on API failure - graceful degradation
-			return array(
-				'moon_illumination' => null,
-				'moon_phase_name'   => 'Unknown',
-				'moonrise'          => null,
-				'moonset'           => null,
-				'moon_azimuth'      => null,
-				'moon_altitude'     => null,
-			);
+			return $empty_data;
 		}
 
 		$body = wp_remote_retrieve_body( $res );
 		$json = json_decode( $body, true );
 		if ( ! $json ) {
-			return array(
-				'moon_illumination' => null,
-				'moon_phase_name'   => 'Unknown',
-				'moonrise'          => null,
-				'moonset'           => null,
-				'moon_azimuth'      => null,
-				'moon_altitude'     => null,
-			);
+			return $empty_data;
 		}
 
 		$moon_data = array(
 			'moon_illumination' => isset( $json['moon_illumination'] ) ? intval( $json['moon_illumination'] ) : null,
-			'moon_phase_name'   => $json['moon_phase_name'] ?? 'Unknown',
+			'moon_phase_name'   => $json['moon_phase_name'] ?? __( 'Unknown', 'cloud-cover-forecast' ),
 			'moonrise'          => $json['moonrise'] ?? null,
 			'moonset'           => $json['moonset'] ?? null,
 			'moon_azimuth'      => isset( $json['moon_azimuth'] ) ? floatval( $json['moon_azimuth'] ) : null,
@@ -531,8 +531,13 @@ class Cloud_Cover_Forecast_API {
 		$url = add_query_arg( $params, $endpoint );
 
 		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'metno_' . md5( $url );
-		$res = get_transient( $cache_key );
-		if ( ! $res ) {
+		$res       = get_transient( $cache_key );
+		if ( false === $res ) {
+			$rate_check = $this->can_make_request( 'met_no_forecast' );
+			if ( is_wp_error( $rate_check ) ) {
+				return $rate_check;
+			}
+
 			$res = wp_remote_get(
 				$url,
 				array(
@@ -544,6 +549,7 @@ class Cloud_Cover_Forecast_API {
 					'sslverify' => true,
 				)
 			);
+			$this->increment_rate_counter( 'met_no_forecast' );
 			if ( is_wp_error( $res ) ) {
 				return new WP_Error( 'cloud_cover_forecast_metno_network', __( 'Network error occurred while fetching Met.no data.', 'cloud-cover-forecast' ), array( 'url' => $url ) );
 			}
@@ -599,6 +605,98 @@ class Cloud_Cover_Forecast_API {
 		$site_url   = home_url();
 		$admin_email = get_bloginfo( 'admin_email' );
 		return sprintf( 'CloudCoverForecastPlugin/1.0 (%1$s; %2$s; contact:%3$s)', $site_name, $site_url, $admin_email );
+	}
+
+	/**
+	 * Check whether a remote request can be made without breaking service limits.
+	 *
+	 * @since 1.0.0
+	 * @param string $service Service key.
+	 * @return true|WP_Error
+	 */
+	private function can_make_request( string $service ) {
+		$config = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
+		if ( ! $config ) {
+			return true;
+		}
+
+		$key   = $this->plugin::TRANSIENT_PREFIX . 'rate_' . $service;
+		$state = get_transient( $key );
+		$now   = time();
+
+		if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) ) {
+			return true;
+		}
+
+		$window_elapsed = $now - (int) $state['window_start'];
+		if ( $window_elapsed >= (int) $config['window'] ) {
+			return true;
+		}
+
+		if ( (int) $state['count'] >= (int) $config['max_requests'] ) {
+			$retry_after = max( 1, (int) $config['window'] - $window_elapsed );
+			return new WP_Error(
+				'cloud_cover_forecast_rate_limited',
+				sprintf(
+					__( 'Rate limit reached for %1$s. Please wait %2$d seconds and try again.', 'cloud-cover-forecast' ),
+					$this->get_service_label( $service ),
+					$retry_after
+				),
+				array( 'retry_after' => $retry_after )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Increment rate counter for a service within its window.
+	 *
+	 * @since 1.0.0
+	 * @param string $service Service key.
+	 */
+	private function increment_rate_counter( string $service ): void {
+		$config = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
+		if ( ! $config ) {
+			return;
+		}
+
+		$key   = $this->plugin::TRANSIENT_PREFIX . 'rate_' . $service;
+		$state = get_transient( $key );
+		$now   = time();
+
+		if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) || ( $now - (int) $state['window_start'] ) >= (int) $config['window'] ) {
+			$state = array(
+				'window_start' => $now,
+				'count'        => 1,
+			);
+		} else {
+			$state['count'] = (int) $state['count'] + 1;
+		}
+
+		set_transient( $key, $state, (int) $config['window'] );
+	}
+
+	/**
+	 * Human readable label for a service key.
+	 *
+	 * @since 1.0.0
+	 * @param string $service Service key.
+	 * @return string
+	 */
+	private function get_service_label( string $service ): string {
+		switch ( $service ) {
+			case 'open_meteo_forecast':
+				return __( 'Open-Meteo forecast', 'cloud-cover-forecast' );
+			case 'open_meteo_geocoding':
+				return __( 'Open-Meteo geocoding', 'cloud-cover-forecast' );
+			case 'met_no_forecast':
+				return __( 'Met.no forecast', 'cloud-cover-forecast' );
+			case 'ipgeolocation_astronomy':
+				return __( 'IPGeolocation astronomy', 'cloud-cover-forecast' );
+			default:
+				return __( 'external service', 'cloud-cover-forecast' );
+		}
 	}
 
 	/**

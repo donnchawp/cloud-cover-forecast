@@ -143,17 +143,15 @@ class Cloud_Cover_Forecast_Shortcode {
 
 		$cache_key = $this->plugin::TRANSIENT_PREFIX . md5( implode( '|', array( $lat, $lon, $hours, wp_timezone_string() ) ) );
 		$data      = get_transient( $cache_key );
-		//error_log( "cached data: " . print_r( $data, true ) );
-		$data = false;
 
-		if ( ! $data ) {
+		if ( false === $data ) {
 			$data = $this->api->fetch_open_meteo( $lat, $lon, $hours );
 			if ( is_wp_error( $data ) ) {
-				return $this->error_box( __( 'Unable to fetch weather data. Please try again later.', 'cloud-cover-forecast' ) );
+				return $this->error_box( $data->get_error_message() );
 			}
-			set_transient( $cache_key, $data, $this->plugin->get_settings()['cache_ttl'] * MINUTE_IN_SECONDS );
+			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
+			set_transient( $cache_key, $data, max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS );
 		}
-		error_log( "data: " . print_r( $data, true ) );
 
 		if ( empty( $data['rows'] ) ) {
 			return $this->error_box( __( 'No forecast data available.', 'cloud-cover-forecast' ) );
@@ -214,7 +212,6 @@ class Cloud_Cover_Forecast_Shortcode {
 	 */
 	private function render_widget( array $data, string $label, int $show_chart ): string {
 		ob_start();
-		error_log( 'Rendering widget: ' . print_r( $data, true ) );
 		// Always use photography mode
 		$this->photography_renderer->render_photography_widget( $data, $label, $show_chart );
 
