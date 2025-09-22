@@ -49,6 +49,22 @@ class Cloud_Cover_Forecast_API {
 	}
 
 	/**
+	 * Validate coordinates
+	 *
+	 * @since 1.0.0
+	 * @param float $lat Latitude.
+	 * @param float $lon Longitude.
+	 * @return bool True if coordinates are valid, false otherwise.
+	 */
+	private function validate_coordinates( $lat, $lon ) {
+		$lat = filter_var( $lat, FILTER_VALIDATE_FLOAT );
+		$lon = filter_var( $lon, FILTER_VALIDATE_FLOAT );
+		return ( $lat !== false && $lon !== false &&
+				$lat >= -90 && $lat <= 90 &&
+				$lon >= -180 && $lon <= 180 );
+	}
+
+	/**
 	 * Fetch weather data from Open-Meteo API
 	 *
 	 * @since 1.0.0
@@ -59,11 +75,8 @@ class Cloud_Cover_Forecast_API {
 	 */
 	public function fetch_open_meteo( float $lat, float $lon, int $hours ) {
 		// Validate coordinates
-		if ( $lat < -90 || $lat > 90 ) {
-			return new WP_Error( 'cloud_cover_forecast_invalid_lat', __( 'Invalid latitude. Must be between -90 and 90.', 'cloud-cover-forecast' ) );
-		}
-		if ( $lon < -180 || $lon > 180 ) {
-			return new WP_Error( 'cloud_cover_forecast_invalid_lon', __( 'Invalid longitude. Must be between -180 and 180.', 'cloud-cover-forecast' ) );
+		if ( ! $this->validate_coordinates( $lat, $lon ) ) {
+			return new WP_Error( 'cloud_cover_forecast_invalid_coordinates', __( 'Invalid coordinates. Must be between -90 and 90 for latitude, and -180 and 180 for longitude.', 'cloud-cover-forecast' ) );
 		}
 
 		$params = array(
