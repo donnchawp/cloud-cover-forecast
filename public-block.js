@@ -8,6 +8,10 @@
 	var useEffect = element.useEffect;
 	var useSelect = data.useSelect;
 	var useDispatch = data.useDispatch;
+	var blockEditor = window.wp && ( window.wp.blockEditor || window.wp.editor );
+	var InspectorControls = blockEditor ? blockEditor.InspectorControls : null;
+	var PanelBody = components ? components.PanelBody : null;
+	var ToggleControl = components ? components.ToggleControl : null;
 
 	registerBlockType('cloud-cover-forecast/public-lookup', {
 		title: __('Public Cloud Cover Lookup', 'cloud-cover-forecast'),
@@ -34,6 +38,10 @@
 				type: 'boolean',
 				default: true
 			},
+			showClearOutsideLink: {
+				type: 'boolean',
+				default: true
+			},
 			maxHours: {
 				type: 'number',
 				default: 24
@@ -43,8 +51,31 @@
 		edit: function(props) {
 			var attributes = props.attributes;
 			var setAttributes = props.setAttributes;
+			var controls = null;
+
+			if (InspectorControls && PanelBody && ToggleControl) {
+				controls = el(
+					InspectorControls,
+					null,
+					el(
+						PanelBody,
+						{
+							title: __('Display Options', 'cloud-cover-forecast'),
+							initialOpen: true
+						},
+						el(ToggleControl, {
+							label: __('Show Clear Outside suggestion', 'cloud-cover-forecast'),
+							checked: attributes.showClearOutsideLink !== false,
+							onChange: function(value) {
+								setAttributes({ showClearOutsideLink: value });
+							}
+						})
+					)
+				);
+			}
 
 			return [
+				controls,
 				el('div', {
 					className: 'cloud-cover-forecast-public-block-editor',
 					style: {
@@ -109,7 +140,7 @@
 			// Return null because this is a dynamic block
 			return null;
 		}
-	});
+		});
 
 })(
 	window.wp.blocks,

@@ -121,6 +121,10 @@ class Cloud_Cover_Forecast_Public_Block {
 						'type' => 'boolean',
 						'default' => true,
 					),
+					'showClearOutsideLink' => array(
+						'type' => 'boolean',
+						'default' => true,
+					),
 					'maxHours' => array(
 						'type' => 'number',
 						'default' => 24,
@@ -220,6 +224,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				'placeholder' => __( 'Enter location (e.g., London, UK)', 'cloud-cover-forecast' ),
 				'buttonText' => __( 'Get Forecast', 'cloud-cover-forecast' ),
 				'showPhotographyMode' => true,
+				'showClearOutsideLink' => true,
 				'maxHours' => 24,
 			)
 		);
@@ -280,6 +285,9 @@ class Cloud_Cover_Forecast_Public_Block {
 		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
 		$hours = isset( $_POST['hours'] ) ? intval( wp_unslash( $_POST['hours'] ) ) : 48;
 		$show_photography = isset( $_POST['show_photography'] ) ? intval( wp_unslash( $_POST['show_photography'] ) ) : 1;
+		$show_photography = (bool) $show_photography;
+		$show_clear_outside_link = isset( $_POST['show_clear_outside_link'] ) ? intval( wp_unslash( $_POST['show_clear_outside_link'] ) ) : 1;
+		$show_clear_outside_link = (bool) $show_clear_outside_link;
 
 		// Validate coordinates
 		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
@@ -320,7 +328,14 @@ class Cloud_Cover_Forecast_Public_Block {
 		}
 
 		// Render the forecast
-		$html = $this->render_forecast_html( $weather_data, $location, $show_photography );
+		$html = $this->render_forecast_html(
+			$weather_data,
+			$location,
+			$show_photography,
+			array(
+				'show_clear_outside_link' => $show_clear_outside_link,
+			)
+		);
 
 		// Record the request for rate limiting
 		$this->record_request();
@@ -419,13 +434,14 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @param array  $data Weather data.
 	 * @param string $location Location name.
 	 * @param bool   $show_photography Whether to show photography mode.
+	 * @param array  $options Rendering options.
 	 * @return string HTML output.
 	 */
-	private function render_forecast_html( $data, $location, $show_photography ) {
+	private function render_forecast_html( $data, $location, $show_photography, $options = array() ) {
 		ob_start();
 
 		if ( $show_photography ) {
-			$this->photography_renderer->render_photography_widget( $data, $location, 1 );
+			$this->photography_renderer->render_photography_widget( $data, $location, 1, $options );
 		} else {
 			$this->render_basic_forecast( $data, $location );
 		}

@@ -96,6 +96,9 @@
 
             blockData = blockData || {};
             blockData.strings = blockData.strings || {};
+            blockData.showClearOutsideLink = blockData.showClearOutsideLink !== false;
+
+            initInstructionToggles($block);
 
             // Get AJAX data from localized script
             if (typeof cloudCoverForecastPublic !== 'undefined') {
@@ -242,6 +245,63 @@
                 return parts.join(', ');
             }
 
+            function initInstructionToggles($context) {
+                $context.find('.cloud-cover-forecast-instructions').each(function() {
+                    var $wrapper = $(this);
+                    if ($wrapper.data('ccfInstructionsInit')) {
+                        return;
+                    }
+
+                    var $toggle = $wrapper.find('.instructions-toggle').first();
+                    var $content = $wrapper.find('.instructions-content').first();
+                    if (!$toggle.length || !$content.length) {
+                        return;
+                    }
+
+                    var $icon = $toggle.find('.instructions-toggle-icon').first();
+                    $wrapper.data('ccfInstructionsInit', true);
+                    $wrapper.addClass('is-collapsed').removeClass('is-open');
+                    $toggle.attr('aria-expanded', 'false');
+                    $content.attr('hidden', 'hidden');
+                    if ($icon.length) {
+                        $icon.text('▸');
+                    }
+                });
+            }
+
+            function toggleInstructionState($toggle) {
+                var $wrapper = $toggle.closest('.cloud-cover-forecast-instructions');
+                var $content = $wrapper.find('.instructions-content').first();
+                if (!$content.length) {
+                    return;
+                }
+
+                var $icon = $toggle.find('.instructions-toggle-icon').first();
+                var isExpanded = $toggle.attr('aria-expanded') === 'true';
+                if (isExpanded) {
+                    $toggle.attr('aria-expanded', 'false');
+                    $wrapper.addClass('is-collapsed').removeClass('is-open');
+                    $content.attr('hidden', 'hidden');
+                    if ($icon.length) {
+                        $icon.text('▸');
+                    }
+                } else {
+                    $toggle.attr('aria-expanded', 'true');
+                    $wrapper.addClass('is-open').removeClass('is-collapsed');
+                    $content.removeAttr('hidden');
+                    if ($icon.length) {
+                        $icon.text('▾');
+                    }
+                }
+            }
+
+            $(document)
+                .off('click.ccfInstructions')
+                .on('click.ccfInstructions', '.cloud-cover-forecast-instructions .instructions-toggle', function(event) {
+                    event.preventDefault();
+                    toggleInstructionState($(this));
+                });
+
             function showLocationChoices(results, originalQuery) {
                 clearLocationResults();
 
@@ -304,6 +364,7 @@
                     location: locationName,
                     hours: blockData.maxHours || 48,
                     show_photography: blockData.showPhotographyMode ? 1 : 0,
+                    show_clear_outside_link: blockData.showClearOutsideLink ? 1 : 0,
                     nonce: blockData.nonce
                 };
 
@@ -323,6 +384,7 @@
             // Display forecast results
             function displayResults(data, locationName) {
                 $resultsContainer.html(data.html).show();
+                initInstructionToggles($resultsContainer);
 
                 // Update page title if possible
                 if (locationName && document.title) {

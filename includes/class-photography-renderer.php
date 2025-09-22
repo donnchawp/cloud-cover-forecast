@@ -54,9 +54,10 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	 * @param string $label Optional label.
 	 * @param int    $show_chart Whether to show chart.
 	 */
-	public function render_photography_widget( array $data, string $label, int $show_chart ) {
+	public function render_photography_widget( array $data, string $label, int $show_chart, array $options = array() ) {
 		$rows  = $data['rows'];
 		$stats = $data['stats'];
+		$show_clear_outside_link = ! isset( $options['show_clear_outside_link'] ) ? true : (bool) $options['show_clear_outside_link'];
 		$photo_ratings = $stats['photo_ratings'] ?? array();
 		$photo_times = $stats['photo_times'] ?? array();
 		$moon_today = $stats['moon_today'] ?? array();
@@ -132,7 +133,14 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			</div>
 
 			<!-- Photography Opportunities Section -->
-		<?php if ( ! empty( $photo_times ) && ! empty( $display_sunset ) && ! empty( $display_sunrise ) ) : ?>
+				<?php
+				$instructions_markup = $this->render_instructions_section( $stats, $show_clear_outside_link );
+				if ( $instructions_markup ) {
+					echo $instructions_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- content escaped within helper
+				}
+				?>
+
+				<?php if ( ! empty( $photo_times ) && ! empty( $display_sunset ) && ! empty( $display_sunrise ) ) : ?>
 			<div class="cloud-cover-forecast-opportunities">
 				<h4>🌅 <?php esc_html_e( 'Photography Opportunities', 'cloud-cover-forecast' ); ?></h4>
 
@@ -609,6 +617,77 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				return 'Mostly cloudy';
 			}
 		}
+	}
+
+	/**
+	 * Build the instructions section shown above the opportunities list.
+	 *
+	 * @since 1.0.0
+	 * @param array $stats Forecast statistics.
+	 * @param bool  $show_clear_outside_link Whether to display the Clear Outside link.
+	 * @return string HTML markup.
+	 */
+	private function render_instructions_section( array $stats, bool $show_clear_outside_link ): string {
+		$diff_summary = $stats['provider_diff_summary'] ?? array();
+		$diff_hours = intval( $diff_summary['rows_with_differences'] ?? 0 );
+		$variance_sentence = esc_html__( 'We merge hourly cloud cover from Open-Meteo and Met.no and highlight disagreements with Δ badges.', 'cloud-cover-forecast' );
+
+		if ( $diff_hours > 0 ) {
+			$hours_label = sprintf(
+				/* translators: %s: number of hours. */
+				_n( '%s hour', '%s hours', $diff_hours, 'cloud-cover-forecast' ),
+				number_format_i18n( $diff_hours )
+			);
+			$hours_label = esc_html( $hours_label );
+			$variance_sentence .= ' ' . sprintf(
+				/* translators: %s: number of hours that show provider variance. */
+				esc_html__( '%s in this forecast show a wider spread, so plan for a broader range of cloud cover.', 'cloud-cover-forecast' ),
+				$hours_label
+			);
+		}
+
+		$variance_sentence .= ' ' . esc_html__( 'Hover a badge to compare the providers and gauge how confident the prediction is.', 'cloud-cover-forecast' );
+
+		ob_start();
+		?>
+		<div class="cloud-cover-forecast-instructions is-collapsed">
+			<button type="button" class="instructions-toggle" aria-expanded="false">
+				<span class="instructions-toggle-icon" aria-hidden="true">▸</span>
+				<span class="instructions-toggle-label"><?php esc_html_e( 'How to read this forecast', 'cloud-cover-forecast' ); ?></span>
+			</button>
+			<div class="instructions-content" hidden>
+				<p><?php echo esc_html( $variance_sentence ); ?></p>
+				<?php if ( $show_clear_outside_link ) : ?>
+				<p>
+					<?php
+					printf(
+						wp_kses(
+							__( 'Need a second opinion? Compare with the <a href="%s" target="_blank" rel="noopener noreferrer">Clear Outside</a> forecast.', 'cloud-cover-forecast' ),
+							array(
+								'a' => array(
+									'href' => array(),
+									'target' => array(),
+									'rel' => array(),
+								),
+							)
+						),
+						esc_url( 'https://clearoutside.com/' )
+					);
+					?>
+				</p>
+				<?php endif; ?>
+				<p><?php esc_html_e( 'Cloud layers influence golden hour in different ways:', 'cloud-cover-forecast' ); ?></p>
+				<ul>
+					<li><?php esc_html_e( 'Low cloud (0-3 km) hugs the horizon and can block the sun entirely, crushing colour.', 'cloud-cover-forecast' ); ?></li>
+					<li><?php esc_html_e( 'Mid-level cloud (3-8 km) adds texture—moderate cover keeps the sky interesting if the horizon stays open.', 'cloud-cover-forecast' ); ?></li>
+					<li><?php esc_html_e( 'High cloud (8 km+) catches post-sunset light; thin cirrus often lights up spectacularly after the sun dips below the horizon.', 'cloud-cover-forecast' ); ?></li>
+				</ul>
+				<p><?php esc_html_e( 'Crystal-clear skies still deliver a warm glow at the horizon, but with no cloud to reflect the colour the scene can feel flat and the light drops off quickly once the sun has set.', 'cloud-cover-forecast' ); ?></p>
+				<p><?php esc_html_e( 'The sunrise and sunset star ratings above reward that balance—clear horizons with some mid and high cloud boost the score, while heavy low or total cloud quickly drags it down.', 'cloud-cover-forecast' ); ?></p>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**

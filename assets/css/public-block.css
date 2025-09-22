@@ -175,6 +175,59 @@
     margin-top: 20px;
 }
 
+.cloud-cover-forecast-instructions {
+    margin: 20px 0;
+    border: 1px solid #d8dde3;
+    border-radius: 6px;
+    background: #f8fafc;
+}
+
+.cloud-cover-forecast-instructions .instructions-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 0;
+    background: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
+    cursor: pointer;
+    text-align: left;
+}
+
+.cloud-cover-forecast-instructions .instructions-toggle:hover,
+.cloud-cover-forecast-instructions .instructions-toggle:focus {
+    background: #eef2f7;
+    outline: none;
+}
+
+.cloud-cover-forecast-instructions .instructions-toggle-icon {
+    font-size: 16px;
+    width: 16px;
+}
+
+.cloud-cover-forecast-instructions .instructions-content {
+    padding: 0 16px 16px;
+    font-size: 14px;
+    color: #1d2327;
+    border-top: 1px solid #d8dde3;
+}
+
+.cloud-cover-forecast-instructions .instructions-content[hidden] {
+    display: none !important;
+}
+
+.cloud-cover-forecast-instructions .instructions-content ul {
+    margin: 8px 0 12px 20px;
+    padding: 0;
+}
+
+.cloud-cover-forecast-instructions .instructions-content li {
+    margin: 4px 0;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .cloud-cover-forecast-public-lookup .search-form {
