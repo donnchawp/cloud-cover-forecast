@@ -292,7 +292,7 @@ class Cloud_Cover_Forecast_Public_Block {
 		}
 
 		// Fetch weather data
-		$weather_data = $this->api->fetch_open_meteo( $lat, $lon, $hours );
+		$weather_data = $this->api->fetch_weather_data( $lat, $lon, $hours );
 		if ( is_wp_error( $weather_data ) ) {
 			wp_send_json_error( $weather_data->get_error_message() );
 		}

@@ -145,7 +145,7 @@ class Cloud_Cover_Forecast_Shortcode {
 		$data      = get_transient( $cache_key );
 
 		if ( false === $data ) {
-			$data = $this->api->fetch_open_meteo( $lat, $lon, $hours );
+			$data = $this->api->fetch_weather_data( $lat, $lon, $hours );
 			if ( is_wp_error( $data ) ) {
 				return $this->error_box( $data->get_error_message() );
 			}

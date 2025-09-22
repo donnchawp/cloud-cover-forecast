@@ -73,7 +73,7 @@ class Cloud_Cover_Forecast_API {
 	 * @param int   $hours Number of hours to fetch.
 	 * @return array|WP_Error Weather data or error.
 	 */
-	public function fetch_open_meteo( float $lat, float $lon, int $hours ) {
+	public function fetch_weather_data( float $lat, float $lon, int $hours ) {
 		// Validate coordinates
 		if ( ! $this->validate_coordinates( $lat, $lon ) ) {
 			return new WP_Error( 'cloud_cover_forecast_invalid_coordinates', __( 'Invalid coordinates. Must be between -90 and 90 for latitude, and -180 and 180 for longitude.', 'cloud-cover-forecast' ) );
