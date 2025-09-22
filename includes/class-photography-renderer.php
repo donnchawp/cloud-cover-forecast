@@ -69,12 +69,14 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			<!-- Photography Summary Header -->
 			<div class="cloud-cover-forecast-header">
 				<div>
+					<?php /* translators: %d: number of forecast hours being displayed. */ ?>
 					<strong>🌤️ <?php printf( esc_html__( 'Cloud Cover & Astronomical Forecast (next %dh)', 'cloud-cover-forecast' ), count( $rows ) ); ?></strong>
 					<?php if ( $label ) : ?>
 						<span class="cloud-cover-forecast-badge"><?php echo esc_html( $label ); ?></span>
 					<?php endif; ?>
 				</div>
 				<div class="cloud-cover-forecast-meta">
+					<?php /* translators: %s: timezone name such as "America/Los_Angeles". */ ?>
 					<?php printf( esc_html__( 'Local Timezone: %s', 'cloud-cover-forecast' ), esc_html( $stats['timezone'] ) ); ?>
 				</div>
 			</div>
@@ -84,6 +86,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<div class="cloud-cover-forecast-stats">
 					<?php
 					printf(
+						/* translators: 1: average total cloud cover, 2: average low cloud, 3: average mid cloud, 4: average high cloud. */
 						esc_html__( 'Avg — Total: %1$s%% · Low: %2$s%% · Mid: %3$s%% · High: %4$s%%', 'cloud-cover-forecast' ),
 						esc_html( $stats['avg_total'] ),
 						esc_html( $stats['avg_low'] ),
@@ -96,23 +99,23 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<?php
 				$provider_notice = $this->render_provider_diff_notice( $stats );
 				if ( $provider_notice ) {
-					echo $provider_notice; // already escaped within helper
+					echo $provider_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped within helper
 				}
 				?>
 
 				<?php if ( ! empty( $photo_ratings ) ) : ?>
 				<div class="cloud-cover-forecast-ratings">
 					🌄 <?php esc_html_e( 'Sunrise Photography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ) . str_repeat( '☆', 5 - ( $photo_ratings['sunrise_rating'] ?? 3 ) ); ?><br />
+					<?php echo esc_html( str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ) . str_repeat( '☆', 5 - ( $photo_ratings['sunrise_rating'] ?? 3 ) ) ); ?><br />
 
 					🌅 <?php esc_html_e( 'Sunset Photography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['sunset_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['sunset_rating'] ); ?><br />
+					<?php echo esc_html( str_repeat( '★', $photo_ratings['sunset_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['sunset_rating'] ) ); ?><br />
 
 					🌌 <?php esc_html_e( 'Astrophotography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['astro_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['astro_rating'] ); ?><br />
+					<?php echo esc_html( str_repeat( '★', $photo_ratings['astro_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['astro_rating'] ) ); ?><br />
 
 					🌌 <?php esc_html_e( 'Milky Way Photography:', 'cloud-cover-forecast' ); ?>
-					<?php echo str_repeat( '★', $photo_ratings['milky_way_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['milky_way_rating'] ); ?>
+					<?php echo esc_html( str_repeat( '★', $photo_ratings['milky_way_rating'] ) . str_repeat( '☆', 5 - $photo_ratings['milky_way_rating'] ) ); ?>
 				</div>
 				<?php endif; ?>
 
@@ -121,6 +124,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 					🌙 <?php esc_html_e( 'Moon:', 'cloud-cover-forecast' ); ?>
 					<?php echo esc_html( $moon_today['moon_phase_name'] . ' ' . $moon_today['moon_illumination'] . '%' ); ?>
 					<?php if ( ! empty( $moon_today['moonset'] ) ) : ?>
+						<?php /* translators: %s: localized moonset time. */ ?>
 						| <?php printf( esc_html__( 'Moonset: %s', 'cloud-cover-forecast' ), esc_html( date_i18n( 'H:i', strtotime( $moon_today['moonset'] ) ) ) ); ?>
 					<?php endif; ?>
 				</div>
@@ -138,7 +142,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						$sunrise_dt = new DateTime( $display_sunrise, new DateTimeZone( $stats['timezone'] ) );
 						echo esc_html( $sunrise_dt->format( 'H:i' ) );
 					?></span>
-					<span class="rating-stars"><?php echo str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ); ?></span>
+					<span class="rating-stars"><?php echo esc_html( str_repeat( '★', $photo_ratings['sunrise_rating'] ?? 3 ) ); ?></span>
 				</div>
 
 				<div class="cloud-cover-forecast-opportunity">
@@ -147,7 +151,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						$sunset_dt = new DateTime( $display_sunset, new DateTimeZone( $stats['timezone'] ) );
 						echo esc_html( $sunset_dt->format( 'H:i' ) );
 					?></span>
-					<span class="rating-stars"><?php echo str_repeat( '★', $photo_ratings['sunset_rating'] ?? 3 ); ?></span>
+					<span class="rating-stars"><?php echo esc_html( str_repeat( '★', $photo_ratings['sunset_rating'] ?? 3 ) ); ?></span>
 				</div>
 
 				<?php if ( ! empty( $photo_ratings['optimal_astro_window'] ) ) : ?>
@@ -245,6 +249,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 				<div class="cloud-cover-forecast-meta">
 					<?php
 					printf(
+						/* translators: 1: latitude, 2: longitude. */
 						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo + Met.no · Astronomy: IPGeolocation', 'cloud-cover-forecast' ),
 						esc_html( number_format( $stats['lat'], 4 ) ),
 						esc_html( number_format( $stats['lon'], 4 ) )
@@ -266,13 +271,13 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	 * @return array Event data with icon and description, or empty array.
 	 */
 	private function get_hour_event_data( int $timestamp, array $photo_times, array $moon_today ): array {
-		$hour_time = date( 'H:i', $timestamp );
+		$hour_time = gmdate( 'H:i', $timestamp );
 
 		// Check for sunrise - sunrise should appear in the hour slot that contains the sunrise time
 		if ( ! empty( $photo_times['sunrise'] ) ) {
 			$sunrise_ts = $photo_times['sunrise'];
-			$sunrise_hour = intval( date( 'H', $sunrise_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$sunrise_hour = intval( gmdate( 'H', $sunrise_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If sunrise is in this hour slot, show sunrise icon and description
 			if ( $sunrise_hour === $current_hour ) {
@@ -286,8 +291,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for sunset - sunset should appear in the hour slot that contains the sunset time
 		if ( ! empty( $photo_times['sunset'] ) ) {
 			$sunset_ts = $photo_times['sunset'];
-			$sunset_hour = intval( date( 'H', $sunset_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$sunset_hour = intval( gmdate( 'H', $sunset_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If sunset is in this hour slot, show sunset icon and description
 			if ( $sunset_hour === $current_hour ) {
@@ -301,8 +306,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for astronomical twilight - show in the hour slot that contains the twilight end time
 		if ( ! empty( $photo_times['astronomical_twilight_end'] ) ) {
 			$twilight_ts = $photo_times['astronomical_twilight_end'];
-			$twilight_hour = intval( date( 'H', $twilight_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$twilight_hour = intval( gmdate( 'H', $twilight_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If astronomical twilight end is in this hour slot, show astro icon and description
 			if ( $twilight_hour === $current_hour ) {
@@ -316,8 +321,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for moonrise - show in the hour slot that contains the moonrise time
 		if ( ! empty( $moon_today['moonrise'] ) ) {
 			$moonrise_ts = strtotime( $moon_today['moonrise'] );
-			$moonrise_hour = intval( date( 'H', $moonrise_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$moonrise_hour = intval( gmdate( 'H', $moonrise_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If moonrise is in this hour slot, show moonrise icon and description
 			if ( $moonrise_hour === $current_hour ) {
@@ -331,8 +336,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for moonset - show in the hour slot that contains the moonset time
 		if ( ! empty( $moon_today['moonset'] ) ) {
 			$moonset_ts = strtotime( $moon_today['moonset'] );
-			$moonset_hour = intval( date( 'H', $moonset_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$moonset_hour = intval( gmdate( 'H', $moonset_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If moonset is in this hour slot, show moonset icon and description
 			if ( $moonset_hour === $current_hour ) {
@@ -346,8 +351,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for Milky Way core rise - show in the hour slot that contains the core rise time
 		if ( ! empty( $photo_times['milky_way_core_rise'] ) ) {
 			$core_rise_ts = $photo_times['milky_way_core_rise'];
-			$core_rise_hour = intval( date( 'H', $core_rise_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$core_rise_hour = intval( gmdate( 'H', $core_rise_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			// If Milky Way core rise is in this hour slot, show Milky Way icon and description
 			if ( $core_rise_hour === $current_hour ) {
@@ -374,13 +379,13 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		$total_cloud = $row['total'] ?? 100;
 		$high_cloud = $row['high'] ?? 0;
 		$timestamp = $row['ts'] ?? 0;
-		$hour_time = date( 'H:i', $timestamp );
+		$hour_time = gmdate( 'H:i', $timestamp );
 
 		// Check for moonset first (prioritize astronomical events)
 		if ( ! empty( $moon_today['moonset'] ) ) {
 			$moonset_ts = strtotime( $moon_today['moonset'] );
-			$moonset_hour = intval( date( 'H', $moonset_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$moonset_hour = intval( gmdate( 'H', $moonset_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			if ( $moonset_hour === $current_hour ) {
 				if ( $total_cloud < 20 ) {
@@ -396,8 +401,8 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check for moonrise
 		if ( ! empty( $moon_today['moonrise'] ) ) {
 			$moonrise_ts = strtotime( $moon_today['moonrise'] );
-			$moonrise_hour = intval( date( 'H', $moonrise_ts ) );
-			$current_hour = intval( date( 'H', $timestamp ) );
+			$moonrise_hour = intval( gmdate( 'H', $moonrise_ts ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 			if ( $moonrise_hour === $current_hour ) {
 				if ( $total_cloud < 20 ) {
@@ -413,52 +418,52 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's during sunrise golden hour (check if current hour falls within the golden hour range)
 		$is_sunrise_golden_hour = false;
 		if ( ! empty( $photo_times['sunrise_golden_hour_start'] ) && ! empty( $photo_times['golden_hour_end'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$golden_start_hour = intval( date( 'H', $photo_times['sunrise_golden_hour_start'] ) );
-			$golden_end_hour = intval( date( 'H', $photo_times['golden_hour_end'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$golden_start_hour = intval( gmdate( 'H', $photo_times['sunrise_golden_hour_start'] ) );
+			$golden_end_hour = intval( gmdate( 'H', $photo_times['golden_hour_end'] ) );
 			$is_sunrise_golden_hour = ( $current_hour >= $golden_start_hour && $current_hour <= $golden_end_hour );
 		}
 
 		// Check if it's during sunset golden hour (1 hour before sunset)
 		$is_sunset_golden_hour = false;
 		if ( ! empty( $photo_times['golden_hour_start'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$golden_start_hour = intval( date( 'H', $photo_times['golden_hour_start'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$golden_start_hour = intval( gmdate( 'H', $photo_times['golden_hour_start'] ) );
 			$is_sunset_golden_hour = ( $current_hour === $golden_start_hour );
 		}
 
 		// Check if it's the actual sunset hour
 		$is_sunset_hour = false;
 		if ( ! empty( $photo_times['sunset'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$sunset_hour = intval( date( 'H', $photo_times['sunset'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
 			$is_sunset_hour = ( $current_hour === $sunset_hour );
 		}
 
 		// Check if it's during sunrise blue hour (check if current hour falls within the blue hour range)
 		$is_sunrise_blue_hour = false;
 		if ( ! empty( $photo_times['sunrise_blue_hour_start'] ) && ! empty( $photo_times['sunrise_blue_hour_end'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$blue_start_hour = intval( date( 'H', $photo_times['sunrise_blue_hour_start'] ) );
-			$blue_end_hour = intval( date( 'H', $photo_times['sunrise_blue_hour_end'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$blue_start_hour = intval( gmdate( 'H', $photo_times['sunrise_blue_hour_start'] ) );
+			$blue_end_hour = intval( gmdate( 'H', $photo_times['sunrise_blue_hour_end'] ) );
 			$is_sunrise_blue_hour = ( $current_hour >= $blue_start_hour && $current_hour <= $blue_end_hour );
 		}
 
 		// Check if it's during sunset blue hour (check if current hour falls within the blue hour range)
 		$is_sunset_blue_hour = false;
 		if ( ! empty( $photo_times['blue_hour_start'] ) && ! empty( $photo_times['blue_hour_end'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$blue_start_hour = intval( date( 'H', $photo_times['blue_hour_start'] ) );
-			$blue_end_hour = intval( date( 'H', $photo_times['blue_hour_end'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$blue_start_hour = intval( gmdate( 'H', $photo_times['blue_hour_start'] ) );
+			$blue_end_hour = intval( gmdate( 'H', $photo_times['blue_hour_end'] ) );
 			$is_sunset_blue_hour = ( $current_hour >= $blue_start_hour && $current_hour <= $blue_end_hour );
 		}
 
 		// Check if it's during astronomical dark (after sunset twilight, before sunrise twilight)
 		$is_astro_dark = false;
 		if ( ! empty( $photo_times['astronomical_twilight_end'] ) && ! empty( $photo_times['astronomical_twilight_start'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$astro_end_hour = intval( date( 'H', $photo_times['astronomical_twilight_end'] ) );
-			$astro_start_hour = intval( date( 'H', $photo_times['astronomical_twilight_start'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$astro_end_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_end'] ) );
+			$astro_start_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_start'] ) );
 
 			// Handle astronomical dark that spans midnight
 			if ( $astro_end_hour > $astro_start_hour ) {
@@ -622,12 +627,12 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			return true;
 		}
 
-		$current_hour = intval( date( 'H', $timestamp ) );
+		$current_hour = intval( gmdate( 'H', $timestamp ) );
 
 		// Show hours from 1 hour before sunset to midnight, and from midnight to sunrise
 		if ( ! empty( $photo_times['sunset'] ) && ! empty( $photo_times['sunrise'] ) ) {
-			$sunset_hour = intval( date( 'H', $photo_times['sunset'] ) );
-			$sunrise_hour = intval( date( 'H', $photo_times['sunrise'] ) );
+			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
+			$sunrise_hour = intval( gmdate( 'H', $photo_times['sunrise'] ) );
 
 			// Calculate 1 hour before sunset
 			$one_hour_before_sunset = ( $sunset_hour - 1 + 24 ) % 24;
@@ -659,17 +664,17 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's during sunrise golden hour (check if current hour falls within the golden hour range)
 		$is_sunrise_golden_hour = false;
 		if ( ! empty( $photo_times['sunrise_golden_hour_start'] ) && ! empty( $photo_times['golden_hour_end'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$golden_start_hour = intval( date( 'H', $photo_times['sunrise_golden_hour_start'] ) );
-			$golden_end_hour = intval( date( 'H', $photo_times['golden_hour_end'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$golden_start_hour = intval( gmdate( 'H', $photo_times['sunrise_golden_hour_start'] ) );
+			$golden_end_hour = intval( gmdate( 'H', $photo_times['golden_hour_end'] ) );
 			$is_sunrise_golden_hour = ( $current_hour >= $golden_start_hour && $current_hour <= $golden_end_hour );
 		}
 
 		// Check if it's during sunset golden hour (check if current hour falls within the golden hour range)
 		$is_sunset_golden_hour = false;
 		if ( ! empty( $photo_times['golden_hour_start'] ) && ! empty( $photo_times['sunset'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$sunset_hour = intval( date( 'H', $photo_times['sunset'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
 
 			// Only show golden hour for the hour that contains the sunset time
 			// (since golden hour is the hour before sunset, it will be in the same hour slot as sunset)
@@ -679,9 +684,9 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's during astronomical dark (between sunset and sunrise twilights)
 		$is_astro_dark = false;
 		if ( ! empty( $photo_times['astronomical_twilight_end'] ) && ! empty( $photo_times['astronomical_twilight_start'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$astro_end_hour = intval( date( 'H', $photo_times['astronomical_twilight_end'] ) );
-			$astro_start_hour = intval( date( 'H', $photo_times['astronomical_twilight_start'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$astro_end_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_end'] ) );
+			$astro_start_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_start'] ) );
 
 			// Handle astronomical dark that spans midnight
 			if ( $astro_end_hour > $astro_start_hour ) {
@@ -696,9 +701,9 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's nighttime (after sunset and before sunrise)
 		$is_nighttime = false;
 		if ( ! empty( $photo_times['sunset'] ) && ! empty( $photo_times['sunrise'] ) ) {
-			$current_hour = intval( date( 'H', $timestamp ) );
-			$sunset_hour = intval( date( 'H', $photo_times['sunset'] ) );
-			$sunrise_hour = intval( date( 'H', $photo_times['sunrise'] ) );
+			$current_hour = intval( gmdate( 'H', $timestamp ) );
+			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
+			$sunrise_hour = intval( gmdate( 'H', $photo_times['sunrise'] ) );
 
 			// Handle nighttime that spans midnight
 			if ( $sunset_hour > $sunrise_hour ) {
@@ -745,10 +750,12 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 
 		$threshold = intval( $summary['threshold'] ?? 20 );
 		$hours_text = sprintf(
+			/* translators: %s: number of forecast hours with differences. */
 			_n( '%s hour', '%s hours', $rows_with_diff, 'cloud-cover-forecast' ),
 			number_format_i18n( $rows_with_diff )
 		);
 		$intro = sprintf(
+			/* translators: 1: count of hours with variance, 2: variance threshold percentage. */
 			esc_html__( 'Heads-up: the forecast models disagree for %1$s (difference above %2$s%%).', 'cloud-cover-forecast' ),
 			esc_html( $hours_text ),
 			esc_html( number_format_i18n( $threshold ) )
@@ -766,6 +773,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			$count = intval( $per_level[ $key ] ?? 0 );
 			if ( $count > 0 ) {
 				$highlights[] = sprintf(
+					/* translators: 1: cloud cover level label, 2: number of hours. */
 					esc_html__( '%1$s (%2$s hrs)', 'cloud-cover-forecast' ),
 					$label,
 					number_format_i18n( $count )
@@ -776,6 +784,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		$detail = '';
 		if ( ! empty( $highlights ) ) {
 			$detail = sprintf(
+				/* translators: %s: comma-separated list of cloud cover levels. */
 				esc_html__( 'Largest differences in %s.', 'cloud-cover-forecast' ),
 				$this->natural_language_join( $highlights )
 			);
@@ -843,15 +852,18 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			$open_value   = intval( $diff['open_meteo'] );
 			$metno_value  = intval( $diff['met_no'] );
 			$tooltip_text = sprintf(
+				/* translators: 1: Open-Meteo cloud cover percentage, 2: Met.no cloud cover percentage. */
 				esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
 				$open_value,
 				$metno_value
 			);
 
+			/* translators: %s: difference percentage between forecast providers. */
+			$delta_label = sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value );
 			$badge_markup = sprintf(
 				'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
 				esc_attr( $tooltip_text ),
-				esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
+				esc_html( $delta_label )
 			);
 
 			return sprintf( '<span class="cloud-cover-value-wrap">%s%s</span>', $value_markup, $badge_markup );

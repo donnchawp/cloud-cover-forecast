@@ -177,6 +177,7 @@ class Cloud_Cover_Forecast_Public_Block {
 					'locationNotFoundText' => __( 'Location not found. Please try a different search term.', 'cloud-cover-forecast' ),
 					'geocodingErrorText' => __( 'Unable to find location. Please check your internet connection and try again.', 'cloud-cover-forecast' ),
 					'forecastErrorText' => __( 'Unable to fetch forecast data. Please try again later.', 'cloud-cover-forecast' ),
+					/* translators: {time}: number of seconds before a new request can be made. */
 					'rateLimitText' => __( 'Too many requests. Please wait {time} seconds before trying again.', 'cloud-cover-forecast' ),
 				),
 			)
@@ -257,7 +258,8 @@ class Cloud_Cover_Forecast_Public_Block {
 	 */
 	public function handle_ajax_lookup() {
 		// Verify nonce first
-		if ( ! wp_verify_nonce( $_POST['nonce'] ?? '', 'cloud_cover_forecast_public_lookup' ) ) {
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'cloud_cover_forecast_public_lookup' ) ) {
 			wp_send_json_error( __( 'Security check failed.', 'cloud-cover-forecast' ) );
 		}
 
@@ -267,11 +269,11 @@ class Cloud_Cover_Forecast_Public_Block {
 		}
 
 		// Get and validate parameters with proper sanitization
-		$lat = isset( $_POST['lat'] ) ? floatval( $_POST['lat'] ) : 0;
-		$lon = isset( $_POST['lon'] ) ? floatval( $_POST['lon'] ) : 0;
-		$location = isset( $_POST['location'] ) ? sanitize_text_field( $_POST['location'] ) : '';
-		$hours = isset( $_POST['hours'] ) ? intval( $_POST['hours'] ) : 48;
-		$show_photography = isset( $_POST['show_photography'] ) ? intval( $_POST['show_photography'] ) : 1;
+		$lat = isset( $_POST['lat'] ) ? floatval( wp_unslash( $_POST['lat'] ) ) : 0;
+		$lon = isset( $_POST['lon'] ) ? floatval( wp_unslash( $_POST['lon'] ) ) : 0;
+		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
+		$hours = isset( $_POST['hours'] ) ? intval( wp_unslash( $_POST['hours'] ) ) : 48;
+		$show_photography = isset( $_POST['show_photography'] ) ? intval( wp_unslash( $_POST['show_photography'] ) ) : 1;
 
 		// Validate coordinates
 		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
@@ -355,12 +357,14 @@ class Cloud_Cover_Forecast_Public_Block {
 		<div class="cloud-cover-forecast-wrap cloud-cover-forecast-card">
 			<div class="cloud-cover-forecast-header">
 				<div>
+					<?php /* translators: %d: number of forecast hours being displayed. */ ?>
 					<strong>🌤️ <?php printf( esc_html__( 'Cloud Cover Forecast (next %dh)', 'cloud-cover-forecast' ), count( $rows ) ); ?></strong>
 					<?php if ( $location ) : ?>
 						<span class="cloud-cover-forecast-badge"><?php echo esc_html( $location ); ?></span>
 					<?php endif; ?>
 				</div>
 				<div class="cloud-cover-forecast-meta">
+					<?php /* translators: %s: timezone name such as "America/New_York". */ ?>
 					<?php printf( esc_html__( 'Local Timezone: %s', 'cloud-cover-forecast' ), esc_html( $stats['timezone'] ) ); ?>
 				</div>
 			</div>
@@ -369,6 +373,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				<div class="cloud-cover-forecast-stats">
 					<?php
 					printf(
+						/* translators: 1: average total cloud cover, 2: average low cloud, 3: average mid cloud, 4: average high cloud. */
 						esc_html__( 'Avg — Total: %1$s%% · Low: %2$s%% · Mid: %3$s%% · High: %4$s%%', 'cloud-cover-forecast' ),
 						esc_html( $stats['avg_total'] ),
 						esc_html( $stats['avg_low'] ),
@@ -381,7 +386,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				<?php
 				$provider_notice = $this->render_provider_diff_notice( $stats );
 				if ( $provider_notice ) {
-					echo $provider_notice; // already escaped
+					echo $provider_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped within helper
 				}
 				?>
 			</div>
@@ -417,6 +422,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				<div class="cloud-cover-forecast-meta">
 					<?php
 					printf(
+						/* translators: 1: latitude, 2: longitude. */
 						esc_html__( 'Location: %1$s, %2$s · Weather: Open‑Meteo + Met.no', 'cloud-cover-forecast' ),
 						esc_html( number_format( $stats['lat'], 4 ) ),
 						esc_html( number_format( $stats['lon'], 4 ) )
@@ -444,10 +450,12 @@ class Cloud_Cover_Forecast_Public_Block {
 
 		$threshold = intval( $summary['threshold'] ?? 20 );
 		$hours_text = sprintf(
+			/* translators: %s: number of forecast hours with differences. */
 			_n( '%s hour', '%s hours', $rows_with_diff, 'cloud-cover-forecast' ),
 			number_format_i18n( $rows_with_diff )
 		);
 		$intro = sprintf(
+			/* translators: 1: count of hours with variance, 2: variance threshold percentage. */
 			esc_html__( 'Heads-up: the forecast models disagree for %1$s (difference above %2$s%%).', 'cloud-cover-forecast' ),
 			esc_html( $hours_text ),
 			esc_html( number_format_i18n( $threshold ) )
@@ -465,6 +473,7 @@ class Cloud_Cover_Forecast_Public_Block {
 			$count = intval( $per_level[ $key ] ?? 0 );
 			if ( $count > 0 ) {
 				$highlights[] = sprintf(
+					/* translators: 1: cloud cover level label, 2: number of hours. */
 					esc_html__( '%1$s (%2$s hrs)', 'cloud-cover-forecast' ),
 					$label,
 					number_format_i18n( $count )
@@ -475,6 +484,7 @@ class Cloud_Cover_Forecast_Public_Block {
 		$detail = '';
 		if ( ! empty( $highlights ) ) {
 			$detail = sprintf(
+				/* translators: %s: comma-separated list of cloud cover levels. */
 				esc_html__( 'Largest differences in %s.', 'cloud-cover-forecast' ),
 				$this->natural_language_join( $highlights )
 			);
@@ -540,15 +550,18 @@ class Cloud_Cover_Forecast_Public_Block {
 			$diff       = $row['provider_diff'][ $level ];
 			$diff_value = intval( $diff['difference'] );
 			$tooltip    = sprintf(
+				/* translators: 1: Open-Meteo cloud cover percentage, 2: Met.no cloud cover percentage. */
 				esc_html__( 'Open-Meteo: %1$s%% · Met.no: %2$s%%', 'cloud-cover-forecast' ),
 				intval( $diff['open_meteo'] ),
 				intval( $diff['met_no'] )
 			);
 
+			/* translators: %s: difference percentage between forecast providers. */
+			$delta_label = sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value );
 			$badge_markup = sprintf(
 				'<span class="cloud-cover-diff-badge" title="%1$s">%2$s</span>',
 				esc_attr( $tooltip ),
-				esc_html( sprintf( __( 'Δ %s%%', 'cloud-cover-forecast' ), $diff_value ) )
+				esc_html( $delta_label )
 			);
 
 			return sprintf( '<span class="cloud-cover-value-wrap">%s%s</span>', $value_markup, $badge_markup );
@@ -591,6 +604,7 @@ class Cloud_Cover_Forecast_Public_Block {
 		// Reset window if expired
 		if ( $now - $window_start > ( $this->rate_limit_config['window_minutes'] * 60 ) ) {
 			delete_transient( $transient_key );
+			$this->plugin->unregister_transient_key( $transient_key );
 			return false;
 		}
 
@@ -629,6 +643,7 @@ class Cloud_Cover_Forecast_Public_Block {
 
 		// Store for the window duration
 		set_transient( $transient_key, $rate_data, $this->rate_limit_config['window_minutes'] * 60 );
+		$this->plugin->register_transient_key( $transient_key );
 	}
 
 	/**
@@ -642,7 +657,7 @@ class Cloud_Cover_Forecast_Public_Block {
 
 		foreach ( $ip_keys as $key ) {
 			if ( array_key_exists( $key, $_SERVER ) === true ) {
-				$ip = $_SERVER[ $key ];
+				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) );
 				if ( strpos( $ip, ',' ) !== false ) {
 					$ip = explode( ',', $ip )[0];
 				}
@@ -655,7 +670,7 @@ class Cloud_Cover_Forecast_Public_Block {
 		}
 
 		// Fallback to REMOTE_ADDR with validation
-		$fallback_ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+		$fallback_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0';
 		if ( filter_var( $fallback_ip, FILTER_VALIDATE_IP ) ) {
 			return $fallback_ip;
 		}

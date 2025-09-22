@@ -54,7 +54,7 @@ class Cloud_Cover_Forecast_Assets {
 	 */
 	public function enqueue_frontend_styles() {
 		$css = $this->get_css();
-		wp_register_style( 'cloud-cover-forecast-style', false );
+		wp_register_style( 'cloud-cover-forecast-style', false, array(), CLOUD_COVER_FORECAST_VERSION );
 		wp_enqueue_style( 'cloud-cover-forecast-style' );
 		wp_add_inline_style( 'cloud-cover-forecast-style', $css );
 	}

@@ -486,38 +486,7 @@ class Cloud_Cover_Forecast_Admin {
 			return;
 		}
 
-		global $wpdb;
-
-		// Clear weather cache
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-				'_transient_' . $this->plugin::TRANSIENT_PREFIX . '%'
-			)
-		);
-
-		// Clear geocoding cache
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-				'_transient_' . $this->plugin::GEOCODING_PREFIX . '%'
-			)
-		);
-
-		// Clear transient timeouts too
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-				'_transient_timeout_' . $this->plugin::TRANSIENT_PREFIX . '%'
-			)
-		);
-
-		$wpdb->query(
-			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-				'_transient_timeout_' . $this->plugin::GEOCODING_PREFIX . '%'
-			)
-		);
+		$this->plugin->clear_tracked_transients();
 	}
 
 	/**

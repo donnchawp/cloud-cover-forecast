@@ -107,6 +107,7 @@ class Cloud_Cover_Forecast_API {
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
 			set_transient( $cache_key, $res, $cache_ttl_seconds );
+			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -131,24 +132,21 @@ class Cloud_Cover_Forecast_API {
 		$timezone_abbr = $json['timezone_abbreviation'] ?? 'UTC';
 
 		$rows = array();
-
-		// Set timezone context for consistent timestamp parsing
-		$orig_timezone = date_default_timezone_get();
-		date_default_timezone_set( $timezone );
+		$location_timezone = new DateTimeZone( $timezone );
 
 		// Get current time in the location's timezone for proper comparison
 		$now = time();
 
 		// Calculate today's start in the location's timezone
-		$location_now = new DateTime( 'now', new DateTimeZone( $timezone ) );
-		$today_start = $location_now->setTime( 0, 0, 0 )->getTimestamp();
+		$location_now = new DateTime( 'now', $location_timezone );
+		$today_start = ( clone $location_now )->setTime( 0, 0, 0 )->getTimestamp();
 
 		// Determine relevant sunset/sunrise window for photography display
 		$last_sunset = null;
 		$next_sunset = null;
 		foreach ( $daily_sunset as $sunset_time ) {
-			$sunset_ts = strtotime( $sunset_time );
-			if ( false === $sunset_ts ) {
+			$sunset_ts = $this->to_timestamp_in_timezone( $sunset_time, $location_timezone );
+			if ( null === $sunset_ts ) {
 				continue;
 			}
 
@@ -171,8 +169,8 @@ class Cloud_Cover_Forecast_API {
 		$sunrise_after_last_sunset = null;
 		if ( $last_sunset ) {
 			foreach ( $daily_sunrise as $sunrise_time ) {
-				$sunrise_ts = strtotime( $sunrise_time );
-				if ( false === $sunrise_ts ) {
+				$sunrise_ts = $this->to_timestamp_in_timezone( $sunrise_time, $location_timezone );
+				if ( null === $sunrise_ts ) {
 					continue;
 				}
 
@@ -189,8 +187,8 @@ class Cloud_Cover_Forecast_API {
 		$sunrise_after_next_sunset = null;
 		if ( $next_sunset ) {
 			foreach ( $daily_sunrise as $sunrise_time ) {
-				$sunrise_ts = strtotime( $sunrise_time );
-				if ( false === $sunrise_ts ) {
+				$sunrise_ts = $this->to_timestamp_in_timezone( $sunrise_time, $location_timezone );
+				if ( null === $sunrise_ts ) {
 					continue;
 				}
 
@@ -232,8 +230,8 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		for ( $i = 0; $i < count( $times ); $i++ ) {
-			$ts = strtotime( $times[ $i ] );
-			if ( false === $ts ) {
+			$ts = $this->to_timestamp_in_timezone( $times[ $i ], $location_timezone );
+			if ( null === $ts ) {
 				continue;
 			}
 
@@ -253,9 +251,6 @@ class Cloud_Cover_Forecast_API {
 
 			// Don't break early - collect all relevant hours first, then sort and limit
 		}
-
-		// Reset timezone to original value
-		date_default_timezone_set( $orig_timezone );
 
 		// Sort rows by timestamp to ensure chronological order (past hours first, then future)
 		usort( $rows, function( $a, $b ) {
@@ -400,6 +395,7 @@ class Cloud_Cover_Forecast_API {
 
 			// Cache result for quicker lookups
 			set_transient( $cache_key, $geocoded, 15 * MINUTE_IN_SECONDS );
+			$this->plugin->register_transient_key( $cache_key );
 
 			return $geocoded;
 		}
@@ -418,6 +414,7 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		set_transient( $cache_key, $results, 15 * MINUTE_IN_SECONDS );
+		$this->plugin->register_transient_key( $cache_key );
 
 		return $results;
 	}
@@ -510,6 +507,7 @@ class Cloud_Cover_Forecast_API {
 
 		// Cache for 24 hours
 		set_transient( $cache_key, $moon_data, 24 * HOUR_IN_SECONDS );
+		$this->plugin->register_transient_key( $cache_key );
 
 		return $moon_data;
 	}
@@ -558,6 +556,7 @@ class Cloud_Cover_Forecast_API {
 				return new WP_Error( 'cloud_cover_forecast_metno_http', __( 'Met.no service temporarily unavailable.', 'cloud-cover-forecast' ), array( 'url' => $url, 'status' => $code ) );
 			}
 			set_transient( $cache_key, $res, 10 * MINUTE_IN_SECONDS );
+			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -638,6 +637,7 @@ class Cloud_Cover_Forecast_API {
 			return new WP_Error(
 				'cloud_cover_forecast_rate_limited',
 				sprintf(
+				/* translators: 1: external service name, 2: number of seconds to wait before retrying. */
 					__( 'Rate limit reached for %1$s. Please wait %2$d seconds and try again.', 'cloud-cover-forecast' ),
 					$this->get_service_label( $service ),
 					$retry_after
@@ -675,6 +675,7 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		set_transient( $key, $state, (int) $config['window'] );
+		$this->plugin->register_transient_key( $key );
 	}
 
 	/**
@@ -787,7 +788,24 @@ class Cloud_Cover_Forecast_API {
 	}
 
 	/**
-	 * Calculate average of array values, excluding null values
+	 * Convert an API time string into a timestamp using the provided timezone context.
+	 *
+	 * @since 1.0.0
+	 * @param string       $time_string ISO8601 time string from the API.
+	 * @param DateTimeZone $timezone    Timezone to interpret the string in when no offset is present.
+	 * @return int|null Unix timestamp or null on failure.
+	 */
+	private function to_timestamp_in_timezone( string $time_string, DateTimeZone $timezone ): ?int {
+		try {
+			$date_time = new DateTime( $time_string, $timezone );
+			return $date_time->getTimestamp();
+		} catch ( Exception $e ) {
+			return null;
+		}
+	}
+
+	/**
+	 * Calculate average of array values, excluding null values.
 	 *
 	 * @since 1.0.0
 	 * @param array $arr Array of values.

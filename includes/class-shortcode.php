@@ -151,6 +151,7 @@ class Cloud_Cover_Forecast_Shortcode {
 			}
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			set_transient( $cache_key, $data, max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS );
+			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		if ( empty( $data['rows'] ) ) {

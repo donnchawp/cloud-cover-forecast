@@ -58,6 +58,14 @@ class Cloud_Cover_Forecast_Plugin {
 	const GEOCODING_PREFIX = 'cloud_cover_forecast_geocoding_';
 
 	/**
+	 * Option key used to track plugin transients.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const TRANSIENT_INDEX_OPTION = 'cloud_cover_forecast_transient_index';
+
+	/**
 	 * Plugin instance
 	 *
 	 * @since 1.0.0
@@ -201,6 +209,84 @@ class Cloud_Cover_Forecast_Plugin {
 		// Plugin activation/deactivation hooks
 		register_activation_hook( __FILE__, array( $this, 'activate' ) );
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
+	}
+
+	/**
+	 * Store a transient key for later cleanup.
+	 *
+	 * @since 1.0.0
+	 * @param string $key Transient key to track.
+	 * @return void
+	 */
+	public function register_transient_key( string $key ): void {
+		$keys = $this->get_tracked_transient_keys();
+		if ( in_array( $key, $keys, true ) ) {
+			return;
+		}
+
+		$keys[] = $key;
+		update_option( self::TRANSIENT_INDEX_OPTION, $keys, false );
+	}
+
+	/**
+	 * Remove a transient key from the tracking list.
+	 *
+	 * @since 1.0.0
+	 * @param string $key Transient key to remove.
+	 * @return void
+	 */
+	public function unregister_transient_key( string $key ): void {
+		$keys = $this->get_tracked_transient_keys();
+		$position = array_search( $key, $keys, true );
+
+		if ( false === $position ) {
+			return;
+		}
+
+		unset( $keys[ $position ] );
+		$keys = array_values( $keys );
+
+		if ( empty( $keys ) ) {
+			delete_option( self::TRANSIENT_INDEX_OPTION );
+			return;
+		}
+
+		update_option( self::TRANSIENT_INDEX_OPTION, $keys, false );
+	}
+
+	/**
+	 * Get all tracked transient keys.
+	 *
+	 * @since 1.0.0
+	 * @return string[]
+	 */
+	public function get_tracked_transient_keys(): array {
+		$keys = get_option( self::TRANSIENT_INDEX_OPTION, array() );
+
+		if ( ! is_array( $keys ) ) {
+			return array();
+		}
+
+		return array_values( array_map( 'strval', array_unique( $keys ) ) );
+	}
+
+	/**
+	 * Clear all tracked transients and reset the index.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	public function clear_tracked_transients(): void {
+		$keys = $this->get_tracked_transient_keys();
+		if ( empty( $keys ) ) {
+			return;
+		}
+
+		foreach ( $keys as $key ) {
+			delete_transient( $key );
+		}
+
+		delete_option( self::TRANSIENT_INDEX_OPTION );
 	}
 
 	/**
