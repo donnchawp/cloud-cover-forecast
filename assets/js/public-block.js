@@ -89,16 +89,22 @@
             var $errorContainer = $block.find('.error-message');
             var $rateLimitMessage = $block.find('.rate-limit-message');
             var $loadingSpinner = $block.find('.loading-spinner');
+            var $locationResults = $block.find('.location-search-results');
 
             var blockData = $block.data('block-attributes');
             var isSearching = false;
+
+            blockData = blockData || {};
+            blockData.strings = blockData.strings || {};
 
             // Get AJAX data from localized script
             if (typeof cloudCoverForecastPublic !== 'undefined') {
                 blockData.ajaxUrl = cloudCoverForecastPublic.ajaxUrl;
                 blockData.nonce = cloudCoverForecastPublic.nonce;
-                blockData.strings = cloudCoverForecastPublic.strings || {};
+                blockData.strings = cloudCoverForecastPublic.strings || blockData.strings;
             }
+
+            var defaultButtonText = blockData.buttonText || 'Get Forecast';
 
             // Initialize from URL parameters
             var urlParams = getURLParams();
@@ -138,7 +144,8 @@
                 }
 
                 isSearching = true;
-                $searchButton.prop('disabled', true).text(blockData.searchingText || 'Searching...');
+                clearLocationResults();
+                $searchButton.prop('disabled', true).text(getString('searchingText', 'Searching...'));
                 $loadingSpinner.show();
                 $errorContainer.hide();
                 $rateLimitMessage.hide();
@@ -146,40 +153,120 @@
 
                 // If coordinates are provided, use them directly
                 if (lat && lon) {
-                    fetchForecast(lat, lon, location);
+                    updateURL(location, lat, lon);
+                    fetchForecast(lat, lon, location).always(resetSearchUI);
                     return;
                 }
 
                 // Otherwise, geocode the location first
                 var geocodeUrl = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
-                    encodeURIComponent(location) + '&count=1&format=json';
+                    encodeURIComponent(location) + '&count=5&format=json';
 
                 $.get(geocodeUrl)
                     .done(function(data) {
                         if (data.results && data.results.length > 0) {
-                            var result = data.results[0];
-                            var coords = {
-                                lat: result.latitude,
-                                lon: result.longitude,
-                                name: result.name + (result.country ? ', ' + result.country : '')
-                            };
+                            if (data.results.length === 1) {
+                                var single = data.results[0];
+                                var singleLabel = buildLocationLabel(single);
+                                updateURL(singleLabel, single.latitude, single.longitude);
+                                fetchForecast(single.latitude, single.longitude, singleLabel).always(resetSearchUI);
+                                return;
+                            }
 
-                            // Update URL with location and coordinates
-                            updateURL(coords.name, coords.lat, coords.lon);
-
-                            fetchForecast(coords.lat, coords.lon, coords.name);
+                            showLocationChoices(data.results, location);
+                            resetSearchUI();
                         } else {
                             showError(blockData.strings.locationNotFoundText || 'Location not found. Please try a different search term.');
+                            resetSearchUI();
                         }
                     })
                     .fail(function() {
                         showError(blockData.strings.geocodingErrorText || 'Unable to find location. Please check your internet connection and try again.');
-                    })
-                    .always(function() {
-                        isSearching = false;
-                        $searchButton.prop('disabled', false).text(blockData.buttonText || 'Get Forecast');
-                        $loadingSpinner.hide();
+                        resetSearchUI();
                     });
+            }
+
+            function clearLocationResults() {
+                $locationResults.hide().empty();
+            }
+
+            function getString(key, fallback) {
+                if (blockData.strings && blockData.strings[key]) {
+                    return blockData.strings[key];
+                }
+                return fallback;
+            }
+
+            function resetSearchUI() {
+                isSearching = false;
+                $searchButton.prop('disabled', false).text(defaultButtonText);
+                $loadingSpinner.hide();
+            }
+
+            function buildLocationLabel(result) {
+                var parts = [];
+                if (result.name) {
+                    parts.push(result.name);
+                }
+                ['admin1', 'admin2', 'country'].forEach(function(key) {
+                    if (result[key] && parts.indexOf(result[key]) === -1) {
+                        parts.push(result[key]);
+                    }
+                });
+                return parts.join(', ');
+            }
+
+            function showLocationChoices(results, originalQuery) {
+                clearLocationResults();
+
+                var promptText = (blockData.strings && blockData.strings.multipleLocationsText) ||
+                    'Multiple matches found. Please pick one:';
+                var buttonText = (blockData.strings && blockData.strings.useLocationButtonText) ||
+                    'Use this location';
+
+                var $wrapper = $('<div/>').addClass('location-results-wrapper');
+                $('<p/>').addClass('location-results-title').text(promptText).appendTo($wrapper);
+
+                var $list = $('<ul/>').addClass('location-results-list');
+
+                results.slice(0, 5).forEach(function(result) {
+                    var label = buildLocationLabel(result);
+                    if (!label) {
+                        label = originalQuery || '';
+                    }
+
+                    var $item = $('<li/>').addClass('location-results-item');
+                    var $button = $('<button/>')
+                        .attr('type', 'button')
+                        .addClass('location-results-button')
+                        .attr('role', 'option')
+                        .attr('aria-selected', 'false')
+                        .on('click', function() {
+                            performSearch(label, result.latitude, result.longitude);
+                        });
+
+                    $('<span/>').addClass('location-results-label').text(label).appendTo($button);
+
+                    var extra = [];
+                    if (typeof result.latitude === 'number' && typeof result.longitude === 'number') {
+                        extra.push(result.latitude.toFixed(2) + ', ' + result.longitude.toFixed(2));
+                    }
+                    if (result.timezone) {
+                        extra.push(result.timezone);
+                    }
+
+                    if (extra.length) {
+                        $('<span/>').addClass('location-results-meta').text(extra.join(' • ')).appendTo($button);
+                    }
+
+                    $('<span/>').addClass('location-results-cta').text(buttonText).appendTo($button);
+
+                    $button.appendTo($item);
+                    $item.appendTo($list);
+                });
+
+                $list.appendTo($wrapper);
+                $locationResults.append($wrapper).show();
             }
 
             // Fetch forecast data
@@ -194,7 +281,7 @@
                     nonce: blockData.nonce
                 };
 
-                $.post(blockData.ajaxUrl, ajaxData)
+                return $.post(blockData.ajaxUrl, ajaxData)
                     .done(function(response) {
                         if (response.success) {
                             displayResults(response.data, locationName);

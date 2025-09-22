@@ -179,6 +179,8 @@ class Cloud_Cover_Forecast_Public_Block {
 					'forecastErrorText' => __( 'Unable to fetch forecast data. Please try again later.', 'cloud-cover-forecast' ),
 					/* translators: {time}: number of seconds before a new request can be made. */
 					'rateLimitText' => __( 'Too many requests. Please wait {time} seconds before trying again.', 'cloud-cover-forecast' ),
+					'multipleLocationsText' => __( 'Multiple matches found. Please pick one:', 'cloud-cover-forecast' ),
+					'useLocationButtonText' => __( 'Use this location', 'cloud-cover-forecast' ),
 				),
 			)
 		);
@@ -240,6 +242,8 @@ class Cloud_Cover_Forecast_Public_Block {
 						<?php echo esc_html( $attributes['buttonText'] ); ?>
 					</button>
 				</div>
+
+				<div class="location-search-results" style="display: none;" role="listbox" aria-live="polite"></div>
 
 				<div class="loading-spinner" style="display: none;"></div>
 				<div class="error-message" style="display: none;"></div>
