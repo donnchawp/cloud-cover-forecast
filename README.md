@@ -1,6 +1,6 @@
 # Cloud Cover Forecast
 
-A WordPress plugin that displays detailed cloud cover data for any location worldwide. Perfect for photographers and astronomy enthusiasts who need to plan their activities based on cloud conditions.
+A WordPress plugin that displays detailed cloud cover data for any location worldwide. Perfect for photographers and astronomy enthusiasts who need to plan their activities based on cloud conditions. Inspired by the [Clear Outside](https://clearoutside.com) website and app.
 
 ![WordPress Plugin](https://img.shields.io/badge/WordPress-Plugin-blue.svg)
 ![PHP Version](https://img.shields.io/badge/PHP-7.4%2B-green.svg)
