@@ -1,24 +1,42 @@
-(function(blocks, element, editor, components, i18n) {
+(function(blocks, element, blockEditor, components, i18n) {
 	'use strict';
+
+	if (!blocks || !element) {
+		return;
+	}
 
 	var el = element.createElement;
 	var registerBlockType = blocks.registerBlockType;
-	var InspectorControls = editor.InspectorControls;
-	var PanelBody = components.PanelBody;
-	var TextControl = components.TextControl;
-	var ToggleControl = components.ToggleControl;
-	var RangeControl = components.RangeControl;
-	var Button = components.Button;
-	var Notice = components.Notice;
-	var RadioControl = components.RadioControl;
+	if (!registerBlockType) {
+		return;
+	}
+
+	var editorModule = blockEditor || (window.wp && (window.wp.blockEditor || window.wp.editor)) || {};
+	var InspectorControls = editorModule.InspectorControls || null;
+
+	var componentLibrary = components || (window.wp && window.wp.components) || {};
+	var PanelBody = componentLibrary.PanelBody || null;
+	var TextControl = componentLibrary.TextControl || null;
+	var ToggleControl = componentLibrary.ToggleControl || null;
+	var RangeControl = componentLibrary.RangeControl || null;
+	var Button = componentLibrary.Button || null;
+	var Notice = componentLibrary.Notice || null;
 	var __ = i18n.__;
 	var useState = element.useState;
-	var Fragment = element.Fragment;
 
-	registerBlockType('cloud-cover-forecast/block', {
-		title: __('Cloud Cover Forecast', 'cloud-cover-forecast'),
-		icon: 'cloud',
-		category: 'widgets',
+	var domReady = (window.wp && window.wp.domReady) || function(callback) {
+		if (document.readyState !== 'loading') {
+			callback();
+			return;
+		}
+		document.addEventListener('DOMContentLoaded', callback);
+	};
+
+	domReady(function() {
+		registerBlockType('cloud-cover-forecast/block', {
+			title: __('Cloud Cover Forecast', 'cloud-cover-forecast'),
+			icon: 'cloud',
+			category: 'widgets',
 		description: __('Display cloud cover forecast with photography and astronomical features for a specific location.', 'cloud-cover-forecast'),
 
 		attributes: {
@@ -47,6 +65,22 @@
 		edit: function(props) {
 			var attributes = props.attributes;
 			var setAttributes = props.setAttributes;
+			var hasComponents = InspectorControls && PanelBody && TextControl && ToggleControl && RangeControl && Button && Notice;
+
+			if (!hasComponents) {
+				return el('div', {
+					className: 'cloud-cover-forecast-block-editor',
+					style: {
+						padding: '16px',
+						border: '1px solid #ccd0d4',
+						borderRadius: '4px',
+						backgroundColor: '#fff',
+						color: '#1d2327'
+					}
+				},
+					__('Cloud Cover Forecast block controls are unavailable because required WordPress components failed to load.', 'cloud-cover-forecast')
+				);
+			}
 
 			// State for location search
 			var searchState = useState('idle'); // idle, searching, results, error
@@ -113,8 +147,9 @@
 				setSearchResults([]);
 			}
 
-			return [
-				el(InspectorControls, {},
+			var inspector = null;
+			if (InspectorControls && PanelBody) {
+				inspector = el(InspectorControls, {},
 					el(PanelBody, {
 						title: __('Cloud Cover Forecast Settings', 'cloud-cover-forecast'),
 						initialOpen: true
@@ -242,7 +277,11 @@
 						}),
 
 					)
-				),
+				);
+			}
+
+			return [
+				inspector,
 				el('div', {
 					className: 'cloud-cover-forecast-block-preview',
 					style: {
@@ -306,12 +345,13 @@
 			// Return null because this is a dynamic block
 			return null;
 		}
+		});
 	});
 
 })(
 	window.wp.blocks,
 	window.wp.element,
-	window.wp.editor,
+	window.wp.blockEditor || window.wp.editor,
 	window.wp.components,
 	window.wp.i18n
 );

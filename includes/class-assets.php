@@ -84,7 +84,7 @@ class Cloud_Cover_Forecast_Assets {
 		wp_enqueue_script(
 			'cloud-cover-forecast-block-editor',
 			CLOUD_COVER_FORECAST_PLUGIN_URL . 'block.js',
-			array( 'wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n' ),
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-editor', 'wp-components', 'wp-i18n' ),
 			CLOUD_COVER_FORECAST_VERSION,
 			true
 		);
@@ -93,7 +93,7 @@ class Cloud_Cover_Forecast_Assets {
 		wp_enqueue_script(
 			'cloud-cover-forecast-public-block-editor',
 			CLOUD_COVER_FORECAST_PLUGIN_URL . 'public-block.js',
-			array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-i18n', 'wp-data' ),
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-editor', 'wp-components', 'wp-i18n', 'wp-data' ),
 			CLOUD_COVER_FORECAST_VERSION,
 			true
 		);

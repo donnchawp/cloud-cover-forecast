@@ -1,19 +1,36 @@
 (function(blocks, element, components, i18n, data) {
 	'use strict';
 
+	if (!blocks || !element) {
+		return;
+	}
+
 	var el = element.createElement;
 	var registerBlockType = blocks.registerBlockType;
-	var __ = i18n.__;
+	if (!registerBlockType) {
+		return;
+	}
+
+	var __ = i18n && i18n.__ ? i18n.__ : function(str) { return str; };
 	var useState = element.useState;
 	var useEffect = element.useEffect;
-	var useSelect = data.useSelect;
-	var useDispatch = data.useDispatch;
+	var dataModule = data || (window.wp && window.wp.data) || {};
+	var useSelect = dataModule.useSelect || function() { return null; };
+	var useDispatch = dataModule.useDispatch || function() { return function() {}; };
 	var blockEditor = window.wp && ( window.wp.blockEditor || window.wp.editor );
 	var InspectorControls = blockEditor ? blockEditor.InspectorControls : null;
-	var PanelBody = components ? components.PanelBody : null;
-	var ToggleControl = components ? components.ToggleControl : null;
+	var PanelBody = components && components.PanelBody ? components.PanelBody : null;
+	var ToggleControl = components && components.ToggleControl ? components.ToggleControl : null;
+	var domReady = (window.wp && window.wp.domReady) || function(callback) {
+		if (document.readyState !== 'loading') {
+			callback();
+			return;
+		}
+		document.addEventListener('DOMContentLoaded', callback);
+	};
 
-	registerBlockType('cloud-cover-forecast/public-lookup', {
+	domReady(function() {
+		registerBlockType('cloud-cover-forecast/public-lookup', {
 		title: __('Public Cloud Cover Lookup', 'cloud-cover-forecast'),
 		icon: 'search',
 		category: 'widgets',
@@ -141,6 +158,7 @@
 			return null;
 		}
 		});
+	});
 
 })(
 	window.wp.blocks,

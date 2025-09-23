@@ -55,6 +55,14 @@ class Cloud_Cover_Forecast_Public_Block {
 	);
 
 	/**
+	 * Tracks whether frontend assets were enqueued.
+	 *
+	 * @since 1.0.0
+	 * @var bool
+	 */
+	private $assets_enqueued = false;
+
+	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
@@ -74,9 +82,6 @@ class Cloud_Cover_Forecast_Public_Block {
 	public function init() {
 		// Register the block
 		add_action( 'init', array( $this, 'register_block' ) );
-
-		// Enqueue assets
-		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 
 		// AJAX handlers
 		add_action( 'wp_ajax_cloud_cover_forecast_public_lookup', array( $this, 'handle_ajax_lookup' ) );
@@ -149,8 +154,7 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @since 1.0.0
 	 */
 	public function enqueue_assets() {
-		// Only enqueue on pages that have the block
-		if ( ! $this->has_public_block() ) {
+		if ( $this->assets_enqueued ) {
 			return;
 		}
 
@@ -190,23 +194,8 @@ class Cloud_Cover_Forecast_Public_Block {
 				),
 			)
 		);
-	}
 
-	/**
-	 * Check if the current page has the public block
-	 *
-	 * @since 1.0.0
-	 * @return bool True if page has the block, false otherwise.
-	 */
-	private function has_public_block() {
-		global $post;
-
-		if ( ! $post ) {
-			return false;
-		}
-
-		// Check if the post content contains the block
-		return has_block( 'cloud-cover-forecast/public-lookup', $post );
+		$this->assets_enqueued = true;
 	}
 
 	/**
@@ -217,6 +206,8 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @return string Block HTML.
 	 */
 	public function render_public_block( $attributes ) {
+		$this->enqueue_assets();
+
 		$attributes = wp_parse_args(
 			$attributes,
 			array(

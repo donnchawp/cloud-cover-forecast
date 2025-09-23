@@ -168,7 +168,7 @@ class Cloud_Cover_Forecast_Admin {
 		wp_register_script(
 			'cloud-cover-forecast-block',
 			plugin_dir_url( dirname( __FILE__ ) ) . 'block.js',
-			array( 'wp-blocks', 'wp-element', 'wp-editor', 'wp-components', 'wp-i18n' ),
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-editor', 'wp-components', 'wp-i18n' ),
 			'1.0.0',
 			true
 		);
