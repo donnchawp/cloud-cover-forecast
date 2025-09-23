@@ -121,7 +121,7 @@ class Cloud_Cover_Forecast_Public_Block {
 						'type' => 'boolean',
 						'default' => true,
 					),
-					'showClearOutsideLink' => array(
+					'showOtherForecastApps' => array(
 						'type' => 'boolean',
 						'default' => true,
 					),
@@ -224,7 +224,7 @@ class Cloud_Cover_Forecast_Public_Block {
 				'placeholder' => __( 'Enter location (e.g., London, UK)', 'cloud-cover-forecast' ),
 				'buttonText' => __( 'Get Forecast', 'cloud-cover-forecast' ),
 				'showPhotographyMode' => true,
-				'showClearOutsideLink' => true,
+				'showOtherForecastApps' => true,
 				'maxHours' => 24,
 			)
 		);
@@ -286,8 +286,8 @@ class Cloud_Cover_Forecast_Public_Block {
 		$hours = isset( $_POST['hours'] ) ? intval( wp_unslash( $_POST['hours'] ) ) : 48;
 		$show_photography = isset( $_POST['show_photography'] ) ? intval( wp_unslash( $_POST['show_photography'] ) ) : 1;
 		$show_photography = (bool) $show_photography;
-		$show_clear_outside_link = isset( $_POST['show_clear_outside_link'] ) ? intval( wp_unslash( $_POST['show_clear_outside_link'] ) ) : 1;
-		$show_clear_outside_link = (bool) $show_clear_outside_link;
+		$show_other_forecast_apps = isset( $_POST['show_other_forecast_apps'] ) ? intval( wp_unslash( $_POST['show_other_forecast_apps'] ) ) : 1;
+		$show_other_forecast_apps = (bool) $show_other_forecast_apps;
 
 		// Validate coordinates
 		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
@@ -333,7 +333,7 @@ class Cloud_Cover_Forecast_Public_Block {
 			$location,
 			$show_photography,
 			array(
-				'show_clear_outside_link' => $show_clear_outside_link,
+				'show_other_forecast_apps' => $show_other_forecast_apps,
 			)
 		);
 

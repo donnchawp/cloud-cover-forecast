@@ -96,7 +96,7 @@
 
             blockData = blockData || {};
             blockData.strings = blockData.strings || {};
-            blockData.showClearOutsideLink = blockData.showClearOutsideLink !== false;
+            blockData.showOtherForecastApps = blockData.showOtherForecastApps !== false;
 
             initInstructionToggles($block);
 
@@ -364,7 +364,7 @@
                     location: locationName,
                     hours: blockData.maxHours || 48,
                     show_photography: blockData.showPhotographyMode ? 1 : 0,
-                    show_clear_outside_link: blockData.showClearOutsideLink ? 1 : 0,
+                    show_other_forecast_apps: blockData.showOtherForecastApps ? 1 : 0,
                     nonce: blockData.nonce
                 };
 

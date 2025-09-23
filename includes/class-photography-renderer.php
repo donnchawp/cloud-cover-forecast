@@ -57,7 +57,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	public function render_photography_widget( array $data, string $label, int $show_chart, array $options = array() ) {
 		$rows  = $data['rows'];
 		$stats = $data['stats'];
-		$show_clear_outside_link = ! isset( $options['show_clear_outside_link'] ) ? true : (bool) $options['show_clear_outside_link'];
+		$show_other_forecast_apps = ! isset( $options['show_other_forecast_apps'] ) ? true : (bool) $options['show_other_forecast_apps'];
 		$photo_ratings = $stats['photo_ratings'] ?? array();
 		$photo_times = $stats['photo_times'] ?? array();
 		$moon_today = $stats['moon_today'] ?? array();
@@ -134,7 +134,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 
 			<!-- Photography Opportunities Section -->
 				<?php
-				$instructions_markup = $this->render_instructions_section( $stats, $show_clear_outside_link );
+				$instructions_markup = $this->render_instructions_section( $stats, $show_other_forecast_apps );
 				if ( $instructions_markup ) {
 					echo $instructions_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- content escaped within helper
 				}
@@ -624,10 +624,10 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	 *
 	 * @since 1.0.0
 	 * @param array $stats Forecast statistics.
-	 * @param bool  $show_clear_outside_link Whether to display the Clear Outside link.
+	 * @param bool  $show_other_forecast_apps Whether to display the other forecast apps section.
 	 * @return string HTML markup.
 	 */
-	private function render_instructions_section( array $stats, bool $show_clear_outside_link ): string {
+	private function render_instructions_section( array $stats, bool $show_other_forecast_apps ): string {
 		$diff_summary = $stats['provider_diff_summary'] ?? array();
 		$diff_hours = intval( $diff_summary['rows_with_differences'] ?? 0 );
 		$variance_sentence = esc_html__( 'We merge hourly cloud cover from Open-Meteo and Met.no and highlight disagreements with Δ badges.', 'cloud-cover-forecast' );
@@ -657,24 +657,45 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			</button>
 			<div class="instructions-content" hidden>
 				<p><?php echo esc_html( $variance_sentence ); ?></p>
-				<?php if ( $show_clear_outside_link ) : ?>
-				<p>
-					<?php
-					printf(
-						wp_kses(
-							__( 'Need a second opinion? Compare with the <a href="%s" target="_blank" rel="noopener noreferrer">Clear Outside</a> forecast.', 'cloud-cover-forecast' ),
-							array(
-								'a' => array(
-									'href' => array(),
-									'target' => array(),
-									'rel' => array(),
-								),
-							)
-						),
-						esc_url( 'https://clearoutside.com/' )
-					);
-					?>
-				</p>
+				<?php if ( $show_other_forecast_apps ) : ?>
+				<p><?php esc_html_e( 'Other options include:', 'cloud-cover-forecast' ); ?></p>
+				<ul>
+					<li>
+						<?php
+						printf(
+							wp_kses(
+								__( '<a href="%s" target="_blank" rel="noopener noreferrer">Clear Outside</a>', 'cloud-cover-forecast' ),
+								array(
+									'a' => array(
+										'href' => array(),
+										'target' => array(),
+										'rel' => array(),
+									),
+								)
+							),
+							esc_url( 'https://clearoutside.com/' )
+						);
+						?>
+					</li>
+					<li>
+						<?php
+						printf(
+							wp_kses(
+								__( '<a href="%s" target="_blank" rel="noopener noreferrer">Astronomy Seeing</a>', 'cloud-cover-forecast' ),
+								array(
+									'a' => array(
+										'href' => array(),
+										'target' => array(),
+										'rel' => array(),
+									),
+								)
+							),
+							esc_url( 'https://content.meteoblue.com/en/private-customers/website-help/outdoor-and-sports/astronomy-seeing' )
+						);
+						?>
+					</li>
+					<li><?php esc_html_e( 'Windy.com app (click on the red menu, choose the cloud overlays)', 'cloud-cover-forecast' ); ?></li>
+				</ul>
 				<?php endif; ?>
 				<p><?php esc_html_e( 'Cloud layers influence golden hour in different ways:', 'cloud-cover-forecast' ); ?></p>
 				<ul>

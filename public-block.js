@@ -38,7 +38,7 @@
 				type: 'boolean',
 				default: true
 			},
-			showClearOutsideLink: {
+			showOtherForecastApps: {
 				type: 'boolean',
 				default: true
 			},
@@ -64,10 +64,10 @@
 							initialOpen: true
 						},
 						el(ToggleControl, {
-							label: __('Show Clear Outside suggestion', 'cloud-cover-forecast'),
-							checked: attributes.showClearOutsideLink !== false,
+							label: __('Show other forecast apps', 'cloud-cover-forecast'),
+							checked: attributes.showOtherForecastApps !== false,
 							onChange: function(value) {
-								setAttributes({ showClearOutsideLink: value });
+								setAttributes({ showOtherForecastApps: value });
 							}
 						})
 					)
