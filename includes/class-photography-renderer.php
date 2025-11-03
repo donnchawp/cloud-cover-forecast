@@ -664,6 +664,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						<?php
 						printf(
 							wp_kses(
+								/* translators: %s: URL to Clear Outside website */
 								__( '<a href="%s" target="_blank" rel="noopener noreferrer">Clear Outside</a>', 'cloud-cover-forecast' ),
 								array(
 									'a' => array(
@@ -681,6 +682,7 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 						<?php
 						printf(
 							wp_kses(
+								/* translators: %s: URL to Astronomy Seeing website */
 								__( '<a href="%s" target="_blank" rel="noopener noreferrer">Astronomy Seeing</a>', 'cloud-cover-forecast' ),
 								array(
 									'a' => array(

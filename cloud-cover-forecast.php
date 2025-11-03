@@ -122,6 +122,14 @@ class Cloud_Cover_Forecast_Plugin {
 	private $public_block;
 
 	/**
+	 * Sunrise Sunset block instance
+	 *
+	 * @since 1.0.0
+	 * @var Cloud_Cover_Forecast_Sunrise_Sunset_Block
+	 */
+	private $sunrise_sunset_block;
+
+	/**
 	 * Assets instance
 	 *
 	 * @since 1.0.0
@@ -190,6 +198,10 @@ class Cloud_Cover_Forecast_Plugin {
 		// Initialize public block
 		$this->public_block = new Cloud_Cover_Forecast_Public_Block( $this );
 		$this->public_block->init();
+
+		// Initialize sunrise sunset block
+		$this->sunrise_sunset_block = new Cloud_Cover_Forecast_Sunrise_Sunset_Block( $this );
+		$this->sunrise_sunset_block->init();
 
 		// Initialize shortcode
 		$this->shortcode = new Cloud_Cover_Forecast_Shortcode( $this, $this->api, $this->photography, $this->photography_renderer );
@@ -397,6 +409,16 @@ class Cloud_Cover_Forecast_Plugin {
 	 */
 	public function get_public_block() {
 		return $this->public_block;
+	}
+
+	/**
+	 * Get sunrise sunset block instance
+	 *
+	 * @since 1.0.0
+	 * @return Cloud_Cover_Forecast_Sunrise_Sunset_Block Sunrise sunset block instance.
+	 */
+	public function get_sunrise_sunset_block() {
+		return $this->sunrise_sunset_block;
 	}
 
 	/**
