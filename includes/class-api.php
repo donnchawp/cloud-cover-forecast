@@ -571,7 +571,11 @@ class Cloud_Cover_Forecast_API {
 			if ( 200 !== $code ) {
 				return new WP_Error( 'cloud_cover_forecast_metno_http', __( 'Met.no service temporarily unavailable.', 'cloud-cover-forecast' ), array( 'url' => $url, 'status' => $code ) );
 			}
-			set_transient( $cache_key, $res, 10 * MINUTE_IN_SECONDS );
+
+			// Use same cache TTL as Open-Meteo to keep sources synchronized
+			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
+			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
+			set_transient( $cache_key, $res, $cache_ttl_seconds );
 			$this->plugin->register_transient_key( $cache_key );
 		}
 

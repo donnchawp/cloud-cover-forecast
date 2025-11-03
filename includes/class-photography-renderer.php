@@ -63,7 +63,6 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		$moon_today = $stats['moon_today'] ?? array();
 		$display_sunset = $stats['selected_sunset'] ?? ( $stats['daily_sunset'][0] ?? null );
 		$display_sunrise = $stats['selected_sunrise'] ?? ( $stats['daily_sunrise'][0] ?? null );
-		//error_log( 'Rendering photography widget: ' . print_r( $data, true ) );
 		?>
 		<div class="cloud-cover-forecast-wrap cloud-cover-forecast-card cloud-cover-forecast-photography" data-provider="open-meteo">
 
@@ -200,7 +199,6 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 					if ( ! $this->should_show_hour_in_photography_mode( $r['ts'], $photo_times, $moon_today ) ) {
 						continue;
 					}
-					//error_log( 'Rendering hour: ' . print_r( $r, true ) );
 
 					$event_data = $this->get_hour_event_data( $r['ts'], $photo_times, $moon_today );
 					$photo_condition = $this->get_hour_photo_condition( $r, $photo_times, $moon_today );

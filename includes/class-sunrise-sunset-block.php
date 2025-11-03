@@ -142,20 +142,34 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	 * @return string Block HTML.
 	 */
 	public function render_block( $attributes ) {
-		// Get coordinates from attributes or settings
+		// Get coordinates from attributes
 		$lat = floatval( $attributes['latitude'] ?? 0 );
 		$lon = floatval( $attributes['longitude'] ?? 0 );
 		$location = $attributes['location'] ?? '';
 
-		// Use plugin settings as fallback
-		if ( 0 === $lat && 0 === $lon ) {
-			$settings = $this->plugin->get_settings();
-			$lat = floatval( $settings['latitude'] ?? 51.8986 );
-			$lon = floatval( $settings['longitude'] ?? -8.4756 );
+		// Check if location is defined in block attributes (use loose comparison to avoid float/int type issues)
+		$has_location = ( 0 != $lat || 0 != $lon );
 
-			if ( empty( $location ) ) {
-				$location = $settings['location_label'] ?? __( 'Default Location', 'cloud-cover-forecast' );
+		// If no location in attributes, check URL query parameters
+		if ( ! $has_location ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading query params for display only
+			$query_lat = isset( $_GET['sunrise_lat'] ) ? floatval( wp_unslash( $_GET['sunrise_lat'] ) ) : 0;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading query params for display only
+			$query_lon = isset( $_GET['sunrise_lon'] ) ? floatval( wp_unslash( $_GET['sunrise_lon'] ) ) : 0;
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading query params for display only
+			$query_location = isset( $_GET['sunrise_location'] ) ? sanitize_text_field( wp_unslash( $_GET['sunrise_location'] ) ) : '';
+
+			if ( 0 != $query_lat || 0 != $query_lon ) {
+				$lat = $query_lat;
+				$lon = $query_lon;
+				$location = $query_location;
+				$has_location = true;
 			}
+		}
+
+		// If still no location, show search form
+		if ( ! $has_location ) {
+			return $this->render_search_form();
 		}
 
 		// Fetch 3-day forecast data
@@ -514,7 +528,7 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 					<?php
 					printf(
 						/* translators: 1: latitude, 2: longitude, 3: timezone */
-						esc_html__( 'Location: %1$s, %2$s · Timezone: %3$s · Data: Open-Meteo', 'cloud-cover-forecast' ),
+						esc_html__( 'Location: %1$s, %2$s · Timezone: %3$s · Data: Open-Meteo + Met.no', 'cloud-cover-forecast' ),
 						esc_html( number_format( $data['lat'], 4 ) ),
 						esc_html( number_format( $data['lon'], 4 ) ),
 						esc_html( $timezone )
@@ -707,5 +721,28 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 		}
 		</style>
 		<?php
+	}
+
+	/**
+	 * Render search form for location lookup
+	 *
+	 * @since 1.0.0
+	 * @return string Search form HTML.
+	 */
+	private function render_search_form() {
+		$this->output_inline_css();
+
+		return Cloud_Cover_Forecast_Location_Search_Form::render(
+			array(
+				'title'       => __( 'Find Sunrise & Sunset Times', 'cloud-cover-forecast' ),
+				'description' => __( 'Enter a location to view 3-day sunrise and sunset forecast with shooting conditions.', 'cloud-cover-forecast' ),
+				'mode'        => 'redirect',
+				'url_params'  => array(
+					'lat'      => 'sunrise_lat',
+					'lon'      => 'sunrise_lon',
+					'location' => 'sunrise_location',
+				),
+			)
+		);
 	}
 }
