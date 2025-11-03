@@ -501,10 +501,10 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 								printf(
 									/* translators: 1: total cloud %, 2: low cloud %, 3: mid cloud %, 4: high cloud % */
 									esc_html__( 'Cloud cover: %1$d%% (Low: %2$d%%, Mid: %3$d%%, High: %4$d%%)', 'cloud-cover-forecast' ),
-									$day['sunrise_clouds']['avg_total'],
-									$day['sunrise_clouds']['avg_low'],
-									$day['sunrise_clouds']['avg_mid'],
-									$day['sunrise_clouds']['avg_high']
+									intval( $day['sunrise_clouds']['avg_total'] ),
+									intval( $day['sunrise_clouds']['avg_low'] ),
+									intval( $day['sunrise_clouds']['avg_mid'] ),
+									intval( $day['sunrise_clouds']['avg_high'] )
 								);
 								?>
 							</div>
@@ -524,10 +524,10 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 								printf(
 									/* translators: 1: total cloud %, 2: low cloud %, 3: mid cloud %, 4: high cloud % */
 									esc_html__( 'Cloud cover: %1$d%% (Low: %2$d%%, Mid: %3$d%%, High: %4$d%%)', 'cloud-cover-forecast' ),
-									$day['sunset_clouds']['avg_total'],
-									$day['sunset_clouds']['avg_low'],
-									$day['sunset_clouds']['avg_mid'],
-									$day['sunset_clouds']['avg_high']
+									intval( $day['sunset_clouds']['avg_total'] ),
+									intval( $day['sunset_clouds']['avg_low'] ),
+									intval( $day['sunset_clouds']['avg_mid'] ),
+									intval( $day['sunset_clouds']['avg_high'] )
 								);
 								?>
 							</div>
