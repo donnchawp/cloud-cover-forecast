@@ -178,64 +178,44 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	 * @return array|WP_Error Forecast data or error.
 	 */
 	private function fetch_3day_forecast( float $lat, float $lon ) {
-		// Check cache first (24 hour cache)
-		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'sunrise_sunset_3day_' . md5( $lat . '|' . $lon );
-		$cached = get_transient( $cache_key );
-		if ( false !== $cached ) {
-			return $cached;
+		// Fetch 72 hours of data using the main API method (includes dual-source data from Open-Meteo + Met.no)
+		$weather_data = $this->api->fetch_weather_data( $lat, $lon, 72 );
+
+		if ( is_wp_error( $weather_data ) ) {
+			return $weather_data;
 		}
 
-		// Fetch 72 hours of hourly data + 3 days of sunrise/sunset
-		$params = array(
-			'latitude'  => $lat,
-			'longitude' => $lon,
-			'hourly'    => 'cloudcover,cloudcover_low,cloudcover_mid,cloudcover_high',
-			'daily'     => 'sunrise,sunset',
-			'timezone'  => 'auto',
-			'forecast_days' => 3,
-		);
-		$url = add_query_arg( $params, 'https://api.open-meteo.com/v1/forecast' );
-
-		$res = wp_remote_get(
-			$url,
-			array(
-				'timeout'    => 12,
-				'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-				'sslverify'  => true,
-			)
-		);
-
-		if ( is_wp_error( $res ) ) {
-			return new WP_Error( 'cloud_cover_forecast_network', __( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' ) );
-		}
-
-		$code = wp_remote_retrieve_response_code( $res );
-		if ( 200 !== $code ) {
-			return new WP_Error( 'cloud_cover_forecast_http', __( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' ) );
-		}
-
-		$body = wp_remote_retrieve_body( $res );
-		$json = json_decode( $body, true );
-
-		if ( ! $json || empty( $json['hourly']['time'] ) || empty( $json['daily'] ) ) {
-			return new WP_Error( 'cloud_cover_forecast_json', __( 'Malformed API response', 'cloud-cover-forecast' ) );
-		}
-
-		// Process the data
-		$timezone = $json['timezone'] ?? 'UTC';
+		$stats = $weather_data['stats'];
+		$rows = $weather_data['rows'];
+		$timezone = $stats['timezone'] ?? 'UTC';
 		$timezone_obj = new DateTimeZone( $timezone );
 
-		$daily_data = $this->process_daily_data(
-			$json['daily'],
-			$json['hourly'],
+		// Build hourly lookup from merged dual-source data
+		$hourly_lookup = array();
+		foreach ( $rows as $row ) {
+			$time_str = $row['time'];
+			$hourly_lookup[ $time_str ] = array(
+				'total' => $row['total'] ?? null,
+				'low'   => $row['low'] ?? null,
+				'mid'   => $row['mid'] ?? null,
+				'high'  => $row['high'] ?? null,
+			);
+		}
+
+		// Extract daily sunrise/sunset data
+		$daily_sunrise = $stats['daily_sunrise'] ?? array();
+		$daily_sunset = $stats['daily_sunset'] ?? array();
+		$daily_times = $stats['daily_times'] ?? array();
+
+		$daily_data = $this->process_daily_data_from_stats(
+			$daily_times,
+			$daily_sunrise,
+			$daily_sunset,
+			$hourly_lookup,
 			$timezone_obj,
 			$lat,
 			$lon
 		);
-
-		// Cache for 24 hours
-		set_transient( $cache_key, $daily_data, 24 * HOUR_IN_SECONDS );
-		$this->plugin->register_transient_key( $cache_key );
 
 		return $daily_data;
 	}
@@ -244,36 +224,17 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	 * Process daily sunrise/sunset data with cloud cover analysis
 	 *
 	 * @since 1.0.0
-	 * @param array        $daily_data Daily data from API.
-	 * @param array        $hourly_data Hourly data from API.
+	 * @param array        $times Daily dates.
+	 * @param array        $sunrises Daily sunrise times.
+	 * @param array        $sunsets Daily sunset times.
+	 * @param array        $hourly_lookup Hourly cloud data lookup (already processed).
 	 * @param DateTimeZone $timezone Timezone object.
 	 * @param float        $lat Latitude.
 	 * @param float        $lon Longitude.
 	 * @return array Processed daily forecast data.
 	 */
-	private function process_daily_data( array $daily_data, array $hourly_data, DateTimeZone $timezone, float $lat, float $lon ): array {
+	private function process_daily_data_from_stats( array $times, array $sunrises, array $sunsets, array $hourly_lookup, DateTimeZone $timezone, float $lat, float $lon ): array {
 		$days = array();
-
-		$times = $daily_data['time'] ?? array();
-		$sunrises = $daily_data['sunrise'] ?? array();
-		$sunsets = $daily_data['sunset'] ?? array();
-
-		// Build hourly lookup
-		$hourly_lookup = array();
-		$hourly_times = $hourly_data['time'] ?? array();
-		$hourly_total = $hourly_data['cloudcover'] ?? array();
-		$hourly_low = $hourly_data['cloudcover_low'] ?? array();
-		$hourly_mid = $hourly_data['cloudcover_mid'] ?? array();
-		$hourly_high = $hourly_data['cloudcover_high'] ?? array();
-
-		foreach ( $hourly_times as $i => $time_str ) {
-			$hourly_lookup[ $time_str ] = array(
-				'total' => $hourly_total[ $i ] ?? null,
-				'low'   => $hourly_low[ $i ] ?? null,
-				'mid'   => $hourly_mid[ $i ] ?? null,
-				'high'  => $hourly_high[ $i ] ?? null,
-			);
-		}
 
 		// Process each day
 		for ( $i = 0; $i < min( 3, count( $times ) ); $i++ ) {
