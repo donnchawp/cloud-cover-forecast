@@ -2,8 +2,10 @@
     'use strict';
 
     // Rate limiting configuration
+    // Note: This is client-side rate limiting (1 min window)
+    // Server-side uses 10 requests per 5 minutes
     var RATE_LIMIT_WINDOW = 60; // 1 minute in seconds
-    var RATE_LIMIT_MAX_REQUESTS = 5; // Max requests per window
+    var RATE_LIMIT_MAX_REQUESTS = 5; // Max requests per window (allows ~2 location lookups with geocoding)
     var RATE_LIMIT_STORAGE_KEY = 'cloud_cover_forecast_rate_limit';
 
     /**

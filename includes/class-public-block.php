@@ -45,14 +45,15 @@ class Cloud_Cover_Forecast_Public_Block {
 	/**
 	 * Rate limiting configuration
 	 *
-	 * Reduced from 10 to 5 requests per 5 minutes to prevent abuse.
+	 * Set to 10 requests per 5 minutes to allow for paired geocoding + forecast lookups.
+	 * Each location search typically requires 2 requests (geocode + forecast).
 	 *
 	 * @since 1.0.0
 	 * @var array
 	 */
 	private $rate_limit_config = array(
 		'window_minutes' => 5,
-		'max_requests'   => 5,
+		'max_requests'   => 10,
 		'ban_minutes'    => 15,
 	);
 
@@ -347,6 +348,11 @@ class Cloud_Cover_Forecast_Public_Block {
 			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'cloud-cover-forecast' ) ), 403 );
 		}
 
+		// Check rate limiting
+		if ( $this->is_rate_limited() ) {
+			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded. Please try again later.', 'cloud-cover-forecast' ) ), 429 );
+		}
+
 		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
 		if ( '' === $location ) {
 			wp_send_json_error( array( 'message' => __( 'Please provide a location to search for.', 'cloud-cover-forecast' ) ), 400 );
@@ -374,6 +380,9 @@ class Cloud_Cover_Forecast_Public_Block {
 
 			wp_send_json_error( array( 'message' => $results->get_error_message() ), $status );
 		}
+
+		// Record the request for rate limiting
+		$this->record_request();
 
 		wp_send_json_success(
 			array(
