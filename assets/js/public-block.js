@@ -6,17 +6,39 @@
     var RATE_LIMIT_MAX_REQUESTS = 5; // Max requests per window
     var RATE_LIMIT_STORAGE_KEY = 'cloud_cover_forecast_rate_limit';
 
+    /**
+     * Escape HTML to prevent XSS attacks
+     * @param {string} text - Text to escape
+     * @return {string} HTML-escaped text
+     */
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // Rate limiting functions
     function getRateLimitData() {
-        var data = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
-        if (!data) {
+        try {
+            var data = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+            if (!data) {
+                return { requests: [], windowStart: Date.now() };
+            }
+            return JSON.parse(data);
+        } catch (e) {
+            // localStorage may be disabled (private browsing)
+            console.warn('localStorage unavailable:', e);
             return { requests: [], windowStart: Date.now() };
         }
-        return JSON.parse(data);
     }
 
     function setRateLimitData(data) {
-        localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(data));
+        try {
+            localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+            // Silently fail if localStorage unavailable
+            console.warn('localStorage unavailable:', e);
+        }
     }
 
     function isRateLimited() {
@@ -397,14 +419,17 @@
 
             // Show error message
             function showError(message) {
-                $errorContainer.html('<div class="error">' + message + '</div>').show();
+                // Escape HTML to prevent XSS attacks
+                var escapedMessage = escapeHtml(String(message || ''));
+                $errorContainer.html('<div class="error">' + escapedMessage + '</div>').show();
             }
 
             // Show rate limit error
             function showRateLimitError() {
                 var remainingTime = getRemainingTime();
                 var message = blockData.strings.rateLimitText || 'Too many requests. Please wait {time} seconds before trying again.';
-                message = message.replace('{time}', remainingTime);
+                // Escape and replace placeholder
+                message = escapeHtml(String(message)).replace('{time}', escapeHtml(String(remainingTime)));
                 $rateLimitMessage.html('<div class="rate-limit-error">' + message + '</div>').show();
 
                 // Update countdown
@@ -414,7 +439,8 @@
                         clearInterval(countdown);
                         $rateLimitMessage.hide();
                     } else {
-                        var updatedMessage = (blockData.strings.rateLimitText || 'Too many requests. Please wait {time} seconds before trying again.').replace('{time}', remainingTime);
+                        var updatedMessage = (blockData.strings.rateLimitText || 'Too many requests. Please wait {time} seconds before trying again.');
+                        updatedMessage = escapeHtml(String(updatedMessage)).replace('{time}', escapeHtml(String(remainingTime)));
                         $rateLimitMessage.html('<div class="rate-limit-error">' + updatedMessage + '</div>');
                     }
                 }, 1000);
@@ -428,10 +454,32 @@
     });
 
     // Re-initialize on AJAX content loads (for dynamic content)
-    $(document).on('DOMNodeInserted', function(e) {
-        if ($(e.target).find('.cloud-cover-forecast-public-lookup').length > 0) {
-            initPublicBlock();
-        }
-    });
+    // Using MutationObserver instead of deprecated DOMNodeInserted
+    if (typeof MutationObserver !== 'undefined') {
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length > 0) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1) { // Element node
+                            var $node = $(node);
+                            if ($node.hasClass('cloud-cover-forecast-public-lookup') ||
+                                $node.find('.cloud-cover-forecast-public-lookup').length > 0) {
+                                initPublicBlock();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // Start observing document body for changes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    } else {
+        // Fallback for older browsers (though MutationObserver is widely supported)
+        console.warn('MutationObserver not supported, dynamic content may not initialize properly');
+    }
 
 })(jQuery);

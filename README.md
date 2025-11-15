@@ -100,10 +100,78 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 
 The plugin uses IPGeolocation.io specifically for astronomical data to provide photographers and astronomy enthusiasts with accurate moon phase information, moonrise/moonset times, and astronomical twilight calculations.
 
-### Data Privacy
-- No personal data collection
-- Location data only used for weather and astronomical data fetching
-- No data transmission to third parties beyond Open-Meteo, Met.no, and IPGeolocation.io
+## Privacy & External Services
+
+This plugin connects to external services to provide weather forecasts. **By installing and activating this plugin, site administrators consent to these external API calls on behalf of site visitors.**
+
+### External API Services Used
+
+#### Open-Meteo API (https://open-meteo.com)
+- **Purpose**: Retrieve hourly cloud cover forecasts
+- **Data Sent**: Geographic coordinates (latitude, longitude)
+- **Privacy Policy**: https://open-meteo.com/en/terms
+- **Frequency**: Once per location per cache period (default: 15 minutes)
+- **API Key**: Not required
+- **User Consent**: Automatic (required for core functionality)
+
+#### Open-Meteo Geocoding API (https://geocoding-api.open-meteo.com)
+- **Purpose**: Convert location names to coordinates
+- **Data Sent**: Location name (e.g., "London, UK")
+- **Privacy Policy**: https://open-meteo.com/en/terms
+- **Frequency**: Once per location search (cached for 15 minutes)
+- **API Key**: Not required
+- **User Consent**: Automatic (required for core functionality)
+
+#### Met.no Weather API (https://api.met.no)
+- **Purpose**: Supplement cloud cover data (merged with Open-Meteo for accuracy)
+- **Data Sent**: Geographic coordinates, your site URL and admin email in User-Agent header
+- **Privacy Policy**: https://api.met.no/doc/TermsOfService
+- **Frequency**: Once per location per cache period (default: 15 minutes)
+- **API Key**: Not required
+- **User-Agent**: Includes site name, URL, and admin email (required by Met.no terms)
+- **User Consent**: Automatic (required for core functionality)
+
+#### IPGeolocation Astronomy API (https://api.ipgeolocation.io) - OPTIONAL
+- **Purpose**: Moon phase, moonrise/moonset times, and astronomical twilight data
+- **Data Sent**: Geographic coordinates, date
+- **Privacy Policy**: https://ipgeolocation.io/privacy-policy.html
+- **Frequency**: Once per day per location (cached for 24 hours)
+- **API Key**: Required (free tier: 1000 requests/day)
+- **User Consent**: Opt-in (disabled by default, requires admin to add API key)
+
+### Personal Data Collection
+
+**No Personally Identifiable Information (PII) is collected or stored by this plugin.**
+
+- No user accounts or registration
+- No cookies or tracking
+- No analytics or metrics collection
+- Only geographic coordinates and location names are sent to APIs
+- No IP addresses logged or transmitted (except as standard HTTP requests)
+- No email addresses collected from users
+
+### Data Storage
+
+- Weather data is cached locally using WordPress transients
+- Cache duration: 15 minutes for weather, 24 hours for astronomical data
+- All cached data is automatically deleted after expiration
+- Coordinates and location names are stored in WordPress options (admin settings only)
+
+### GDPR Compliance
+
+This plugin is GDPR-compliant:
+- No personal data processing
+- No cookies requiring consent
+- Location lookups are anonymous
+- No data shared with third parties beyond necessary API providers
+- Users can request site administrators disable the plugin at any time
+
+### For Site Administrators
+
+When using this plugin on a website that serves EU visitors:
+1. Disclose the use of external weather APIs in your privacy policy
+2. Inform users that location coordinates are sent to weather services
+3. Note that Met.no receives your site's admin email in the User-Agent header
 
 ## Requirements
 

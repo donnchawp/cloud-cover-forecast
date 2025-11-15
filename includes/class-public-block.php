@@ -45,12 +45,14 @@ class Cloud_Cover_Forecast_Public_Block {
 	/**
 	 * Rate limiting configuration
 	 *
+	 * Reduced from 10 to 5 requests per 5 minutes to prevent abuse.
+	 *
 	 * @since 1.0.0
 	 * @var array
 	 */
 	private $rate_limit_config = array(
 		'window_minutes' => 5,
-		'max_requests'   => 10,
+		'max_requests'   => 5,
 		'ban_minutes'    => 15,
 	);
 
@@ -744,32 +746,78 @@ class Cloud_Cover_Forecast_Public_Block {
 	}
 
 	/**
-	 * Get client IP address
+	 * Get client IP address with protection against IP spoofing
+	 *
+	 * By default, only trusts REMOTE_ADDR to prevent rate limit bypass attacks.
+	 * Site admins can enable proxy header support via filters if behind a CDN/proxy.
 	 *
 	 * @since 1.0.0
 	 * @return string Client IP address.
 	 */
 	private function get_client_ip() {
-		$ip_keys = array( 'HTTP_CF_CONNECTING_IP', 'HTTP_CLIENT_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_FORWARDED', 'HTTP_X_CLUSTER_CLIENT_IP', 'HTTP_FORWARDED_FOR', 'HTTP_FORWARDED', 'REMOTE_ADDR' );
+		// Get the direct connection IP (most secure, cannot be spoofed)
+		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ?
+			sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) :
+			'0.0.0.0';
 
-		foreach ( $ip_keys as $key ) {
-			if ( array_key_exists( $key, $_SERVER ) === true ) {
-				$ip = sanitize_text_field( wp_unslash( $_SERVER[ $key ] ) );
-				if ( strpos( $ip, ',' ) !== false ) {
-					$ip = explode( ',', $ip )[0];
-				}
-				$ip = trim( $ip );
-				// Validate IP address
-				if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-					return $ip;
+		/**
+		 * Filter to enable trust of proxy headers.
+		 *
+		 * WARNING: Only enable this if your site is behind a known CDN/proxy.
+		 * Enabling this without proper configuration allows rate limit bypass attacks.
+		 *
+		 * @since 1.0.0
+		 * @param bool $trust_proxy_headers Whether to trust proxy headers. Default false.
+		 */
+		$trust_proxy_headers = apply_filters(
+			'cloud_cover_forecast_trust_proxy_headers',
+			false
+		);
+
+		/**
+		 * Filter to define trusted proxy IP addresses.
+		 *
+		 * Only requests from these IPs will have their proxy headers trusted.
+		 * Example: array( '192.168.1.1', '10.0.0.1' )
+		 *
+		 * @since 1.0.0
+		 * @param array $trusted_proxies Array of trusted proxy IP addresses. Default empty.
+		 */
+		$trusted_proxies = apply_filters(
+			'cloud_cover_forecast_trusted_proxies',
+			array()
+		);
+
+		// Only trust proxy headers if explicitly enabled AND request is from trusted proxy
+		if ( $trust_proxy_headers && ! empty( $trusted_proxies ) && in_array( $remote_addr, $trusted_proxies, true ) ) {
+			// Check proxy headers in order of preference
+			$proxy_headers = array(
+				'HTTP_CF_CONNECTING_IP',  // Cloudflare
+				'HTTP_X_FORWARDED_FOR',   // Standard proxy header
+				'HTTP_X_REAL_IP',         // Nginx proxy
+			);
+
+			foreach ( $proxy_headers as $header ) {
+				if ( ! empty( $_SERVER[ $header ] ) ) {
+					$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+
+					// X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2)
+					// Take the first one (original client)
+					if ( strpos( $ip, ',' ) !== false ) {
+						$ip = trim( explode( ',', $ip )[0] );
+					}
+
+					// Validate IP and ensure it's not a private/reserved range
+					if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+						return $ip;
+					}
 				}
 			}
 		}
 
-		// Fallback to REMOTE_ADDR with validation
-		$fallback_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0';
-		if ( filter_var( $fallback_ip, FILTER_VALIDATE_IP ) ) {
-			return $fallback_ip;
+		// Default: Use REMOTE_ADDR (most reliable, not spoofable via HTTP headers)
+		if ( filter_var( $remote_addr, FILTER_VALIDATE_IP ) ) {
+			return $remote_addr;
 		}
 
 		return '0.0.0.0';
