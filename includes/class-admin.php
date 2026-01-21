@@ -222,11 +222,10 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function render_lat_field() {
 		$opts = $this->plugin->get_settings();
-		$val  = isset( $opts['lat'] ) ? $opts['lat'] : '';
 		printf(
 			'<input type="text" name="%1$s[lat]" value="%2$s" class="regular-text" />',
 			esc_attr( $this->plugin::OPTION_KEY ),
-			esc_attr( $val )
+			esc_attr( $opts['lat'] )
 		);
 	}
 
@@ -237,11 +236,10 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function render_lon_field() {
 		$opts = $this->plugin->get_settings();
-		$val  = isset( $opts['lon'] ) ? $opts['lon'] : '';
 		printf(
 			'<input type="text" name="%1$s[lon]" value="%2$s" class="regular-text" />',
 			esc_attr( $this->plugin::OPTION_KEY ),
-			esc_attr( $val )
+			esc_attr( $opts['lon'] )
 		);
 	}
 
@@ -252,11 +250,10 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function render_hours_field() {
 		$opts = $this->plugin->get_settings();
-		$val  = isset( $opts['hours'] ) ? $opts['hours'] : '';
 		printf(
 			'<input type="number" name="%1$s[hours]" value="%2$s" min="1" step="1" class="regular-text" />',
 			esc_attr( $this->plugin::OPTION_KEY ),
-			esc_attr( $val )
+			esc_attr( $opts['hours'] )
 		);
 	}
 
@@ -267,11 +264,10 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function render_cache_ttl_field() {
 		$opts = $this->plugin->get_settings();
-		$val  = isset( $opts['cache_ttl'] ) ? $opts['cache_ttl'] : '';
 		printf(
 			'<input type="number" name="%1$s[cache_ttl]" value="%2$s" min="1" step="1" class="regular-text" />',
 			esc_attr( $this->plugin::OPTION_KEY ),
-			esc_attr( $val )
+			esc_attr( $opts['cache_ttl'] )
 		);
 	}
 
@@ -484,11 +480,10 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function render_astro_api_key_field() {
 		$opts = $this->plugin->get_settings();
-		$val  = isset( $opts['astro_api_key'] ) ? $opts['astro_api_key'] : '';
 		printf(
 			'<input type="text" name="%1$s[astro_api_key]" value="%2$s" class="regular-text" />',
 			esc_attr( $this->plugin::OPTION_KEY ),
-			esc_attr( $val )
+			esc_attr( $opts['astro_api_key'] )
 		);
 		echo '<p class="description">' .
 			sprintf(

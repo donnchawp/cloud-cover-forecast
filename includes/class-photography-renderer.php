@@ -228,17 +228,20 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 
 		$window_start = $astronomical_dark;
 		$window_end = 6 * 3600;
-		$quality = 'good';
 
+		// Calculate moonset timing once
+		$moonset_in_dark_window = false;
 		if ( ! empty( $moonset_time ) ) {
 			$moonset_ts = strtotime( $moonset_time );
 			$moonset_seconds = intval( gmdate( 'H', $moonset_ts ) ) * 3600 + intval( gmdate( 'i', $moonset_ts ) ) * 60;
+			$moonset_in_dark_window = ( $moonset_seconds > $astronomical_dark ) || ( $moonset_seconds < $window_end );
 
-			if ( ( $moonset_seconds > $astronomical_dark ) || ( $moonset_seconds < $window_end ) ) {
+			if ( $moonset_in_dark_window ) {
 				$window_start = $moonset_seconds;
 			}
 		}
 
+		// Determine base quality from cloud cover
 		if ( $avg_total_cloud < 10 ) {
 			$quality = 'excellent';
 		} elseif ( $avg_total_cloud < 25 ) {
@@ -249,21 +252,16 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 			$quality = 'poor';
 		}
 
-		if ( ! empty( $moonset_time ) ) {
-			$moonset_ts = strtotime( $moonset_time );
-			$moonset_seconds = intval( gmdate( 'H', $moonset_ts ) ) * 3600 + intval( gmdate( 'i', $moonset_ts ) ) * 60;
-
-			if ( ( $moonset_seconds > $astronomical_dark ) || ( $moonset_seconds < $window_end ) ) {
-				if ( $quality === 'fair' ) {
-					$quality = 'good';
-				} elseif ( $quality === 'good' ) {
-					$quality = 'excellent';
-				}
+		// Boost quality if moonset occurs during optimal dark window
+		if ( $moonset_in_dark_window ) {
+			if ( 'fair' === $quality ) {
+				$quality = 'good';
+			} elseif ( 'good' === $quality ) {
+				$quality = 'excellent';
 			}
 		}
 
 		$duration_hours = ( $window_end - $window_start ) / 3600;
-
 		if ( $duration_hours < 0 ) {
 			$duration_hours = ( 24 * 3600 + $window_end - $window_start ) / 3600;
 		}
@@ -620,46 +618,38 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		$total_cloud = $row['total'] ?? 100;
 		$high_cloud = $row['high'] ?? 0;
 		$timestamp = $row['ts'] ?? 0;
-		$hour_time = gmdate( 'H:i', $timestamp );
+		$current_hour = intval( gmdate( 'H', $timestamp ) );
+
+		// Helper to get cloud condition suffix
+		$cloud_condition = function( $cloud ) {
+			if ( $cloud < 20 ) {
+				return 'clear skies';
+			}
+			if ( $cloud < 50 ) {
+				return 'partly cloudy';
+			}
+			return 'mostly cloudy';
+		};
 
 		// Check for moonset first (prioritize astronomical events)
 		if ( ! empty( $moon_today['moonset'] ) ) {
-			$moonset_ts = strtotime( $moon_today['moonset'] );
-			$moonset_hour = intval( gmdate( 'H', $moonset_ts ) );
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
-
+			$moonset_hour = intval( gmdate( 'H', strtotime( $moon_today['moonset'] ) ) );
 			if ( $moonset_hour === $current_hour ) {
-				if ( $total_cloud < 20 ) {
-					return '🌙 Moonset, clear skies';
-				} elseif ( $total_cloud < 50 ) {
-					return '🌙 Moonset, partly cloudy';
-				} else {
-					return '🌙 Moonset, mostly cloudy';
-				}
+				return '🌙 Moonset, ' . $cloud_condition( $total_cloud );
 			}
 		}
 
 		// Check for moonrise
 		if ( ! empty( $moon_today['moonrise'] ) ) {
-			$moonrise_ts = strtotime( $moon_today['moonrise'] );
-			$moonrise_hour = intval( gmdate( 'H', $moonrise_ts ) );
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
-
+			$moonrise_hour = intval( gmdate( 'H', strtotime( $moon_today['moonrise'] ) ) );
 			if ( $moonrise_hour === $current_hour ) {
-				if ( $total_cloud < 20 ) {
-					return '🌙 Moonrise, clear skies';
-				} elseif ( $total_cloud < 50 ) {
-					return '🌙 Moonrise, partly cloudy';
-				} else {
-					return '🌙 Moonrise, mostly cloudy';
-				}
+				return '🌙 Moonrise, ' . $cloud_condition( $total_cloud );
 			}
 		}
 
-		// Check if it's during sunrise golden hour (check if current hour falls within the golden hour range)
+		// Check if it's during sunrise golden hour
 		$is_sunrise_golden_hour = false;
 		if ( ! empty( $photo_times['sunrise_golden_hour_start'] ) && ! empty( $photo_times['golden_hour_end'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$golden_start_hour = intval( gmdate( 'H', $photo_times['sunrise_golden_hour_start'] ) );
 			$golden_end_hour = intval( gmdate( 'H', $photo_times['golden_hour_end'] ) );
 			$is_sunrise_golden_hour = ( $current_hour >= $golden_start_hour && $current_hour <= $golden_end_hour );
@@ -668,7 +658,6 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's during sunset golden hour (1 hour before sunset)
 		$is_sunset_golden_hour = false;
 		if ( ! empty( $photo_times['golden_hour_start'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$golden_start_hour = intval( gmdate( 'H', $photo_times['golden_hour_start'] ) );
 			$is_sunset_golden_hour = ( $current_hour === $golden_start_hour );
 		}
@@ -676,24 +665,21 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's the actual sunset hour
 		$is_sunset_hour = false;
 		if ( ! empty( $photo_times['sunset'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
 			$is_sunset_hour = ( $current_hour === $sunset_hour );
 		}
 
-		// Check if it's during sunrise blue hour (check if current hour falls within the blue hour range)
+		// Check if it's during sunrise blue hour
 		$is_sunrise_blue_hour = false;
 		if ( ! empty( $photo_times['sunrise_blue_hour_start'] ) && ! empty( $photo_times['sunrise_blue_hour_end'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$blue_start_hour = intval( gmdate( 'H', $photo_times['sunrise_blue_hour_start'] ) );
 			$blue_end_hour = intval( gmdate( 'H', $photo_times['sunrise_blue_hour_end'] ) );
 			$is_sunrise_blue_hour = ( $current_hour >= $blue_start_hour && $current_hour <= $blue_end_hour );
 		}
 
-		// Check if it's during sunset blue hour (check if current hour falls within the blue hour range)
+		// Check if it's during sunset blue hour
 		$is_sunset_blue_hour = false;
 		if ( ! empty( $photo_times['blue_hour_start'] ) && ! empty( $photo_times['blue_hour_end'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$blue_start_hour = intval( gmdate( 'H', $photo_times['blue_hour_start'] ) );
 			$blue_end_hour = intval( gmdate( 'H', $photo_times['blue_hour_end'] ) );
 			$is_sunset_blue_hour = ( $current_hour >= $blue_start_hour && $current_hour <= $blue_end_hour );
@@ -702,16 +688,13 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		// Check if it's during astronomical dark (after sunset twilight, before sunrise twilight)
 		$is_astro_dark = false;
 		if ( ! empty( $photo_times['astronomical_twilight_end'] ) && ! empty( $photo_times['astronomical_twilight_start'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$astro_end_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_end'] ) );
 			$astro_start_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_start'] ) );
 
 			// Handle astronomical dark that spans midnight
 			if ( $astro_end_hour > $astro_start_hour ) {
-				// Normal case: astronomical dark ends in evening, starts in morning
 				$is_astro_dark = ( $current_hour > $astro_end_hour || $current_hour < $astro_start_hour );
 			} else {
-				// Edge case: astronomical dark within same day (polar regions)
 				$is_astro_dark = ( $current_hour > $astro_end_hour && $current_hour < $astro_start_hour );
 			}
 		}
@@ -996,74 +979,53 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	 * @return string CSS class name.
 	 */
 	private function get_hour_row_class( int $timestamp, array $photo_times ): string {
-		// Check if it's during sunrise golden hour (check if current hour falls within the golden hour range)
-		$is_sunrise_golden_hour = false;
+		$current_hour = intval( gmdate( 'H', $timestamp ) );
+
+		// Check if it's during sunrise golden hour
 		if ( ! empty( $photo_times['sunrise_golden_hour_start'] ) && ! empty( $photo_times['golden_hour_end'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$golden_start_hour = intval( gmdate( 'H', $photo_times['sunrise_golden_hour_start'] ) );
 			$golden_end_hour = intval( gmdate( 'H', $photo_times['golden_hour_end'] ) );
-			$is_sunrise_golden_hour = ( $current_hour >= $golden_start_hour && $current_hour <= $golden_end_hour );
+			if ( $current_hour >= $golden_start_hour && $current_hour <= $golden_end_hour ) {
+				return 'sunrise-golden-hour-row';
+			}
 		}
 
-		// Check if it's during sunset golden hour (check if current hour falls within the golden hour range)
-		$is_sunset_golden_hour = false;
+		// Check if it's during sunset golden hour (the hour containing sunset)
 		if ( ! empty( $photo_times['golden_hour_start'] ) && ! empty( $photo_times['sunset'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
-
-			// Only show golden hour for the hour that contains the sunset time
-			// (since golden hour is the hour before sunset, it will be in the same hour slot as sunset)
-			$is_sunset_golden_hour = ( $current_hour === $sunset_hour );
+			if ( $current_hour === $sunset_hour ) {
+				return 'sunset-golden-hour-row';
+			}
 		}
 
 		// Check if it's during astronomical dark (between sunset and sunrise twilights)
-		$is_astro_dark = false;
 		if ( ! empty( $photo_times['astronomical_twilight_end'] ) && ! empty( $photo_times['astronomical_twilight_start'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$astro_end_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_end'] ) );
 			$astro_start_hour = intval( gmdate( 'H', $photo_times['astronomical_twilight_start'] ) );
 
 			// Handle astronomical dark that spans midnight
-			if ( $astro_end_hour > $astro_start_hour ) {
-				// Normal case: astronomical dark ends in evening, starts in morning
-				$is_astro_dark = ( $current_hour > $astro_end_hour || $current_hour < $astro_start_hour );
-			} else {
-				// Edge case: astronomical dark within same day (polar regions)
-				$is_astro_dark = ( $current_hour > $astro_end_hour && $current_hour < $astro_start_hour );
+			$is_astro_dark = ( $astro_end_hour > $astro_start_hour )
+				? ( $current_hour > $astro_end_hour || $current_hour < $astro_start_hour )
+				: ( $current_hour > $astro_end_hour && $current_hour < $astro_start_hour );
+
+			if ( $is_astro_dark ) {
+				return 'astro-dark-row';
 			}
 		}
 
 		// Check if it's nighttime (after sunset and before sunrise)
-		$is_nighttime = false;
 		if ( ! empty( $photo_times['sunset'] ) && ! empty( $photo_times['sunrise'] ) ) {
-			$current_hour = intval( gmdate( 'H', $timestamp ) );
 			$sunset_hour = intval( gmdate( 'H', $photo_times['sunset'] ) );
 			$sunrise_hour = intval( gmdate( 'H', $photo_times['sunrise'] ) );
 
 			// Handle nighttime that spans midnight
-			if ( $sunset_hour > $sunrise_hour ) {
-				// Normal case: sunset in evening, sunrise in morning
-				$is_nighttime = ( $current_hour > $sunset_hour || $current_hour < $sunrise_hour );
-			} else {
-				// Edge case: sunset and sunrise in same day (polar regions)
-				$is_nighttime = ( $current_hour > $sunset_hour && $current_hour < $sunrise_hour );
+			$is_nighttime = ( $sunset_hour > $sunrise_hour )
+				? ( $current_hour > $sunset_hour || $current_hour < $sunrise_hour )
+				: ( $current_hour > $sunset_hour && $current_hour < $sunrise_hour );
+
+			if ( $is_nighttime ) {
+				return 'nighttime-row';
 			}
-		}
-
-		if ( $is_sunrise_golden_hour ) {
-			return 'sunrise-golden-hour-row';
-		}
-
-		if ( $is_sunset_golden_hour ) {
-			return 'sunset-golden-hour-row';
-		}
-
-		if ( $is_astro_dark ) {
-			return 'astro-dark-row';
-		}
-
-		if ( $is_nighttime ) {
-			return 'nighttime-row';
 		}
 
 		return '';

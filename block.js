@@ -65,9 +65,8 @@
 		edit: function(props) {
 			var attributes = props.attributes;
 			var setAttributes = props.setAttributes;
-			var hasComponents = InspectorControls && PanelBody && TextControl && ToggleControl && RangeControl && Button && Notice;
 
-			if (!hasComponents) {
+			if (!InspectorControls || !PanelBody || !TextControl || !RangeControl || !Button || !Notice) {
 				return el('div', {
 					className: 'cloud-cover-forecast-block-editor',
 					style: {
@@ -83,17 +82,17 @@
 			}
 
 			// State for location search
-			var searchState = useState('idle'); // idle, searching, results, error
-			var currentSearchState = searchState[0];
-			var setSearchState = searchState[1];
+			var searchStateHook = useState('idle'); // idle, searching, results, error
+			var currentSearchState = searchStateHook[0];
+			var setSearchState = searchStateHook[1];
 
-			var searchResults = useState([]);
-			var currentSearchResults = searchResults[0];
-			var setSearchResults = searchResults[1];
+			var searchResultsHook = useState([]);
+			var currentSearchResults = searchResultsHook[0];
+			var setSearchResults = searchResultsHook[1];
 
-			var searchTerm = useState('');
-			var currentSearchTerm = searchTerm[0];
-			var setSearchTerm = searchTerm[1];
+			var searchTermHook = useState('');
+			var currentSearchTerm = searchTermHook[0];
+			var setSearchTerm = searchTermHook[1];
 
 			// Location search function
 			function searchLocation() {
@@ -147,9 +146,7 @@
 				setSearchResults([]);
 			}
 
-			var inspector = null;
-			if (InspectorControls && PanelBody) {
-				inspector = el(InspectorControls, {},
+			var inspector = el(InspectorControls, {},
 					el(PanelBody, {
 						title: __('Cloud Cover Forecast Settings', 'cloud-cover-forecast'),
 						initialOpen: true
@@ -274,11 +271,9 @@
 								setAttributes({ label: value });
 							},
 							help: __('Optional label to display with the forecast', 'cloud-cover-forecast')
-						}),
-
+						})
 					)
 				);
-			}
 
 			return [
 				inspector,
