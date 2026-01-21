@@ -19,7 +19,7 @@
   // ============================================================
 
   const state = {
-    activeTab: 'home',
+    activeTab: 'locations',
     homeLocation: null,
     currentLocation: null,
     savedLocations: [],
@@ -712,6 +712,7 @@
         <div class="grid-label section-header">${escapeHtml(strings.wind)}</div>
         <div class="grid-label">${escapeHtml(strings.visibility)}</div>
         <div class="grid-label section-header">${escapeHtml(strings.temp)}</div>
+        <div class="grid-label">${escapeHtml(strings.actual)}</div>
         <div class="grid-label">${escapeHtml(strings.feelsLike)}</div>
         <div class="grid-label">${escapeHtml(strings.dewPoint)}</div>
         <div class="grid-label">${escapeHtml(strings.humidity)}</div>
@@ -980,6 +981,7 @@
     if (searchBtn) {
       searchBtn.addEventListener('click', handleSearchClick);
     }
+
   }
 
   /**
@@ -1305,13 +1307,8 @@
       // Clean expired cache.
       await ForecastStorage.cleanExpiredCache();
 
-      // Render initial UI.
+      // Render initial UI (starts on locations tab).
       renderApp();
-
-      // Load home tab data if we have a home location.
-      if (state.homeLocation) {
-        loadHomeTab();
-      }
     } catch (e) {
       console.error('App initialization error:', e);
       state.error = e.message;

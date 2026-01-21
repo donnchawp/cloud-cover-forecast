@@ -125,6 +125,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				visibility: <?php echo wp_json_encode( __( 'Visibility', 'cloud-cover-forecast' ) ); ?>,
 				fog: <?php echo wp_json_encode( __( 'Fog', 'cloud-cover-forecast' ) ); ?>,
 				temp: <?php echo wp_json_encode( __( 'Temp', 'cloud-cover-forecast' ) ); ?>,
+				actual: <?php echo wp_json_encode( __( 'Actual', 'cloud-cover-forecast' ) ); ?>,
 				feelsLike: <?php echo wp_json_encode( __( 'Feels Like', 'cloud-cover-forecast' ) ); ?>,
 				dewPoint: <?php echo wp_json_encode( __( 'Dew Point', 'cloud-cover-forecast' ) ); ?>,
 				humidity: <?php echo wp_json_encode( __( 'Humidity', 'cloud-cover-forecast' ) ); ?>,

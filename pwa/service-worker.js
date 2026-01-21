@@ -3,7 +3,7 @@
  * Provides offline support and caching for the forecast app.
  */
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v10';
 const STATIC_CACHE = `ccf-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `ccf-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `ccf-api-${CACHE_VERSION}`;
@@ -58,9 +58,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets.
+  // Handle static assets - use network-first for JS/CSS to ensure updates are fetched.
   if (isStaticAsset(url.pathname)) {
-    event.respondWith(cacheFirstStrategy(request, STATIC_CACHE));
+    const strategy = /\.(js|css)$/.test(url.pathname)
+      ? networkFirstStrategy(request, STATIC_CACHE, 86400)  // 24h cache for code
+      : cacheFirstStrategy(request, STATIC_CACHE);          // Cache-first for images/fonts
+    event.respondWith(strategy);
     return;
   }
 

@@ -461,7 +461,7 @@ class Cloud_Cover_Forecast_API {
 				'humidity'          => $hourly['relative_humidity_2m'][ $i ] ?? null,
 				'precipitation'     => $hourly['precipitation'][ $i ] ?? null,
 				'rain_chance'       => $hourly['precipitation_probability'][ $i ] ?? null,
-				'rain_amount'       => $hourly['rain'][ $i ] ?? null,
+				'rain_amount'       => $hourly['precipitation'][ $i ] ?? null,
 				'weather_code'      => $hourly['weather_code'][ $i ] ?? null,
 				'cloud_total'       => $hourly['cloud_cover'][ $i ] ?? null,
 				'cloud_low'         => $hourly['cloud_cover_low'][ $i ] ?? null,
