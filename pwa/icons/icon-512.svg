@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1a1a2e"/>
+  <circle cx="256" cy="200" r="100" fill="none" stroke="#4ade80" stroke-width="10"/>
+  <path d="M156 200 L256 200 L256 100" fill="none" stroke="#4ade80" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="180" cy="340" r="40" fill="#60a5fa" opacity="0.8"/>
+  <circle cx="256" cy="355" r="50" fill="#60a5fa" opacity="0.9"/>
+  <circle cx="340" cy="335" r="55" fill="#60a5fa"/>
+  <text x="256" y="460" text-anchor="middle" fill="#e5e5e5" font-family="system-ui" font-size="36" font-weight="bold">CLOUD COVER</text>
+</svg>
