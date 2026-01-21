@@ -181,17 +181,18 @@
    * Format a date/time string.
    * @param {string} isoString - ISO date string.
    * @param {string} format - Format type ('time', 'date', 'datetime', 'day').
+   * @param {string} timezone - Optional timezone identifier (e.g., 'America/Los_Angeles').
    * @returns {string} Formatted string.
    */
-  function formatDateTime(isoString, format = 'time') {
+  function formatDateTime(isoString, format = 'time', timezone = undefined) {
     const date = new Date(isoString);
-    const options = {};
+    const tzOption = timezone ? { timeZone: timezone } : {};
 
     switch (format) {
       case 'time':
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false, ...tzOption });
       case 'date':
-        return date.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+        return date.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short', ...tzOption });
       case 'datetime':
         return date.toLocaleString([], {
           weekday: 'short',
@@ -200,11 +201,12 @@
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
+          ...tzOption,
         });
       case 'day':
-        return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString([], { weekday: 'short', ...tzOption });
       case 'hour':
-        return date.toLocaleTimeString([], { hour: '2-digit', hour12: false });
+        return date.toLocaleTimeString([], { hour: '2-digit', hour12: false, ...tzOption });
       default:
         return isoString;
     }
@@ -871,18 +873,26 @@
     const hourly = forecast.hourly || [];
     if (hourly.length === 0) return '';
 
+    const timezone = forecast.location?.timezone;
     const now = new Date();
-    const currentHour = now.getHours();
-    const todayStr = now.toISOString().split('T')[0];
 
-    // Group hours by day for date headers.
-    let lastDate = '';
-    let currentHourIndex = -1;
+    // Get current hour in the location's timezone
+    const nowInTz = timezone
+      ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
+      : now;
+    const currentHour = nowInTz.getHours();
+    const todayStr = nowInTz.toISOString().split('T')[0];
 
     // Find current hour index for auto-scroll.
+    let currentHourIndex = -1;
     hourly.forEach((hour, index) => {
+      // Parse hour time in location timezone
       const hourDate = new Date(hour.time);
-      if (hourDate.toISOString().split('T')[0] === todayStr && hourDate.getHours() === currentHour) {
+      const hourInTz = timezone
+        ? new Date(hourDate.toLocaleString('en-US', { timeZone: timezone }))
+        : hourDate;
+      const hourDateStr = hourInTz.toISOString().split('T')[0];
+      if (hourDateStr === todayStr && hourInTz.getHours() === currentHour) {
         currentHourIndex = index;
       }
     });
@@ -891,7 +901,7 @@
       <div class="forecast-grid-container" id="forecast-grid">
         <div class="forecast-grid">
           ${renderGridHeader()}
-          ${renderGridBody(hourly, forecast, todayStr, currentHourIndex)}
+          ${renderGridBody(hourly, forecast, currentHourIndex, timezone)}
         </div>
       </div>
     `;
@@ -935,7 +945,7 @@
    * @param {number} currentHourIndex - Index of current hour.
    * @returns {string} HTML string.
    */
-  function renderGridBody(hourly, forecast, todayStr, currentHourIndex) {
+  function renderGridBody(hourly, forecast, currentHourIndex, timezone) {
     let lastDate = '';
 
     // Build a map of daily data by date for quick lookup
@@ -950,7 +960,10 @@
       <div class="grid-data" id="grid-data">
         ${hourly.map((hour, index) => {
           const hourDate = new Date(hour.time);
-          const dateStr = hourDate.toISOString().split('T')[0];
+          // Get date string in location timezone
+          const dateStr = timezone
+            ? hourDate.toLocaleDateString('en-CA', { timeZone: timezone })
+            : hourDate.toISOString().split('T')[0];
           const isNewDay = dateStr !== lastDate;
           lastDate = dateStr;
           const isCurrent = index === currentHourIndex;
@@ -958,7 +971,7 @@
           const dayMoon = forecast.moon?.[dateStr];
           const dayData = dailyByDate[dateStr];
 
-          return renderHourColumn(hour, index, isNewDay, isCurrent, isPast, dayMoon, dayData);
+          return renderHourColumn(hour, index, isNewDay, isCurrent, isPast, dayMoon, dayData, timezone);
         }).join('')}
       </div>
     `;
@@ -975,15 +988,15 @@
    * @param {Object} dayData - Daily data for this day (sunrise, sunset, twilight).
    * @returns {string} HTML string.
    */
-  function renderHourColumn(hour, index, isNewDay, isCurrent, isPast, moon, dayData) {
+  function renderHourColumn(hour, index, isNewDay, isCurrent, isPast, moon, dayData, timezone) {
     const hourDate = new Date(hour.time);
-    const timeStr = formatDateTime(hour.time, 'hour');
-    const dayLabel = isNewDay ? formatDateTime(hour.time, 'day') : '';
+    const timeStr = formatDateTime(hour.time, 'hour', timezone);
+    const dayLabel = isNewDay ? formatDateTime(hour.time, 'day', timezone) : '';
     const wind = getWindDirection(hour.wind_direction);
     const visKm = hour.visibility != null ? (hour.visibility / 1000).toFixed(1) : '-';
 
-    const sunlightClass = getSunlightClass(hour, hourDate, dayData);
-    const moonVisible = isMoonVisible(hourDate, moon);
+    const sunlightClass = getSunlightClass(hour, hourDate, dayData, timezone);
+    const moonVisible = isMoonVisible(hourDate, moon, timezone);
     const moonIllumination = moon ? moon.moon_illumination : 0;
 
     return `
@@ -1022,10 +1035,26 @@
    * Parse a time string to timestamp for a given date.
    * @param {string} dateStr - Date string (YYYY-MM-DD).
    * @param {string} timeStr - Time string (HH:MM).
+   * @param {string} timezone - Optional timezone identifier.
    * @returns {number|null} Timestamp or null if invalid.
    */
-  function parseTimeToTimestamp(dateStr, timeStr) {
+  function parseTimeToTimestamp(dateStr, timeStr, timezone) {
     if (!timeStr) return null;
+    // If timezone provided, create date in that timezone
+    if (timezone) {
+      // Parse the time components
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      // Create a date string and use the timezone to get correct UTC time
+      const localDateStr = `${dateStr}T${timeStr}:00`;
+      // Create date object and get its representation in the target timezone
+      // We need to find what UTC time corresponds to this local time in the given timezone
+      const tempDate = new Date(localDateStr);
+      const utcDate = new Date(tempDate.toLocaleString('en-US', { timeZone: 'UTC' }));
+      const tzDate = new Date(tempDate.toLocaleString('en-US', { timeZone: timezone }));
+      const offset = utcDate.getTime() - tzDate.getTime();
+      const ts = tempDate.getTime() + offset;
+      return isNaN(ts) ? null : ts;
+    }
     const ts = new Date(`${dateStr}T${timeStr}`).getTime();
     return isNaN(ts) ? null : ts;
   }
@@ -1048,7 +1077,7 @@
    * @param {Object} dayData - Daily data with sunrise/sunset/twilight info.
    * @returns {string} CSS class.
    */
-  function getSunlightClass(hour, hourDate, dayData) {
+  function getSunlightClass(hour, hourDate, dayData, timezone) {
     if (!dayData) {
       return getSunlightFallback(hour);
     }
@@ -1063,8 +1092,8 @@
 
     const dateStr = dayData.date;
     const hourTs = hourDate.getTime();
-    const sunriseTs = parseTimeToTimestamp(dateStr, sunriseStr);
-    const sunsetTs = parseTimeToTimestamp(dateStr, sunsetStr);
+    const sunriseTs = parseTimeToTimestamp(dateStr, sunriseStr, timezone);
+    const sunsetTs = parseTimeToTimestamp(dateStr, sunsetStr, timezone);
 
     if (!sunriseTs || !sunsetTs) {
       return getSunlightFallback(hour);
@@ -1078,9 +1107,13 @@
     const goldenMorningEnd = sunriseTs + HOUR_MS;
     const goldenEveningStart = sunsetTs - HOUR_MS;
 
-    // Blue hour boundaries (use civil twilight if available, otherwise estimate 1 hour)
-    const civilDawnTs = parseTimeToTimestamp(dateStr, twilight.civil_dawn) || (sunriseTs - BLUE_HOUR_MS);
-    const civilDuskTs = parseTimeToTimestamp(dateStr, twilight.civil_dusk) || (sunsetTs + BLUE_HOUR_MS);
+    // Blue hour boundaries - ensure at least 1 hour window so it's visible in hourly grid
+    const parsedCivilDawn = parseTimeToTimestamp(dateStr, twilight.civil_dawn, timezone);
+    const parsedCivilDusk = parseTimeToTimestamp(dateStr, twilight.civil_dusk, timezone);
+    // Use earlier of parsed civil dawn or 1 hour before sunrise
+    const civilDawnTs = parsedCivilDawn ? Math.min(parsedCivilDawn, sunriseTs - BLUE_HOUR_MS) : (sunriseTs - BLUE_HOUR_MS);
+    // Use later of parsed civil dusk or 1 hour after sunset (ensures blue hour shows in at least one column)
+    const civilDuskTs = Math.max(parsedCivilDusk || 0, sunsetTs + BLUE_HOUR_MS);
 
     // Determine sunlight class based on time of day
     // Morning blue hour (before sunrise)
@@ -1103,13 +1136,15 @@
    * @param {Object} moon - Moon data for this day.
    * @returns {boolean} True if moon is visible.
    */
-  function isMoonVisible(hourDate, moon) {
+  function isMoonVisible(hourDate, moon, timezone) {
     if (!moon) return false;
 
     const hourTs = hourDate.getTime();
-    const dateStr = hourDate.toISOString().split('T')[0];
-    const moonriseTs = parseTimeToTimestamp(dateStr, moon.moonrise);
-    const moonsetTs = parseTimeToTimestamp(dateStr, moon.moonset);
+    const dateStr = timezone
+      ? hourDate.toLocaleDateString('en-CA', { timeZone: timezone })
+      : hourDate.toISOString().split('T')[0];
+    const moonriseTs = parseTimeToTimestamp(dateStr, moon.moonrise, timezone);
+    const moonsetTs = parseTimeToTimestamp(dateStr, moon.moonset, timezone);
 
     // Both times available
     if (moonriseTs && moonsetTs) {
