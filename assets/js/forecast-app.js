@@ -1026,7 +1026,8 @@
    */
   function parseTimeToTimestamp(dateStr, timeStr) {
     if (!timeStr) return null;
-    return new Date(`${dateStr}T${timeStr}`).getTime();
+    const ts = new Date(`${dateStr}T${timeStr}`).getTime();
+    return isNaN(ts) ? null : ts;
   }
 
   /**
@@ -1065,24 +1066,33 @@
     const sunriseTs = parseTimeToTimestamp(dateStr, sunriseStr);
     const sunsetTs = parseTimeToTimestamp(dateStr, sunsetStr);
 
+    if (!sunriseTs || !sunsetTs) {
+      return getSunlightFallback(hour);
+    }
+
     // Duration constants
     const HOUR_MS = 60 * 60 * 1000;
-    const BLUE_HOUR_MS = 35 * 60 * 1000;
+    const BLUE_HOUR_MS = 60 * 60 * 1000; // 1 hour fallback for blue hour
 
     // Golden hour boundaries
     const goldenMorningEnd = sunriseTs + HOUR_MS;
     const goldenEveningStart = sunsetTs - HOUR_MS;
 
-    // Blue hour boundaries (use civil twilight if available, otherwise estimate)
+    // Blue hour boundaries (use civil twilight if available, otherwise estimate 1 hour)
     const civilDawnTs = parseTimeToTimestamp(dateStr, twilight.civil_dawn) || (sunriseTs - BLUE_HOUR_MS);
     const civilDuskTs = parseTimeToTimestamp(dateStr, twilight.civil_dusk) || (sunsetTs + BLUE_HOUR_MS);
 
     // Determine sunlight class based on time of day
-    if (hourTs >= civilDawnTs && hourTs < sunriseTs) return 'sunlight-blue';
+    // Morning blue hour (before sunrise)
+    if (civilDawnTs && hourTs >= civilDawnTs && hourTs < sunriseTs) return 'sunlight-blue';
+    // Morning golden hour
     if (hourTs >= sunriseTs && hourTs < goldenMorningEnd) return 'sunlight-golden';
+    // Daytime
     if (hourTs >= goldenMorningEnd && hourTs < goldenEveningStart) return 'sunlight-day';
+    // Evening golden hour
     if (hourTs >= goldenEveningStart && hourTs < sunsetTs) return 'sunlight-golden';
-    if (hourTs >= sunsetTs && hourTs < civilDuskTs) return 'sunlight-blue';
+    // Evening blue hour (after sunset)
+    if (civilDuskTs && hourTs >= sunsetTs && hourTs < civilDuskTs) return 'sunlight-blue';
 
     return 'sunlight-night';
   }
