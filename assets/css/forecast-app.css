@@ -168,13 +168,13 @@ html, body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
+  background: var(--bg-primary);
 }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   font-size: var(--font-size-md);
   line-height: 1.5;
-  background: var(--bg-primary);
   color: var(--text-primary);
 }
 
@@ -283,6 +283,7 @@ body {
   flex: 1;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  background: var(--bg-primary);
 }
 
 /* ============================================================
@@ -403,6 +404,8 @@ body {
 
 .locations-panel {
   padding: var(--spacing-md);
+  background: var(--bg-primary);
+  min-height: 100%;
 }
 
 /* Search */
@@ -578,6 +581,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  color: var(--text-primary);
 }
 
 .maps-link {
