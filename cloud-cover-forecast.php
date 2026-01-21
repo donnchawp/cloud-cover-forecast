@@ -98,15 +98,7 @@ class Cloud_Cover_Forecast_Plugin {
 	private $shortcode;
 
 	/**
-	 * Photography instance
-	 *
-	 * @since 1.0.0
-	 * @var Cloud_Cover_Forecast_Photography
-	 */
-	private $photography;
-
-	/**
-	 * Photography renderer instance
+	 * Photography renderer instance (handles both calculations and rendering)
 	 *
 	 * @since 1.0.0
 	 * @var Cloud_Cover_Forecast_Photography_Renderer
@@ -197,11 +189,8 @@ class Cloud_Cover_Forecast_Plugin {
 		// Initialize API
 		$this->api = new Cloud_Cover_Forecast_API( $this );
 
-		// Initialize photography
-		$this->photography = new Cloud_Cover_Forecast_Photography( $this );
-
-		// Initialize photography renderer
-		$this->photography_renderer = new Cloud_Cover_Forecast_Photography_Renderer( $this, $this->photography );
+		// Initialize photography renderer (handles both calculations and rendering)
+		$this->photography_renderer = new Cloud_Cover_Forecast_Photography_Renderer( $this );
 
 		// Initialize public block
 		$this->public_block = new Cloud_Cover_Forecast_Public_Block( $this );
@@ -212,7 +201,7 @@ class Cloud_Cover_Forecast_Plugin {
 		$this->sunrise_sunset_block->init();
 
 		// Initialize shortcode
-		$this->shortcode = new Cloud_Cover_Forecast_Shortcode( $this, $this->api, $this->photography, $this->photography_renderer );
+		$this->shortcode = new Cloud_Cover_Forecast_Shortcode( $this, $this->api, $this->photography_renderer );
 		$this->shortcode->init();
 
 		// Initialize admin
@@ -368,16 +357,6 @@ class Cloud_Cover_Forecast_Plugin {
 	}
 
 	/**
-	 * Get admin instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Admin Admin instance.
-	 */
-	public function get_admin() {
-		return $this->admin;
-	}
-
-	/**
 	 * Get API instance
 	 *
 	 * @since 1.0.0
@@ -398,53 +377,13 @@ class Cloud_Cover_Forecast_Plugin {
 	}
 
 	/**
-	 * Get photography instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Photography Photography instance.
-	 */
-	public function get_photography() {
-		return $this->photography;
-	}
-
-	/**
-	 * Get photography renderer instance
+	 * Get photography renderer instance (handles both calculations and rendering)
 	 *
 	 * @since 1.0.0
 	 * @return Cloud_Cover_Forecast_Photography_Renderer Photography renderer instance.
 	 */
 	public function get_photography_renderer() {
 		return $this->photography_renderer;
-	}
-
-	/**
-	 * Get public block instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Public_Block Public block instance.
-	 */
-	public function get_public_block() {
-		return $this->public_block;
-	}
-
-	/**
-	 * Get sunrise sunset block instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Sunrise_Sunset_Block Sunrise sunset block instance.
-	 */
-	public function get_sunrise_sunset_block() {
-		return $this->sunrise_sunset_block;
-	}
-
-	/**
-	 * Get assets instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Assets Assets instance.
-	 */
-	public function get_assets() {
-		return $this->assets;
 	}
 
 	/**

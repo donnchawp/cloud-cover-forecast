@@ -35,15 +35,7 @@ class Cloud_Cover_Forecast_Shortcode {
 	private $api;
 
 	/**
-	 * Photography instance
-	 *
-	 * @since 1.0.0
-	 * @var Cloud_Cover_Forecast_Photography
-	 */
-	private $photography;
-
-	/**
-	 * Photography renderer instance
+	 * Photography renderer instance (handles both calculations and rendering)
 	 *
 	 * @since 1.0.0
 	 * @var Cloud_Cover_Forecast_Photography_Renderer
@@ -56,13 +48,11 @@ class Cloud_Cover_Forecast_Shortcode {
 	 * @since 1.0.0
 	 * @param Cloud_Cover_Forecast_Plugin $plugin Plugin instance.
 	 * @param Cloud_Cover_Forecast_API $api API instance.
-	 * @param Cloud_Cover_Forecast_Photography $photography Photography instance.
 	 * @param Cloud_Cover_Forecast_Photography_Renderer $photography_renderer Photography renderer instance.
 	 */
-	public function __construct( $plugin, $api, $photography, $photography_renderer ) {
+	public function __construct( $plugin, $api, $photography_renderer ) {
 		$this->plugin = $plugin;
 		$this->api = $api;
-		$this->photography = $photography;
 		$this->photography_renderer = $photography_renderer;
 	}
 
@@ -162,12 +152,12 @@ class Cloud_Cover_Forecast_Shortcode {
 		$shortcode_sunset = $data['stats']['selected_sunset'] ?? ( $data['stats']['daily_sunset'][0] ?? '' );
 		$shortcode_sunrise = $data['stats']['selected_sunrise'] ?? ( $data['stats']['daily_sunrise'][0] ?? '' );
 		if ( ! empty( $shortcode_sunset ) && ! empty( $shortcode_sunrise ) ) {
-			$photo_times = $this->photography->calculate_photography_times(
+			$photo_times = $this->photography_renderer->calculate_photography_times(
 				$shortcode_sunrise,
 				$shortcode_sunset,
 				$data['stats']['timezone']
 			);
-			$photo_ratings = $this->photography->rate_photography_conditions( $data['stats'] );
+			$photo_ratings = $this->photography_renderer->rate_photography_conditions( $data['stats'] );
 
 			$data['stats']['photo_times'] = $photo_times;
 			$data['stats']['photo_ratings'] = $photo_ratings;

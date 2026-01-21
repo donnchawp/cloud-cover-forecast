@@ -35,14 +35,6 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	private $api;
 
 	/**
-	 * Photography instance
-	 *
-	 * @since 1.0.0
-	 * @var Cloud_Cover_Forecast_Photography
-	 */
-	private $photography;
-
-	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
@@ -51,7 +43,6 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	public function __construct( $plugin ) {
 		$this->plugin = $plugin;
 		$this->api = $plugin->get_api();
-		$this->photography = $plugin->get_photography();
 	}
 
 	/**
