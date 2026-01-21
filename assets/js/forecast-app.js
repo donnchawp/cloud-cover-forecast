@@ -152,6 +152,16 @@
     };
   }
 
+  /**
+   * Get Google Maps URL for coordinates.
+   * @param {number} lat - Latitude.
+   * @param {number} lon - Longitude.
+   * @returns {string} Google Maps URL.
+   */
+  function getGoogleMapsUrl(lat, lon) {
+    return `https://www.google.com/maps?q=${lat},${lon}`;
+  }
+
   // ============================================================
   // COLOR SCHEMES
   // ============================================================
@@ -455,6 +465,7 @@
     const displayName = location.admin1
       ? `${location.name}, ${location.admin1}`
       : location.name;
+    const mapsUrl = getGoogleMapsUrl(location.lat, location.lon);
 
     return `
       <li class="location-item ${location.isHome ? 'is-home' : ''}" data-id="${location.id}">
@@ -466,6 +477,9 @@
           <span class="location-coords">${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}</span>
         </button>
         <div class="location-actions">
+          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-icon" title="View on Google Maps">
+            &#128205;
+          </a>
           ${!location.isHome ? `
             <button class="btn btn-icon" data-action="set-home" data-id="${location.id}" title="${escapeHtml(strings.setAsHome)}">
               &#127968;
@@ -489,11 +503,15 @@
     const displayName = location.admin1
       ? `${location.name}, ${location.admin1}`
       : location.name || `${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`;
+    const mapsUrl = getGoogleMapsUrl(location.lat, location.lon);
 
     return `
       <div class="forecast-view">
         <div class="forecast-header">
-          <h2 class="forecast-location">${escapeHtml(displayName)}</h2>
+          <h2 class="forecast-location">
+            ${escapeHtml(displayName)}
+            <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps">&#128205;</a>
+          </h2>
           ${forecast.location?.timezone_abbr ? `
             <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
           ` : ''}

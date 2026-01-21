@@ -469,6 +469,20 @@ body {
 .forecast-location {
   font-size: var(--font-size-lg);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.maps-link {
+  text-decoration: none;
+  font-size: var(--font-size-lg);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.maps-link:hover {
+  opacity: 1;
 }
 
 .forecast-timezone {
