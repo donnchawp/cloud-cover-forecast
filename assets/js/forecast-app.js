@@ -967,7 +967,7 @@
           const isNewDay = dateStr !== lastDate;
           lastDate = dateStr;
           const isCurrent = index === currentHourIndex;
-          const isPast = hourDate < new Date();
+          const isPast = currentHourIndex >= 0 && index < currentHourIndex;
           const dayMoon = forecast.moon?.[dateStr];
           const dayData = dailyByDate[dateStr];
 
