@@ -33,6 +33,8 @@
     // PWA Install state
     deferredInstallPrompt: null,
     showInstallInstructions: false,
+    // Edit location state
+    editingLocation: null,
   };
 
   // ============================================================
@@ -474,6 +476,7 @@
         ${renderTabContent()}
       </main>
       ${state.showInstallInstructions ? renderInstallInstructions() : ''}
+      ${state.editingLocation ? renderEditModal() : ''}
     `;
 
     attachEventListeners();
@@ -549,6 +552,46 @@
           <h2>${escapeHtml(strings.installTitle || 'Install App')}</h2>
           <p class="install-description">${escapeHtml(strings.installDescription || 'Install this app on your device for quick access.')}</p>
           ${instructions}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render edit location modal.
+   * @returns {string} HTML string.
+   */
+  function renderEditModal() {
+    const location = state.editingLocation;
+    if (!location) return '';
+
+    const name = location.name || '';
+    const admin1 = location.admin1 || '';
+    const notes = location.notes || '';
+
+    return `
+      <div class="edit-modal-overlay" data-action="cancel-edit">
+        <div class="edit-modal">
+          <button class="edit-modal-close" data-action="cancel-edit">&times;</button>
+          <h2>${escapeHtml(strings.editLocation || 'Edit Location')}</h2>
+          <form class="edit-form" id="edit-location-form">
+            <div class="form-group">
+              <label for="edit-name">${escapeHtml(strings.name || 'Name')}</label>
+              <input type="text" id="edit-name" class="form-input" value="${escapeHtml(name)}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-admin1">${escapeHtml(strings.region || 'Region')} <span class="optional">(${escapeHtml(strings.optional || 'optional')})</span></label>
+              <input type="text" id="edit-admin1" class="form-input" value="${escapeHtml(admin1)}" placeholder="${escapeHtml(strings.regionPlaceholder || 'State, province, or region')}">
+            </div>
+            <div class="form-group">
+              <label for="edit-notes">${escapeHtml(strings.notes || 'Notes')} <span class="optional">(${escapeHtml(strings.optional || 'optional')})</span></label>
+              <textarea id="edit-notes" class="form-textarea" rows="3" placeholder="${escapeHtml(strings.notesPlaceholder || 'Add notes about this location...')}">${escapeHtml(notes)}</textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn" data-action="cancel-edit">${escapeHtml(strings.cancel || 'Cancel')}</button>
+              <button type="submit" class="btn btn-primary" data-action="save-location-edit">${escapeHtml(strings.save || 'Save')}</button>
+            </div>
+          </form>
         </div>
       </div>
     `;
@@ -704,7 +747,18 @@
         </div>
         ${state.searchResults.length > 0 ? renderSearchResults() : ''}
         <div class="saved-locations">
-          <h2>${escapeHtml(strings.locations)}</h2>
+          <div class="locations-header">
+            <h2>${escapeHtml(strings.locations)}</h2>
+            <div class="locations-actions">
+              <button class="btn btn-sm" data-action="export-locations" title="${escapeHtml(strings.exportLocations || 'Export')}">
+                &#8599; ${escapeHtml(strings.export || 'Export')}
+              </button>
+              <button class="btn btn-sm" data-action="import-locations" title="${escapeHtml(strings.importLocations || 'Import')}">
+                &#8601; ${escapeHtml(strings.import || 'Import')}
+              </button>
+              <input type="file" id="import-file" accept=".json" style="display: none;">
+            </div>
+          </div>
           ${state.savedLocations.length === 0 ? `
             <div class="empty-state small">
               <p>${escapeHtml(strings.noLocations)}</p>
@@ -755,9 +809,13 @@
             ${location.isHome ? '<span class="home-badge">&#127968;</span>' : ''}
             ${escapeHtml(displayName)}
           </span>
+          ${location.notes ? `<span class="location-notes">${escapeHtml(location.notes)}</span>` : ''}
           <span class="location-coords">${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}</span>
         </button>
         <div class="location-actions">
+          <button class="btn btn-icon" data-action="edit-location" data-id="${location.id}" title="${escapeHtml(strings.edit || 'Edit')}">
+            &#9998;
+          </button>
           <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-icon" title="View on Google Maps">
             &#128205;
           </a>
@@ -1261,6 +1319,20 @@
       searchBtn.addEventListener('click', handleSearchClick);
     }
 
+    // Import file input.
+    const importInput = app.querySelector('#import-file');
+    if (importInput) {
+      importInput.addEventListener('change', handleImportFile);
+    }
+
+    // Edit form submission.
+    const editForm = app.querySelector('#edit-location-form');
+    if (editForm) {
+      editForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveLocationEdit();
+      });
+    }
   }
 
   /**
@@ -1327,6 +1399,32 @@
 
       case 'delete-location':
         await deleteLocation(id);
+        break;
+
+      case 'edit-location':
+        openEditModal(id);
+        break;
+
+      case 'save-location-edit':
+        event.preventDefault();
+        await saveLocationEdit();
+        break;
+
+      case 'cancel-edit':
+        // Only close if clicking X button, Cancel button, or directly on overlay (not modal content)
+        if (btn.classList.contains('edit-modal-close') ||
+            btn.classList.contains('btn') ||
+            event.target.classList.contains('edit-modal-overlay')) {
+          closeEditModal();
+        }
+        break;
+
+      case 'export-locations':
+        exportLocations();
+        break;
+
+      case 'import-locations':
+        triggerImport();
         break;
     }
   }
@@ -1537,6 +1635,180 @@
     } catch (e) {
       console.error('Error deleting location:', e);
     }
+  }
+
+  /**
+   * Open the edit modal for a location.
+   * @param {number} id - Location ID.
+   */
+  function openEditModal(id) {
+    const location = state.savedLocations.find((loc) => loc.id === id);
+    if (!location) return;
+
+    state.editingLocation = { ...location };
+    renderApp();
+  }
+
+  /**
+   * Close the edit modal without saving.
+   */
+  function closeEditModal() {
+    state.editingLocation = null;
+    renderApp();
+  }
+
+  /**
+   * Save the edited location.
+   */
+  async function saveLocationEdit() {
+    if (!state.editingLocation) return;
+
+    const nameInput = document.getElementById('edit-name');
+    const admin1Input = document.getElementById('edit-admin1');
+    const notesInput = document.getElementById('edit-notes');
+
+    if (!nameInput) return;
+
+    const name = nameInput.value.trim();
+    const admin1 = admin1Input ? admin1Input.value.trim() : '';
+    const notes = notesInput ? notesInput.value.trim() : '';
+
+    if (!name) return;
+
+    try {
+      await ForecastStorage.updateLocation(state.editingLocation.id, { name, admin1, notes });
+      await loadSavedLocations();
+      state.editingLocation = null;
+      renderApp();
+    } catch (e) {
+      console.error('Error saving location:', e);
+    }
+  }
+
+  /**
+   * Export locations to JSON file.
+   */
+  async function exportLocations() {
+    if (state.savedLocations.length === 0) return;
+
+    const exportData = {
+      version: 1,
+      exported: new Date().toISOString(),
+      locations: state.savedLocations.map((loc) => ({
+        lat: loc.lat,
+        lon: loc.lon,
+        name: loc.name,
+        admin1: loc.admin1,
+        country: loc.country,
+        timezone: loc.timezone,
+        notes: loc.notes,
+        isHome: loc.isHome,
+      })),
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const filename = `cloud-cover-locations-${new Date().toISOString().split('T')[0]}.json`;
+
+    // Try Web Share API first (for mobile devices)
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'application/json' });
+      const shareData = { files: [file] };
+
+      if (navigator.canShare(shareData)) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (e) {
+          if (e.name !== 'AbortError') {
+            console.error('Share error:', e);
+          }
+        }
+      }
+    }
+
+    // Fallback: Download the file
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Trigger the file input for importing locations.
+   */
+  function triggerImport() {
+    const fileInput = document.getElementById('import-file');
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  /**
+   * Handle file selection for import.
+   * @param {Event} event - Change event.
+   */
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // Validate structure
+      if (!data.locations || !Array.isArray(data.locations)) {
+        throw new Error('Invalid file format');
+      }
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const loc of data.locations) {
+        // Validate required fields
+        if (typeof loc.lat !== 'number' || typeof loc.lon !== 'number' || !loc.name) {
+          skipped++;
+          continue;
+        }
+
+        // Check for duplicate by proximity
+        if (isLocationSaved(loc.lat, loc.lon)) {
+          skipped++;
+          continue;
+        }
+
+        // Save the location (don't preserve isHome from import to avoid conflicts)
+        await ForecastStorage.saveLocation({
+          lat: loc.lat,
+          lon: loc.lon,
+          name: loc.name,
+          admin1: loc.admin1,
+          country: loc.country,
+          timezone: loc.timezone,
+          notes: loc.notes,
+        });
+        imported++;
+      }
+
+      await loadSavedLocations();
+      renderApp();
+
+      // Show result message
+      const message = imported > 0
+        ? `${strings.importedLocations || 'Imported'}: ${imported}${skipped > 0 ? ` (${skipped} ${strings.skipped || 'skipped'})` : ''}`
+        : strings.noNewLocations || 'No new locations to import';
+      alert(message);
+    } catch (e) {
+      console.error('Import error:', e);
+      alert(strings.importError || 'Failed to import locations. Please check the file format.');
+    }
+
+    // Reset file input
+    event.target.value = '';
   }
 
   /**

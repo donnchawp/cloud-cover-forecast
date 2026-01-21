@@ -239,6 +239,20 @@
     });
   }
 
+  /**
+   * Update a location with partial updates.
+   * @param {number} id - Location ID.
+   * @param {Object} updates - Object with fields to update (name, notes, etc.).
+   * @returns {Promise<number>} Location ID.
+   */
+  async function updateLocation(id, updates) {
+    const location = await getLocation(id);
+    if (!location) {
+      throw new Error('Location not found');
+    }
+    return saveLocation({ ...location, ...updates, id });
+  }
+
   // ============================================================
   // SETTINGS
   // ============================================================
@@ -398,6 +412,7 @@
     getHomeLocation,
     setHomeLocation,
     deleteLocation,
+    updateLocation,
 
     // Settings.
     getSetting,
