@@ -36,6 +36,7 @@ class Cloud_Cover_Forecast_API {
 		'open_meteo_geocoding'     => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 20 ),
 		'met_no_forecast'          => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 15 ),
 		'ipgeolocation_astronomy'  => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 60 ),
+		'nominatim_reverse'        => array( 'window' => MINUTE_IN_SECONDS, 'max_requests' => 1 ), // Nominatim requires max 1 req/sec
 	);
 
 	/**
@@ -660,6 +661,147 @@ class Cloud_Cover_Forecast_API {
 	}
 
 	/**
+	 * Reverse geocode coordinates to a location name using Nominatim (OpenStreetMap).
+	 *
+	 * @since 1.0.0
+	 * @param float $lat Latitude.
+	 * @param float $lon Longitude.
+	 * @return array|WP_Error Array with name, admin1, country, timezone or error.
+	 */
+	public function reverse_geocode( float $lat, float $lon ) {
+		// Round coordinates to 4 decimal places for caching
+		$lat = round( $lat, 4 );
+		$lon = round( $lon, 4 );
+
+		// Check cache first
+		$cache_key = $this->plugin::GEOCODING_PREFIX . 'reverse_' . md5( "{$lat},{$lon}" );
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return $cached;
+		}
+
+		$rate_check = $this->can_make_request( 'nominatim_reverse' );
+		if ( is_wp_error( $rate_check ) ) {
+			return $rate_check;
+		}
+
+		$url = add_query_arg(
+			array(
+				'lat'            => $lat,
+				'lon'            => $lon,
+				'format'         => 'json',
+				'addressdetails' => 1,
+				'zoom'           => 10, // City level
+			),
+			'https://nominatim.openstreetmap.org/reverse'
+		);
+
+		$this->increment_rate_counter( 'nominatim_reverse' );
+		$res = wp_remote_get(
+			$url,
+			array(
+				'timeout'    => 10,
+				'user-agent' => 'Cloud Cover Forecast WordPress Plugin/' . CLOUD_COVER_FORECAST_VERSION . ' (contact via WordPress plugin support)',
+				'sslverify'  => true,
+			)
+		);
+
+		if ( is_wp_error( $res ) ) {
+			return new WP_Error( 'cloud_cover_forecast_reverse_geocode_network', __( 'Network error during reverse geocoding.', 'cloud-cover-forecast' ) );
+		}
+
+		$code = wp_remote_retrieve_response_code( $res );
+		if ( 200 !== $code ) {
+			return new WP_Error( 'cloud_cover_forecast_reverse_geocode_http', __( 'Reverse geocoding service unavailable.', 'cloud-cover-forecast' ) );
+		}
+
+		$body = wp_remote_retrieve_body( $res );
+		$json = json_decode( $body, true );
+
+		if ( ! $json || isset( $json['error'] ) ) {
+			return new WP_Error( 'cloud_cover_forecast_reverse_geocode_not_found', __( 'Location not found.', 'cloud-cover-forecast' ) );
+		}
+
+		$address = $json['address'] ?? array();
+
+		// Build location name - prefer city/town/village, fall back to others
+		$name = $address['city']
+			?? $address['town']
+			?? $address['village']
+			?? $address['municipality']
+			?? $address['suburb']
+			?? $address['locality']
+			?? $json['name']
+			?? '';
+
+		// Get state/region (admin1)
+		$admin1 = $address['state']
+			?? $address['province']
+			?? $address['region']
+			?? $address['county']
+			?? '';
+
+		$country = $address['country'] ?? '';
+
+		// Get timezone from Open-Meteo (Nominatim doesn't provide it)
+		$timezone = $this->get_timezone_for_coordinates( $lat, $lon );
+
+		$result = array(
+			'lat'      => $lat,
+			'lon'      => $lon,
+			'name'     => $name,
+			'admin1'   => $admin1,
+			'country'  => $country,
+			'timezone' => $timezone,
+		);
+
+		// Cache for 24 hours (reverse geocoding results rarely change)
+		set_transient( $cache_key, $result, DAY_IN_SECONDS );
+		$this->plugin->register_transient_key( $cache_key );
+
+		return $result;
+	}
+
+	/**
+	 * Get timezone for coordinates from Open-Meteo.
+	 *
+	 * @since 1.0.0
+	 * @param float $lat Latitude.
+	 * @param float $lon Longitude.
+	 * @return string Timezone identifier or empty string.
+	 */
+	private function get_timezone_for_coordinates( float $lat, float $lon ): string {
+		// Use a minimal Open-Meteo request to get timezone
+		$url = add_query_arg(
+			array(
+				'latitude'  => $lat,
+				'longitude' => $lon,
+				'timezone'  => 'auto',
+				'forecast_days' => 1,
+			),
+			'https://api.open-meteo.com/v1/forecast'
+		);
+
+		$res = wp_remote_get(
+			$url,
+			array(
+				'timeout'    => 5,
+				'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+				'sslverify'  => true,
+			)
+		);
+
+		if ( is_wp_error( $res ) ) {
+			return '';
+		}
+
+		$body = wp_remote_retrieve_body( $res );
+		$json = json_decode( $body, true );
+
+		return $json['timezone'] ?? '';
+	}
+
+	/**
 	 * Geocode a location and return normalized results for AJAX responses.
 	 *
 	 * @since 1.0.0
@@ -973,6 +1115,8 @@ class Cloud_Cover_Forecast_API {
 				return __( 'Met.no forecast', 'cloud-cover-forecast' );
 			case 'ipgeolocation_astronomy':
 				return __( 'IPGeolocation astronomy', 'cloud-cover-forecast' );
+			case 'nominatim_reverse':
+				return __( 'Nominatim reverse geocoding', 'cloud-cover-forecast' );
 			default:
 				return __( 'external service', 'cloud-cover-forecast' );
 		}

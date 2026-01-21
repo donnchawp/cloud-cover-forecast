@@ -404,22 +404,38 @@
   }
 
   /**
-   * Reverse geocode coordinates to location name.
+   * Reverse geocode coordinates to location object.
    * @param {number} lat - Latitude.
    * @param {number} lon - Longitude.
-   * @returns {Promise<string>} Location name.
+   * @returns {Promise<Object>} Location object with name, admin1, country, timezone.
    */
   async function reverseGeocode(lat, lon) {
     try {
-      const results = await searchLocations(`${lat.toFixed(4)},${lon.toFixed(4)}`);
-      if (results.length > 0) {
-        const loc = results[0];
-        return loc.admin1 ? `${loc.name}, ${loc.admin1}` : loc.name;
+      const result = await ajax('ccf_pwa_reverse_geocode', { lat, lon });
+      if (result && result.name) {
+        return result;
       }
     } catch (e) {
       // Fallback to coordinates.
     }
-    return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    return {
+      lat,
+      lon,
+      name: `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+    };
+  }
+
+  /**
+   * Check if a location is already saved (by coordinates proximity).
+   * @param {number} lat - Latitude.
+   * @param {number} lon - Longitude.
+   * @returns {boolean} True if location is already saved.
+   */
+  function isLocationSaved(lat, lon) {
+    const threshold = 0.01; // ~1km tolerance
+    return state.savedLocations.some(
+      (loc) => Math.abs(loc.lat - lat) < threshold && Math.abs(loc.lon - lon) < threshold
+    );
   }
 
   // ============================================================
@@ -769,6 +785,8 @@
       ? `${location.name}, ${location.admin1}`
       : location.name || `${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`;
     const mapsUrl = getGoogleMapsUrl(location.lat, location.lon);
+    const canSave = !location.id && !isLocationSaved(location.lat, location.lon);
+    const alreadySaved = !location.id && isLocationSaved(location.lat, location.lon);
 
     return `
       <div class="forecast-view">
@@ -777,9 +795,19 @@
             ${escapeHtml(displayName)}
             <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps">&#128205;</a>
           </h2>
-          ${forecast.location?.timezone_abbr ? `
-            <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
-          ` : ''}
+          <div class="forecast-header-actions">
+            ${forecast.location?.timezone_abbr ? `
+              <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
+            ` : ''}
+            ${canSave ? `
+              <button class="btn btn-save-location" data-action="save-current-location" title="${escapeHtml(strings.saveLocation || 'Save Location')}">
+                &#128190; ${escapeHtml(strings.saveLocation || 'Save')}
+              </button>
+            ` : ''}
+            ${alreadySaved ? `
+              <span class="saved-badge" title="${escapeHtml(strings.locationSaved || 'Location saved')}">&#10003; ${escapeHtml(strings.saved || 'Saved')}</span>
+            ` : ''}
+          </div>
         </div>
         ${renderSolarInfo(forecast)}
         ${renderLunarInfo(forecast)}
@@ -1287,6 +1315,12 @@
         }
         break;
 
+      case 'save-current-location':
+        if (state.currentLocation && !isLocationSaved(state.currentLocation.lat, state.currentLocation.lon)) {
+          await addLocation(state.currentLocation);
+        }
+        break;
+
       case 'set-home':
         await setHomeLocation(id);
         break;
@@ -1407,13 +1441,7 @@
 
     try {
       const position = await getCurrentPosition();
-      const name = await reverseGeocode(position.lat, position.lon);
-
-      state.currentLocation = {
-        lat: position.lat,
-        lon: position.lon,
-        name,
-      };
+      state.currentLocation = await reverseGeocode(position.lat, position.lon);
 
       const forecast = await fetchForecast(state.currentLocation);
       state.forecastData['current'] = forecast;

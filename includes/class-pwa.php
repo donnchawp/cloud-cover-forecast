@@ -62,6 +62,8 @@ class Cloud_Cover_Forecast_PWA {
 		add_action( 'wp_ajax_nopriv_ccf_pwa_forecast', array( $this, 'ajax_extended_forecast' ) );
 		add_action( 'wp_ajax_ccf_pwa_geocode', array( $this, 'ajax_geocode' ) );
 		add_action( 'wp_ajax_nopriv_ccf_pwa_geocode', array( $this, 'ajax_geocode' ) );
+		add_action( 'wp_ajax_ccf_pwa_reverse_geocode', array( $this, 'ajax_reverse_geocode' ) );
+		add_action( 'wp_ajax_nopriv_ccf_pwa_reverse_geocode', array( $this, 'ajax_reverse_geocode' ) );
 
 		// Serve manifest and service worker.
 		add_action( 'init', array( $this, 'serve_pwa_assets' ) );
@@ -254,6 +256,40 @@ class Cloud_Cover_Forecast_PWA {
 
 		$api = $this->plugin->get_api();
 		$result = $api->geocode_location( $query );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success( $result );
+	}
+
+	/**
+	 * AJAX handler for reverse geocoding (coordinates to location name).
+	 *
+	 * @since 1.0.0
+	 */
+	public function ajax_reverse_geocode() {
+		// Verify nonce if provided.
+		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
+		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'ccf_pwa_nonce' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'cloud-cover-forecast' ) ) );
+		}
+
+		$lat = isset( $_REQUEST['lat'] ) ? floatval( $_REQUEST['lat'] ) : null;
+		$lon = isset( $_REQUEST['lon'] ) ? floatval( $_REQUEST['lon'] ) : null;
+
+		if ( null === $lat || null === $lon ) {
+			wp_send_json_error( array( 'message' => __( 'Latitude and longitude are required.', 'cloud-cover-forecast' ) ) );
+		}
+
+		// Validate coordinate ranges
+		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid coordinates.', 'cloud-cover-forecast' ) ) );
+		}
+
+		$api = $this->plugin->get_api();
+		$result = $api->reverse_geocode( $lat, $lon );
 
 		if ( is_wp_error( $result ) ) {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
