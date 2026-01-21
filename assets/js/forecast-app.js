@@ -30,7 +30,105 @@
     searchResults: [],
     isSearching: false,
     theme: localStorage.getItem('ccf-theme') || 'auto',
+    // PWA Install state
+    deferredInstallPrompt: null,
+    showInstallInstructions: false,
   };
+
+  // ============================================================
+  // PWA INSTALL DETECTION
+  // ============================================================
+
+  /**
+   * Detect if app is running in standalone/installed mode.
+   * @returns {boolean} True if installed.
+   */
+  function isAppInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+
+  /**
+   * Detect if running on iOS.
+   * @returns {boolean} True if iOS.
+   */
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  }
+
+  /**
+   * Detect if running on Android.
+   * @returns {boolean} True if Android.
+   */
+  function isAndroid() {
+    return /Android/.test(navigator.userAgent);
+  }
+
+  /**
+   * Detect if browser supports native install prompt (Chrome/Edge/Samsung).
+   * @returns {boolean} True if supported.
+   */
+  function supportsNativeInstall() {
+    return 'BeforeInstallPromptEvent' in window || state.deferredInstallPrompt !== null;
+  }
+
+  /**
+   * Check if browser supports native install but needs manual instructions.
+   * @returns {boolean} True if browser needs manual instructions.
+   */
+  function needsManualInstallInstructions() {
+    const browser = getBrowserType();
+    // iOS always needs manual instructions (no beforeinstallprompt support)
+    if (isIOS()) return true;
+    // Firefox on Android needs manual instructions
+    if (browser === 'firefox') return true;
+    // Other browsers (Chrome, Edge, Samsung) support native install
+    return false;
+  }
+
+  /**
+   * Check if we should show the install button.
+   * @returns {boolean} True if install button should be shown.
+   */
+  function shouldShowInstallButton() {
+    // Don't show if already installed
+    if (isAppInstalled()) return false;
+    // If we have a deferred prompt, always show (native install available)
+    if (state.deferredInstallPrompt) return true;
+    // For browsers that need manual instructions, show on mobile
+    if (needsManualInstallInstructions() && (isIOS() || isAndroid())) return true;
+    // Don't show for browsers that support native install but haven't fired the event
+    return false;
+  }
+
+  /**
+   * Get the browser name for install instructions.
+   * @returns {string} Browser identifier.
+   */
+  function getBrowserType() {
+    const ua = navigator.userAgent;
+    if (/CriOS/.test(ua)) return 'chrome-ios';
+    if (/Chrome/.test(ua) && !/Edg/.test(ua)) return 'chrome';
+    if (/Safari/.test(ua) && !/Chrome/.test(ua)) return 'safari';
+    if (/Firefox/.test(ua)) return 'firefox';
+    if (/Edg/.test(ua)) return 'edge';
+    if (/SamsungBrowser/.test(ua)) return 'samsung';
+    return 'other';
+  }
+
+  // Listen for the beforeinstallprompt event (Chrome/Edge/Samsung)
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    state.deferredInstallPrompt = e;
+    renderApp();
+  });
+
+  // Listen for successful install
+  window.addEventListener('appinstalled', () => {
+    state.deferredInstallPrompt = null;
+    state.showInstallInstructions = false;
+    renderApp();
+  });
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -338,6 +436,7 @@
           <h1 class="app-title">${escapeHtml(strings.appTitle)}</h1>
           <div class="app-status">
             ${!state.isOnline ? `<span class="offline-badge">${escapeHtml(strings.offline)}</span>` : ''}
+            ${shouldShowInstallButton() ? `<button class="install-btn" data-action="install" title="${escapeHtml(strings.installApp || 'Install App')}">&#8681;</button>` : ''}
             <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme">${getThemeIcon()}</button>
           </div>
         </div>
@@ -356,9 +455,116 @@
       <main class="app-content" id="app-content">
         ${renderTabContent()}
       </main>
+      ${state.showInstallInstructions ? renderInstallInstructions() : ''}
     `;
 
     attachEventListeners();
+  }
+
+  /**
+   * Render install instructions modal for Safari/Firefox.
+   * @returns {string} HTML string.
+   */
+  function renderInstallInstructions() {
+    const browser = getBrowserType();
+    const isIOSDevice = isIOS();
+
+    let instructions = '';
+    let icon = '';
+
+    if (isIOSDevice) {
+      if (browser === 'safari') {
+        icon = '&#61512;'; // Share icon approximation
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStep1Safari || 'Tap the Share button')} <span class="install-icon">&#61512;</span></li>
+            <li>${escapeHtml(strings.installStep2Safari || 'Scroll down and tap "Add to Home Screen"')}</li>
+            <li>${escapeHtml(strings.installStep3Safari || 'Tap "Add" in the top right')}</li>
+          </ol>
+        `;
+      } else if (browser === 'chrome-ios') {
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStep1ChromeIOS || 'Tap the Share button')} <span class="install-icon">&#61512;</span></li>
+            <li>${escapeHtml(strings.installStep2ChromeIOS || 'Tap "Add to Home Screen"')}</li>
+            <li>${escapeHtml(strings.installStep3ChromeIOS || 'Tap "Add" to confirm')}</li>
+          </ol>
+        `;
+      } else if (browser === 'firefox') {
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStep1FirefoxIOS || 'Tap the menu button')} <span class="install-icon">&#8943;</span></li>
+            <li>${escapeHtml(strings.installStep2FirefoxIOS || 'Tap "Share"')}</li>
+            <li>${escapeHtml(strings.installStep3FirefoxIOS || 'Tap "Add to Home Screen"')}</li>
+          </ol>
+        `;
+      } else {
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStepGenericIOS || 'Open this page in Safari, then tap Share and "Add to Home Screen"')}</li>
+          </ol>
+        `;
+      }
+    } else {
+      // Android Firefox or other browsers
+      if (browser === 'firefox') {
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStep1Firefox || 'Tap the menu button')} <span class="install-icon">&#8942;</span></li>
+            <li>${escapeHtml(strings.installStep2Firefox || 'Tap "Install"')}</li>
+          </ol>
+        `;
+      } else {
+        instructions = `
+          <ol class="install-steps">
+            <li>${escapeHtml(strings.installStep1Generic || 'Tap the browser menu')} <span class="install-icon">&#8942;</span></li>
+            <li>${escapeHtml(strings.installStep2Generic || 'Look for "Install app" or "Add to Home Screen"')}</li>
+          </ol>
+        `;
+      }
+    }
+
+    return `
+      <div class="install-modal-overlay" data-action="close-install">
+        <div class="install-modal">
+          <button class="install-modal-close" data-action="close-install">&times;</button>
+          <h2>${escapeHtml(strings.installTitle || 'Install App')}</h2>
+          <p class="install-description">${escapeHtml(strings.installDescription || 'Install this app on your device for quick access.')}</p>
+          ${instructions}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Handle install button click.
+   */
+  async function handleInstallClick() {
+    // If we have a deferred prompt (Chrome/Edge), use it
+    if (state.deferredInstallPrompt) {
+      try {
+        state.deferredInstallPrompt.prompt();
+        const result = await state.deferredInstallPrompt.userChoice;
+        if (result.outcome === 'accepted') {
+          state.deferredInstallPrompt = null;
+        }
+      } catch (e) {
+        console.error('Install prompt error:', e);
+      }
+      return;
+    }
+
+    // Otherwise, show manual instructions
+    state.showInstallInstructions = true;
+    renderApp();
+  }
+
+  /**
+   * Close install instructions modal.
+   */
+  function closeInstallInstructions() {
+    state.showInstallInstructions = false;
+    renderApp();
   }
 
   /**
@@ -999,6 +1205,17 @@
     switch (action) {
       case 'toggle-theme':
         toggleTheme();
+        break;
+
+      case 'install':
+        handleInstallClick();
+        break;
+
+      case 'close-install':
+        // Only close if clicking X button or directly on overlay (not modal content)
+        if (btn.classList.contains('install-modal-close') || event.target.classList.contains('install-modal-overlay')) {
+          closeInstallInstructions();
+        }
         break;
 
       case 'go-to-locations':

@@ -140,6 +140,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 				now: <?php echo wp_json_encode( __( 'Now', 'cloud-cover-forecast' ) ); ?>,
 				today: <?php echo wp_json_encode( __( 'Today', 'cloud-cover-forecast' ) ); ?>,
 				tomorrow: <?php echo wp_json_encode( __( 'Tomorrow', 'cloud-cover-forecast' ) ); ?>,
+				// Install labels
+				installApp: <?php echo wp_json_encode( __( 'Install App', 'cloud-cover-forecast' ) ); ?>,
+				installTitle: <?php echo wp_json_encode( __( 'Install App', 'cloud-cover-forecast' ) ); ?>,
+				installDescription: <?php echo wp_json_encode( __( 'Add this app to your home screen for quick access.', 'cloud-cover-forecast' ) ); ?>,
+				installStep1Safari: <?php echo wp_json_encode( __( 'Tap the Share button', 'cloud-cover-forecast' ) ); ?>,
+				installStep2Safari: <?php echo wp_json_encode( __( 'Scroll down and tap "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
+				installStep3Safari: <?php echo wp_json_encode( __( 'Tap "Add" in the top right', 'cloud-cover-forecast' ) ); ?>,
+				installStep1ChromeIOS: <?php echo wp_json_encode( __( 'Tap the Share button', 'cloud-cover-forecast' ) ); ?>,
+				installStep2ChromeIOS: <?php echo wp_json_encode( __( 'Tap "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
+				installStep3ChromeIOS: <?php echo wp_json_encode( __( 'Tap "Add" to confirm', 'cloud-cover-forecast' ) ); ?>,
+				installStep1FirefoxIOS: <?php echo wp_json_encode( __( 'Tap the menu button', 'cloud-cover-forecast' ) ); ?>,
+				installStep2FirefoxIOS: <?php echo wp_json_encode( __( 'Tap "Share"', 'cloud-cover-forecast' ) ); ?>,
+				installStep3FirefoxIOS: <?php echo wp_json_encode( __( 'Tap "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
+				installStepGenericIOS: <?php echo wp_json_encode( __( 'Open this page in Safari, then tap Share and "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
+				installStep1Firefox: <?php echo wp_json_encode( __( 'Tap the menu button', 'cloud-cover-forecast' ) ); ?>,
+				installStep2Firefox: <?php echo wp_json_encode( __( 'Tap "Install"', 'cloud-cover-forecast' ) ); ?>,
+				installStep1Generic: <?php echo wp_json_encode( __( 'Tap the browser menu', 'cloud-cover-forecast' ) ); ?>,
+				installStep2Generic: <?php echo wp_json_encode( __( 'Look for "Install app" or "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
 			}
 		};
 	</script>

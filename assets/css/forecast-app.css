@@ -248,6 +248,31 @@ body {
   background: var(--border-color);
 }
 
+/* Install Button */
+.install-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: 8px;
+  color: var(--bg-primary);
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.install-btn:hover {
+  background: #22c55e;
+}
+
+.install-btn:active {
+  transform: scale(0.95);
+}
+
 /* Tabs */
 .app-tabs {
   display: flex;
@@ -983,4 +1008,118 @@ body {
 .grid-data {
   scrollbar-width: thin;
   scrollbar-color: var(--bg-tertiary) var(--bg-secondary);
+}
+
+/* ============================================================
+   INSTALL MODAL
+   ============================================================ */
+
+.install-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.install-modal {
+  position: relative;
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  padding: var(--spacing-lg);
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.install-modal h2 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  padding-right: var(--spacing-lg);
+}
+
+.install-modal-close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  width: 32px;
+  height: 32px;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-primary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.install-modal-close:hover {
+  background: var(--border-color);
+}
+
+.install-description {
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-md);
+}
+
+.install-steps {
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 0;
+}
+
+.install-steps li {
+  counter-increment: step;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+}
+
+.install-steps li:last-child {
+  border-bottom: none;
+}
+
+.install-steps li::before {
+  content: counter(step);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.install-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: var(--font-size-lg);
+  vertical-align: middle;
 }
