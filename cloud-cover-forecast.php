@@ -138,6 +138,14 @@ class Cloud_Cover_Forecast_Plugin {
 	private $assets;
 
 	/**
+	 * PWA instance
+	 *
+	 * @since 1.0.0
+	 * @var Cloud_Cover_Forecast_PWA
+	 */
+	private $pwa;
+
+	/**
 	 * Get plugin instance
 	 *
 	 * @since 1.0.0
@@ -210,6 +218,10 @@ class Cloud_Cover_Forecast_Plugin {
 		// Initialize admin
 		$this->admin = new Cloud_Cover_Forecast_Admin( $this );
 		$this->admin->init();
+
+		// Initialize PWA
+		$this->pwa = new Cloud_Cover_Forecast_PWA( $this );
+		$this->pwa->init();
 	}
 
 	/**
@@ -311,6 +323,9 @@ class Cloud_Cover_Forecast_Plugin {
 		if ( ! get_option( self::OPTION_KEY ) ) {
 			update_option( self::OPTION_KEY, self::get_defaults() );
 		}
+
+		// Trigger PWA rewrite rules flush.
+		Cloud_Cover_Forecast_PWA::activate();
 	}
 
 	/**
@@ -319,7 +334,8 @@ class Cloud_Cover_Forecast_Plugin {
 	 * @since 1.0.0
 	 */
 	public function deactivate() {
-		// Clean up if needed
+		// Clean up PWA rewrite rules.
+		Cloud_Cover_Forecast_PWA::deactivate();
 	}
 
 	/**
@@ -429,6 +445,16 @@ class Cloud_Cover_Forecast_Plugin {
 	 */
 	public function get_assets() {
 		return $this->assets;
+	}
+
+	/**
+	 * Get PWA instance
+	 *
+	 * @since 1.0.0
+	 * @return Cloud_Cover_Forecast_PWA PWA instance.
+	 */
+	public function get_pwa() {
+		return $this->pwa;
 	}
 }
 

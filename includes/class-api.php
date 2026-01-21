@@ -341,6 +341,230 @@ class Cloud_Cover_Forecast_API {
 	}
 
 	/**
+	 * Fetch extended weather data from Open-Meteo API for PWA
+	 *
+	 * Returns 7 days (168 hours) of comprehensive weather data including
+	 * temperature, humidity, precipitation, wind, visibility, and more.
+	 *
+	 * @since 1.0.0
+	 * @param float $lat  Latitude.
+	 * @param float $lon  Longitude.
+	 * @param int   $days Number of days to fetch (default 7).
+	 * @return array|WP_Error Extended weather data or error.
+	 */
+	public function fetch_extended_forecast( float $lat, float $lon, int $days = 7 ) {
+		// Validate coordinates.
+		if ( ! $this->validate_coordinates( $lat, $lon ) ) {
+			return new WP_Error(
+				'cloud_cover_forecast_invalid_coordinates',
+				__( 'Invalid coordinates. Must be between -90 and 90 for latitude, and -180 and 180 for longitude.', 'cloud-cover-forecast' )
+			);
+		}
+
+		$days = max( 1, min( 7, $days ) );
+
+		$params = array(
+			'latitude'       => $lat,
+			'longitude'      => $lon,
+			'hourly'         => implode( ',', array(
+				'temperature_2m',
+				'apparent_temperature',
+				'dew_point_2m',
+				'relative_humidity_2m',
+				'precipitation',
+				'precipitation_probability',
+				'rain',
+				'weather_code',
+				'cloud_cover',
+				'cloud_cover_low',
+				'cloud_cover_mid',
+				'cloud_cover_high',
+				'visibility',
+				'wind_speed_10m',
+				'wind_direction_10m',
+				'is_day',
+			) ),
+			'daily'          => implode( ',', array(
+				'sunrise',
+				'sunset',
+			) ),
+			'timezone'       => 'auto',
+			'forecast_days'  => $days,
+		);
+
+		$url = add_query_arg( $params, 'https://api.open-meteo.com/v1/forecast' );
+
+		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'extended_' . md5( $url );
+		$res       = get_transient( $cache_key );
+
+		if ( false === $res ) {
+			$rate_check = $this->can_make_request( 'open_meteo_forecast' );
+			if ( is_wp_error( $rate_check ) ) {
+				return $rate_check;
+			}
+
+			$res = wp_remote_get(
+				$url,
+				array(
+					'timeout'    => 15,
+					'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+					'sslverify'  => true,
+				)
+			);
+			$this->increment_rate_counter( 'open_meteo_forecast' );
+
+			if ( is_wp_error( $res ) ) {
+				return new WP_Error(
+					'cloud_cover_forecast_network',
+					__( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' )
+				);
+			}
+
+			$code = wp_remote_retrieve_response_code( $res );
+			if ( 200 !== $code ) {
+				return new WP_Error(
+					'cloud_cover_forecast_http',
+					__( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' )
+				);
+			}
+
+			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
+			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
+			set_transient( $cache_key, $res, $cache_ttl_seconds );
+			$this->plugin->register_transient_key( $cache_key );
+		}
+
+		$body = wp_remote_retrieve_body( $res );
+		$json = json_decode( $body, true );
+		if ( ! $json || empty( $json['hourly']['time'] ) ) {
+			return new WP_Error(
+				'cloud_cover_forecast_json',
+				__( 'Malformed API response', 'cloud-cover-forecast' )
+			);
+		}
+
+		$timezone      = $json['timezone'] ?? 'UTC';
+		$timezone_abbr = $json['timezone_abbreviation'] ?? 'UTC';
+		$hourly        = $json['hourly'];
+		$daily         = $json['daily'] ?? array();
+
+		// Build hourly data array.
+		$hourly_data = array();
+		$count       = count( $hourly['time'] );
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$hourly_data[] = array(
+				'time'              => $hourly['time'][ $i ],
+				'temperature'       => $hourly['temperature_2m'][ $i ] ?? null,
+				'feels_like'        => $hourly['apparent_temperature'][ $i ] ?? null,
+				'dew_point'         => $hourly['dew_point_2m'][ $i ] ?? null,
+				'humidity'          => $hourly['relative_humidity_2m'][ $i ] ?? null,
+				'precipitation'     => $hourly['precipitation'][ $i ] ?? null,
+				'rain_chance'       => $hourly['precipitation_probability'][ $i ] ?? null,
+				'rain_amount'       => $hourly['rain'][ $i ] ?? null,
+				'weather_code'      => $hourly['weather_code'][ $i ] ?? null,
+				'cloud_total'       => $hourly['cloud_cover'][ $i ] ?? null,
+				'cloud_low'         => $hourly['cloud_cover_low'][ $i ] ?? null,
+				'cloud_mid'         => $hourly['cloud_cover_mid'][ $i ] ?? null,
+				'cloud_high'        => $hourly['cloud_cover_high'][ $i ] ?? null,
+				'visibility'        => $hourly['visibility'][ $i ] ?? null,
+				'wind_speed'        => $hourly['wind_speed_10m'][ $i ] ?? null,
+				'wind_direction'    => $hourly['wind_direction_10m'][ $i ] ?? null,
+				'is_day'            => $hourly['is_day'][ $i ] ?? null,
+			);
+		}
+
+		// Calculate frost indicator for each hour.
+		foreach ( $hourly_data as &$hour ) {
+			$hour['frost'] = ( null !== $hour['temperature'] && $hour['temperature'] <= 0 );
+		}
+		unset( $hour );
+
+		// Build daily data array.
+		$daily_data = array();
+		if ( ! empty( $daily['time'] ) ) {
+			$day_count = count( $daily['time'] );
+			for ( $i = 0; $i < $day_count; $i++ ) {
+				$daily_data[] = array(
+					'date'    => $daily['time'][ $i ],
+					'sunrise' => $daily['sunrise'][ $i ] ?? null,
+					'sunset'  => $daily['sunset'][ $i ] ?? null,
+				);
+			}
+		}
+
+		// Calculate twilight times for each day.
+		foreach ( $daily_data as &$day ) {
+			$day['twilight'] = $this->calculate_twilight_times( $lat, $lon, $day['date'], $timezone );
+		}
+		unset( $day );
+
+		// Fetch moon data for the forecast period.
+		$moon_data = array();
+		foreach ( $daily_data as $day ) {
+			$moon = $this->fetch_moon_data( $lat, $lon, $day['date'] );
+			if ( ! is_wp_error( $moon ) ) {
+				$moon_data[ $day['date'] ] = $moon;
+			}
+		}
+
+		return array(
+			'location'      => array(
+				'lat'      => $lat,
+				'lon'      => $lon,
+				'timezone' => $timezone,
+				'timezone_abbr' => $timezone_abbr,
+			),
+			'hourly'        => $hourly_data,
+			'daily'         => $daily_data,
+			'moon'          => $moon_data,
+			'generated_at'  => gmdate( 'c' ),
+		);
+	}
+
+	/**
+	 * Calculate twilight times for a given date and location.
+	 *
+	 * @since 1.0.0
+	 * @param float  $lat      Latitude.
+	 * @param float  $lon      Longitude.
+	 * @param string $date     Date in YYYY-MM-DD format.
+	 * @param string $timezone Timezone identifier.
+	 * @return array Twilight times array.
+	 */
+	private function calculate_twilight_times( float $lat, float $lon, string $date, string $timezone ): array {
+		$timestamp = strtotime( $date . ' 12:00:00' );
+		if ( false === $timestamp ) {
+			return array();
+		}
+
+		// Get sun info for the date.
+		$sun_info = date_sun_info( $timestamp, $lat, $lon );
+
+		$tz = new DateTimeZone( $timezone );
+
+		$format_time = function( $ts ) use ( $tz ) {
+			if ( false === $ts || true === $ts ) {
+				return null;
+			}
+			$dt = new DateTime( '@' . $ts );
+			$dt->setTimezone( $tz );
+			return $dt->format( 'H:i' );
+		};
+
+		return array(
+			'astronomical_dawn' => $format_time( $sun_info['astronomical_twilight_begin'] ?? false ),
+			'nautical_dawn'     => $format_time( $sun_info['nautical_twilight_begin'] ?? false ),
+			'civil_dawn'        => $format_time( $sun_info['civil_twilight_begin'] ?? false ),
+			'sunrise'           => $format_time( $sun_info['sunrise'] ?? false ),
+			'sunset'            => $format_time( $sun_info['sunset'] ?? false ),
+			'civil_dusk'        => $format_time( $sun_info['civil_twilight_end'] ?? false ),
+			'nautical_dusk'     => $format_time( $sun_info['nautical_twilight_end'] ?? false ),
+			'astronomical_dusk' => $format_time( $sun_info['astronomical_twilight_end'] ?? false ),
+		);
+	}
+
+	/**
 	 * Geocode a location name to coordinates using Open-Meteo Geocoding API
 	 *
 	 * @since 1.0.0
