@@ -660,6 +660,40 @@ class Cloud_Cover_Forecast_API {
 	}
 
 	/**
+	 * Geocode a location and return normalized results for AJAX responses.
+	 *
+	 * @since 1.0.0
+	 * @param string $location Location name to geocode.
+	 * @return array|WP_Error Normalized array of results or error.
+	 */
+	public function get_normalized_geocode_results( string $location ) {
+		$geocoded = $this->geocode_location( $location );
+		if ( is_wp_error( $geocoded ) ) {
+			return $geocoded;
+		}
+
+		// Normalize single result to array format
+		if ( isset( $geocoded['lat'] ) && isset( $geocoded['lon'] ) ) {
+			$geocoded = array( $geocoded );
+		}
+
+		$results = array();
+		foreach ( (array) $geocoded as $item ) {
+			$results[] = array(
+				'name'      => isset( $item['name'] ) ? sanitize_text_field( $item['name'] ) : '',
+				'admin1'    => isset( $item['admin1'] ) ? sanitize_text_field( $item['admin1'] ) : '',
+				'admin2'    => isset( $item['admin2'] ) ? sanitize_text_field( $item['admin2'] ) : '',
+				'country'   => isset( $item['country'] ) ? sanitize_text_field( $item['country'] ) : '',
+				'timezone'  => isset( $item['timezone'] ) ? sanitize_text_field( $item['timezone'] ) : '',
+				'latitude'  => isset( $item['lat'] ) ? floatval( $item['lat'] ) : null,
+				'longitude' => isset( $item['lon'] ) ? floatval( $item['lon'] ) : null,
+			);
+		}
+
+		return $results;
+	}
+
+	/**
 	 * Fetch moon data from IPGeolocation Astronomy API
 	 *
 	 * @since 1.0.0

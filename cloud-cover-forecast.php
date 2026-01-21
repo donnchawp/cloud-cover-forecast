@@ -66,14 +66,6 @@ class Cloud_Cover_Forecast_Plugin {
 	const TRANSIENT_INDEX_OPTION = 'cloud_cover_forecast_transient_index';
 
 	/**
-	 * Plugin instance
-	 *
-	 * @since 1.0.0
-	 * @var Cloud_Cover_Forecast_Plugin
-	 */
-	private static $instance = null;
-
-	/**
 	 * Admin instance
 	 *
 	 * @since 1.0.0
@@ -138,24 +130,11 @@ class Cloud_Cover_Forecast_Plugin {
 	private $pwa;
 
 	/**
-	 * Get plugin instance
-	 *
-	 * @since 1.0.0
-	 * @return Cloud_Cover_Forecast_Plugin Plugin instance.
-	 */
-	public static function get_instance() {
-		if ( null === self::$instance ) {
-			self::$instance = new self();
-		}
-		return self::$instance;
-	}
-
-	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
 	 */
-	private function __construct() {
+	public function __construct() {
 		$this->init();
 	}
 
@@ -398,4 +377,4 @@ class Cloud_Cover_Forecast_Plugin {
 }
 
 // Initialize the plugin
-Cloud_Cover_Forecast_Plugin::get_instance();
+new Cloud_Cover_Forecast_Plugin();

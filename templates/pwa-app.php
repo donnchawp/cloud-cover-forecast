@@ -14,8 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$plugin = Cloud_Cover_Forecast_Plugin::get_instance();
-$pwa    = $plugin->get_pwa();
+// $pwa is passed from render_pwa_app() in class-pwa.php
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>

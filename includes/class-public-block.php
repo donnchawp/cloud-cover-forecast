@@ -345,7 +345,7 @@ class Cloud_Cover_Forecast_Public_Block {
 			wp_send_json_error( array( 'message' => __( 'Please provide a location to search for.', 'cloud-cover-forecast' ) ), 400 );
 		}
 
-		$results = $this->get_geocode_results( $location );
+		$results = $this->api->get_normalized_geocode_results( $location );
 		if ( is_wp_error( $results ) ) {
 			$status = 500;
 			switch ( $results->get_error_code() ) {
@@ -360,7 +360,6 @@ class Cloud_Cover_Forecast_Public_Block {
 					break;
 				case 'cloud_cover_forecast_geocoding_network':
 				case 'cloud_cover_forecast_geocoding_http':
-				case 'cloud_cover_forecast_api_unavailable':
 					$status = 503;
 					break;
 			}
@@ -378,43 +377,6 @@ class Cloud_Cover_Forecast_Public_Block {
 		);
 	}
 
-	/**
-	 * Retrieve sanitized geocoding results for a location.
-	 *
-	 * @since 1.0.0
-	 * @param string $location Location name.
-	 * @return array|WP_Error
-	 */
-	private function get_geocode_results( string $location ) {
-		$api = $this->plugin->get_api();
-		if ( ! $api ) {
-			return new WP_Error( 'cloud_cover_forecast_api_unavailable', __( 'Geocoding service unavailable.', 'cloud-cover-forecast' ) );
-		}
-
-		$geocoded = $api->geocode_location( $location );
-		if ( is_wp_error( $geocoded ) ) {
-			return $geocoded;
-		}
-
-		if ( isset( $geocoded['lat'] ) && isset( $geocoded['lon'] ) ) {
-			$geocoded = array( $geocoded );
-		}
-
-		$results = array();
-		foreach ( (array) $geocoded as $item ) {
-			$results[] = array(
-				'name'      => isset( $item['name'] ) ? sanitize_text_field( $item['name'] ) : '',
-				'admin1'    => isset( $item['admin1'] ) ? sanitize_text_field( $item['admin1'] ) : '',
-				'admin2'    => isset( $item['admin2'] ) ? sanitize_text_field( $item['admin2'] ) : '',
-				'country'   => isset( $item['country'] ) ? sanitize_text_field( $item['country'] ) : '',
-				'timezone'  => isset( $item['timezone'] ) ? sanitize_text_field( $item['timezone'] ) : '',
-				'latitude'  => isset( $item['lat'] ) ? floatval( $item['lat'] ) : null,
-				'longitude' => isset( $item['lon'] ) ? floatval( $item['lon'] ) : null,
-			);
-		}
-
-		return $results;
-	}
 
 	/**
 	 * Render forecast HTML
@@ -596,80 +558,18 @@ class Cloud_Cover_Forecast_Public_Block {
 	}
 
 	/**
-	 * Get client IP address with protection against IP spoofing
-	 *
-	 * By default, only trusts REMOTE_ADDR to prevent rate limit bypass attacks.
-	 * Site admins can enable proxy header support via filters if behind a CDN/proxy.
+	 * Get client IP address for rate limiting.
 	 *
 	 * @since 1.0.0
 	 * @return string Client IP address.
 	 */
 	private function get_client_ip() {
-		// Get the direct connection IP (most secure, cannot be spoofed)
-		$remote_addr = isset( $_SERVER['REMOTE_ADDR'] ) ?
-			sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) :
-			'0.0.0.0';
-
-		/**
-		 * Filter to enable trust of proxy headers.
-		 *
-		 * WARNING: Only enable this if your site is behind a known CDN/proxy.
-		 * Enabling this without proper configuration allows rate limit bypass attacks.
-		 *
-		 * @since 1.0.0
-		 * @param bool $trust_proxy_headers Whether to trust proxy headers. Default false.
-		 */
-		$trust_proxy_headers = apply_filters(
-			'cloud_cover_forecast_trust_proxy_headers',
-			false
-		);
-
-		/**
-		 * Filter to define trusted proxy IP addresses.
-		 *
-		 * Only requests from these IPs will have their proxy headers trusted.
-		 * Example: array( '192.168.1.1', '10.0.0.1' )
-		 *
-		 * @since 1.0.0
-		 * @param array $trusted_proxies Array of trusted proxy IP addresses. Default empty.
-		 */
-		$trusted_proxies = apply_filters(
-			'cloud_cover_forecast_trusted_proxies',
-			array()
-		);
-
-		// Only trust proxy headers if explicitly enabled AND request is from trusted proxy
-		if ( $trust_proxy_headers && ! empty( $trusted_proxies ) && in_array( $remote_addr, $trusted_proxies, true ) ) {
-			// Check proxy headers in order of preference
-			$proxy_headers = array(
-				'HTTP_CF_CONNECTING_IP',  // Cloudflare
-				'HTTP_X_FORWARDED_FOR',   // Standard proxy header
-				'HTTP_X_REAL_IP',         // Nginx proxy
-			);
-
-			foreach ( $proxy_headers as $header ) {
-				if ( ! empty( $_SERVER[ $header ] ) ) {
-					$ip = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-
-					// X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2)
-					// Take the first one (original client)
-					if ( strpos( $ip, ',' ) !== false ) {
-						$ip = trim( explode( ',', $ip )[0] );
-					}
-
-					// Validate IP and ensure it's not a private/reserved range
-					if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-						return $ip;
-					}
-				}
+		if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+				return $ip;
 			}
 		}
-
-		// Default: Use REMOTE_ADDR (most reliable, not spoofable via HTTP headers)
-		if ( filter_var( $remote_addr, FILTER_VALIDATE_IP ) ) {
-			return $remote_addr;
-		}
-
 		return '0.0.0.0';
 	}
 }

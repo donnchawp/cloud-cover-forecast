@@ -538,44 +538,6 @@ class Cloud_Cover_Forecast_Admin {
 	}
 
 	/**
-	 * Normalize geocoding data for AJAX responses
-	 *
-	 * @since 1.0.0
-	 * @param string $location Location name.
-	 * @return array|WP_Error
-	 */
-	private function get_geocode_results( string $location ) {
-		$api = $this->plugin->get_api();
-		if ( ! $api ) {
-			return new WP_Error( 'cloud_cover_forecast_api_unavailable', __( 'Geocoding service unavailable.', 'cloud-cover-forecast' ) );
-		}
-
-		$geocoded = $api->geocode_location( $location );
-		if ( is_wp_error( $geocoded ) ) {
-			return $geocoded;
-		}
-
-		if ( isset( $geocoded['lat'] ) && isset( $geocoded['lon'] ) ) {
-			$geocoded = array( $geocoded );
-		}
-
-		$results = array();
-		foreach ( (array) $geocoded as $item ) {
-			$results[] = array(
-				'name'      => isset( $item['name'] ) ? sanitize_text_field( $item['name'] ) : '',
-				'admin1'    => isset( $item['admin1'] ) ? sanitize_text_field( $item['admin1'] ) : '',
-				'admin2'    => isset( $item['admin2'] ) ? sanitize_text_field( $item['admin2'] ) : '',
-				'country'   => isset( $item['country'] ) ? sanitize_text_field( $item['country'] ) : '',
-				'timezone'  => isset( $item['timezone'] ) ? sanitize_text_field( $item['timezone'] ) : '',
-				'latitude'  => isset( $item['lat'] ) ? floatval( $item['lat'] ) : null,
-				'longitude' => isset( $item['lon'] ) ? floatval( $item['lon'] ) : null,
-			);
-		}
-
-		return $results;
-	}
-
-	/**
 	 * Handle admin geocoding AJAX requests
 	 *
 	 * @since 1.0.0
@@ -598,7 +560,8 @@ class Cloud_Cover_Forecast_Admin {
 			);
 		}
 
-		$results = $this->get_geocode_results( $location );
+		$api = $this->plugin->get_api();
+		$results = $api->get_normalized_geocode_results( $location );
 		if ( is_wp_error( $results ) ) {
 			$status = 500;
 			switch ( $results->get_error_code() ) {
@@ -613,7 +576,6 @@ class Cloud_Cover_Forecast_Admin {
 					break;
 				case 'cloud_cover_forecast_geocoding_network':
 				case 'cloud_cover_forecast_geocoding_http':
-				case 'cloud_cover_forecast_api_unavailable':
 					$status = 503;
 					break;
 			}
