@@ -407,7 +407,9 @@
             placeholder="${escapeHtml(strings.searchLocation)}"
             autocomplete="off"
           >
-          ${state.isSearching ? '<div class="search-spinner"></div>' : ''}
+          <button class="search-btn" id="search-btn" ${state.isSearching ? 'disabled' : ''}>
+            ${state.isSearching ? escapeHtml(strings.loading) : 'Search'}
+          </button>
         </div>
         ${state.searchResults.length > 0 ? renderSearchResults() : ''}
         <div class="saved-locations">
@@ -894,11 +896,14 @@
     // Action buttons.
     app.addEventListener('click', handleActionClick);
 
-    // Search input.
+    // Search input and button.
     const searchInput = app.querySelector('#location-search');
+    const searchBtn = app.querySelector('#search-btn');
     if (searchInput) {
-      searchInput.addEventListener('input', debounce(handleSearchInput, 300));
       searchInput.addEventListener('keydown', handleSearchKeydown);
+    }
+    if (searchBtn) {
+      searchBtn.addEventListener('click', handleSearchClick);
     }
   }
 
@@ -950,11 +955,11 @@
   }
 
   /**
-   * Handle search input.
-   * @param {Event} event - Input event.
+   * Handle search button click.
    */
-  async function handleSearchInput(event) {
-    const query = event.target.value.trim();
+  async function handleSearchClick() {
+    const searchInput = app.querySelector('#location-search');
+    const query = searchInput ? searchInput.value.trim() : '';
 
     if (query.length < 2) {
       state.searchResults = [];
@@ -977,10 +982,10 @@
     renderApp();
 
     // Restore focus to search input.
-    const searchInput = app.querySelector('#location-search');
-    if (searchInput) {
-      searchInput.value = query;
-      searchInput.focus();
+    const newSearchInput = app.querySelector('#location-search');
+    if (newSearchInput) {
+      newSearchInput.value = query;
+      newSearchInput.focus();
     }
   }
 
@@ -989,7 +994,10 @@
    * @param {Event} event - Keydown event.
    */
   function handleSearchKeydown(event) {
-    if (event.key === 'Escape') {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleSearchClick();
+    } else if (event.key === 'Escape') {
       state.searchResults = [];
       renderApp();
     }
