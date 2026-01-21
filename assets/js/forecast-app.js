@@ -37,6 +37,30 @@
     editingLocation: null,
   };
 
+  // Debug mode - enable with ?debug=1 in URL
+  const DEBUG_MODE = new URLSearchParams(window.location.search).has('debug');
+  const debugLog = [];
+
+  function addDebug(message) {
+    const timestamp = new Date().toLocaleTimeString();
+    debugLog.push(`[${timestamp}] ${message}`);
+    if (debugLog.length > 20) debugLog.shift(); // Keep last 20 messages
+    updateDebugPanel();
+  }
+
+  function updateDebugPanel() {
+    if (!DEBUG_MODE) return;
+    let panel = document.getElementById('ccf-debug-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'ccf-debug-panel';
+      panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font-family:monospace;font-size:11px;padding:8px;z-index:99999;white-space:pre-wrap;';
+      document.body.appendChild(panel);
+    }
+    panel.textContent = debugLog.join('\n');
+    panel.scrollTop = panel.scrollHeight;
+  }
+
   // ============================================================
   // PWA INSTALL DETECTION
   // ============================================================
@@ -46,8 +70,16 @@
    * @returns {boolean} True if installed.
    */
   function isAppInstalled() {
-    return window.matchMedia('(display-mode: standalone)').matches ||
-           window.navigator.standalone === true;
+    const standaloneMedia = window.matchMedia('(display-mode: standalone)').matches;
+    const iosStandalone = window.navigator.standalone === true;
+    const fullscreenMedia = window.matchMedia('(display-mode: fullscreen)').matches;
+    const minimalUiMedia = window.matchMedia('(display-mode: minimal-ui)').matches;
+
+    const isInstalled = standaloneMedia || iosStandalone || fullscreenMedia || minimalUiMedia;
+
+    addDebug(`isAppInstalled: standalone=${standaloneMedia} iosStandalone=${iosStandalone} fullscreen=${fullscreenMedia} minimalUi=${minimalUiMedia} => ${isInstalled}`);
+
+    return isInstalled;
   }
 
   /**
@@ -93,14 +125,38 @@
    * @returns {boolean} True if install button should be shown.
    */
   function shouldShowInstallButton() {
-    // Don't show if already installed
-    if (isAppInstalled()) return false;
-    // If we have a deferred prompt, always show (native install available)
-    if (state.deferredInstallPrompt) return true;
-    // For browsers that need manual instructions, show on mobile
-    if (needsManualInstallInstructions() && (isIOS() || isAndroid())) return true;
-    // Don't show for browsers that support native install but haven't fired the event
-    return false;
+    const installed = isAppInstalled();
+    const hasPrompt = !!state.deferredInstallPrompt;
+    const needsManual = needsManualInstallInstructions();
+    const ios = isIOS();
+    const android = isAndroid();
+    const isMobile = ios || android;
+
+    let shouldShow = false;
+    let reason = '';
+
+    if (installed) {
+      reason = 'App is installed';
+      shouldShow = false;
+    } else if (hasPrompt) {
+      reason = 'Native install prompt available';
+      shouldShow = true;
+    } else if (needsManual && isMobile) {
+      reason = 'Mobile browser needs manual instructions';
+      shouldShow = true;
+    } else if (isMobile) {
+      // Show on mobile even without deferred prompt - user might have dismissed before
+      // They can still install via browser menu, and we can show instructions
+      reason = 'Mobile browser (fallback - show instructions)';
+      shouldShow = true;
+    } else {
+      reason = 'Desktop browser without native prompt';
+      shouldShow = false;
+    }
+
+    addDebug(`shouldShowInstallButton: installed=${installed} hasPrompt=${hasPrompt} iOS=${ios} Android=${android} => ${shouldShow} (${reason})`);
+
+    return shouldShow;
   }
 
   /**
@@ -109,12 +165,13 @@
    */
   function getBrowserType() {
     const ua = navigator.userAgent;
-    if (/CriOS/.test(ua)) return 'chrome-ios';
-    if (/Chrome/.test(ua) && !/Edg/.test(ua)) return 'chrome';
-    if (/Safari/.test(ua) && !/Chrome/.test(ua)) return 'safari';
-    if (/Firefox/.test(ua)) return 'firefox';
-    if (/Edg/.test(ua)) return 'edge';
+    // Order matters - check specific browsers before generic ones
     if (/SamsungBrowser/.test(ua)) return 'samsung';
+    if (/CriOS/.test(ua)) return 'chrome-ios';
+    if (/Edg/.test(ua)) return 'edge';
+    if (/Firefox/.test(ua)) return 'firefox';
+    if (/Chrome/.test(ua)) return 'chrome';
+    if (/Safari/.test(ua)) return 'safari';
     return 'other';
   }
 
@@ -1689,7 +1746,13 @@
    * Export locations to JSON file.
    */
   async function exportLocations() {
-    if (state.savedLocations.length === 0) return;
+    addDebug(`Export: Starting, ${state.savedLocations.length} locations`);
+
+    if (state.savedLocations.length === 0) {
+      addDebug('Export: No locations to export');
+      alert(strings.noLocationsToExport || 'No locations to export');
+      return;
+    }
 
     const exportData = {
       version: 1,
@@ -1711,31 +1774,93 @@
     const filename = `cloud-cover-locations-${new Date().toISOString().split('T')[0]}.json`;
 
     // Try Web Share API first (for mobile devices)
+    addDebug(`Export: Web Share API available: share=${!!navigator.share} canShare=${!!navigator.canShare}`);
     if (navigator.share && navigator.canShare) {
       const file = new File([blob], filename, { type: 'application/json' });
       const shareData = { files: [file] };
+      const canShareFiles = navigator.canShare(shareData);
+      addDebug(`Export: canShare(files)=${canShareFiles}`);
 
-      if (navigator.canShare(shareData)) {
-        try {
+      try {
+        if (canShareFiles) {
+          addDebug('Export: Calling navigator.share()...');
           await navigator.share(shareData);
-          return;
-        } catch (e) {
-          if (e.name !== 'AbortError') {
-            console.error('Share error:', e);
-          }
+          addDebug('Export: Share completed successfully');
+          return; // User completed or cancelled share - either way, we're done
         }
+      } catch (e) {
+        addDebug(`Export: Share error: ${e.name} - ${e.message}`);
+        if (e.name === 'AbortError') {
+          addDebug('Export: User cancelled share');
+          return; // User cancelled, no need to fallback
+        }
+        // Fall through to other methods
       }
     }
 
-    // Fallback: Download the file
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // On mobile browsers, anchor-click downloads are unreliable - prefer clipboard
+    const isMobile = isIOS() || isAndroid();
+    const browser = getBrowserType();
+    addDebug(`Export: isMobile=${isMobile} browser=${browser}`);
+
+    // On mobile, try clipboard first (most reliable)
+    if (isMobile) {
+      addDebug('Export: Mobile detected, trying clipboard first...');
+      try {
+        await navigator.clipboard.writeText(json);
+        addDebug('Export: Clipboard write succeeded!');
+        alert(strings.exportCopiedToClipboard || 'Locations copied to clipboard. Paste into a text file to save.');
+        return;
+      } catch (e) {
+        addDebug(`Export: Clipboard failed: ${e.message}`);
+        // Continue to download fallback
+      }
+    }
+
+    // Try download approach (works reliably on desktop, less so on mobile)
+    addDebug('Export: Trying download approach...');
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      // Give the download a moment to start before revoking
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      addDebug('Export: Download link clicked');
+
+      // On desktop, assume it worked
+      if (!isMobile) {
+        return;
+      }
+    } catch (e) {
+      addDebug(`Export: Download failed: ${e.message}`);
+    }
+
+    // All methods failed - show the data in a prompt so user can manually copy
+    addDebug('Export: All methods failed, showing manual copy option');
+    const copyManually = confirm(
+      (strings.exportFailed || 'Export failed. Would you like to see the data to copy manually?')
+    );
+    if (copyManually) {
+      // Use a textarea in a modal-like alert for better UX
+      const textArea = document.createElement('textarea');
+      textArea.value = json;
+      textArea.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;height:80%;z-index:10000;font-family:monospace;font-size:12px;';
+      const closeBtn = document.createElement('button');
+      closeBtn.textContent = strings.close || 'Close';
+      closeBtn.style.cssText = 'position:fixed;top:5%;right:5%;z-index:10001;padding:10px 20px;';
+      closeBtn.onclick = () => {
+        document.body.removeChild(textArea);
+        document.body.removeChild(closeBtn);
+      };
+      document.body.appendChild(textArea);
+      document.body.appendChild(closeBtn);
+      textArea.select();
+    }
   }
 
   /**
@@ -1858,6 +1983,14 @@
   // ============================================================
 
   async function init() {
+    // Show debug info at startup
+    if (DEBUG_MODE) {
+      addDebug('=== App Starting ===');
+      addDebug(`UA: ${navigator.userAgent}`);
+      addDebug(`Browser: ${getBrowserType()}`);
+      addDebug(`Service Worker: ${('serviceWorker' in navigator) ? 'supported' : 'not supported'}`);
+    }
+
     try {
       // Apply saved theme.
       applyTheme();
@@ -1866,13 +1999,22 @@
       await ForecastStorage.openDatabase();
       await loadSavedLocations();
 
+      if (DEBUG_MODE) {
+        addDebug(`Loaded ${state.savedLocations.length} locations`);
+      }
+
       // Clean expired cache.
       await ForecastStorage.cleanExpiredCache();
 
       // Render initial UI (starts on locations tab).
       renderApp();
+
+      if (DEBUG_MODE) {
+        addDebug('App rendered successfully');
+      }
     } catch (e) {
       console.error('App initialization error:', e);
+      addDebug(`Init error: ${e.message}`);
       state.error = e.message;
       renderApp();
     }

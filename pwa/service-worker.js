@@ -3,7 +3,7 @@
  * Provides offline support and caching for the forecast app.
  */
 
-const CACHE_VERSION = 'v16';
+const CACHE_VERSION = 'v20';
 const STATIC_CACHE = `ccf-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `ccf-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `ccf-api-${CACHE_VERSION}`;
