@@ -29,6 +29,7 @@
     isOnline: navigator.onLine,
     searchResults: [],
     isSearching: false,
+    theme: localStorage.getItem('ccf-theme') || 'auto',
   };
 
   // ============================================================
@@ -163,6 +164,61 @@
   }
 
   // ============================================================
+  // THEME MANAGEMENT
+  // ============================================================
+
+  /**
+   * Apply the current theme to the document.
+   */
+  function applyTheme() {
+    const html = document.documentElement;
+    html.classList.remove('light-mode', 'dark-mode');
+
+    if (state.theme === 'light') {
+      html.classList.add('light-mode');
+    } else if (state.theme === 'dark') {
+      html.classList.add('dark-mode');
+    }
+    // 'auto' uses prefers-color-scheme media query (no class needed)
+  }
+
+  /**
+   * Toggle between themes: auto -> light -> dark -> auto.
+   */
+  function toggleTheme() {
+    // Save scroll position before re-render
+    const gridData = document.getElementById('grid-data');
+    const scrollLeft = gridData ? gridData.scrollLeft : 0;
+
+    const themes = ['auto', 'light', 'dark'];
+    const currentIndex = themes.indexOf(state.theme);
+    state.theme = themes[(currentIndex + 1) % themes.length];
+    localStorage.setItem('ccf-theme', state.theme);
+    applyTheme();
+    renderApp();
+
+    // Restore scroll position after re-render
+    requestAnimationFrame(() => {
+      const newGridData = document.getElementById('grid-data');
+      if (newGridData && scrollLeft > 0) {
+        newGridData.scrollLeft = scrollLeft;
+      }
+    });
+  }
+
+  /**
+   * Get the icon for the current theme.
+   * @returns {string} Theme icon.
+   */
+  function getThemeIcon() {
+    switch (state.theme) {
+      case 'light': return '&#9728;'; // Sun
+      case 'dark': return '&#9790;'; // Moon
+      default: return '&#9788;'; // Sun with rays (auto)
+    }
+  }
+
+  // ============================================================
   // COLOR SCHEMES
   // ============================================================
 
@@ -282,6 +338,7 @@
           <h1 class="app-title">${escapeHtml(strings.appTitle)}</h1>
           <div class="app-status">
             ${!state.isOnline ? `<span class="offline-badge">${escapeHtml(strings.offline)}</span>` : ''}
+            <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme">${getThemeIcon()}</button>
           </div>
         </div>
         <nav class="app-tabs">
@@ -938,6 +995,10 @@
     const index = btn.dataset.index ? parseInt(btn.dataset.index, 10) : null;
 
     switch (action) {
+      case 'toggle-theme':
+        toggleTheme();
+        break;
+
       case 'go-to-locations':
         switchTab('locations');
         break;
@@ -1234,6 +1295,9 @@
 
   async function init() {
     try {
+      // Apply saved theme.
+      applyTheme();
+
       // Open database and load saved data.
       await ForecastStorage.openDatabase();
       await loadSavedLocations();

@@ -21,7 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-	<meta name="theme-color" content="#1a1a2e">
+	<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
+	<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="<?php echo esc_attr__( 'Cloud Cover', 'cloud-cover-forecast' ); ?>">
@@ -47,8 +48,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 		html, body { height: 100%; overflow: hidden; }
 		body {
 			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-			background: #1a1a2e;
-			color: #e5e5e5;
+			background: #f5f5f5;
+			color: #111827;
+		}
+		@media (prefers-color-scheme: dark) {
+			body { background: #0f172a; color: #f8fafc; }
+			.app-loading-spinner { border-color: #334155; border-top-color: #4ade80; }
 		}
 		#app { display: flex; flex-direction: column; height: 100%; }
 		.app-loading {
@@ -62,8 +67,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		.app-loading-spinner {
 			width: 48px;
 			height: 48px;
-			border: 4px solid #16213e;
-			border-top-color: #4ade80;
+			border: 4px solid #e5e7eb;
+			border-top-color: #16a34a;
 			border-radius: 50%;
 			animation: spin 1s linear infinite;
 		}
