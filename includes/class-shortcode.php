@@ -96,6 +96,14 @@ class Cloud_Cover_Forecast_Shortcode {
 		$show_chart = intval( $atts['show_chart'] ) ? 1 : 0;
 		$location   = sanitize_text_field( $atts['location'] );
 
+		// Validate coordinate ranges if explicitly provided (not using location geocoding).
+		if ( null !== $lat && ( $lat < -90 || $lat > 90 ) ) {
+			return $this->error_box( __( 'Invalid latitude. Must be between -90 and 90.', 'cloud-cover-forecast' ) );
+		}
+		if ( null !== $lon && ( $lon < -180 || $lon > 180 ) ) {
+			return $this->error_box( __( 'Invalid longitude. Must be between -180 and 180.', 'cloud-cover-forecast' ) );
+		}
+
 		// Check if manual coordinates are provided (not defaults)
 		$defaults = $this->plugin->get_settings();
 		$has_manual_coords = ( $lat !== null && $lon !== null &&

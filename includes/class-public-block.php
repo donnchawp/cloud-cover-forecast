@@ -564,16 +564,33 @@ class Cloud_Cover_Forecast_Public_Block {
 	/**
 	 * Get client IP address for rate limiting.
 	 *
+	 * Checks proxy headers in priority order to get the real client IP
+	 * when behind CDNs or reverse proxies.
+	 *
 	 * @since 1.0.0
 	 * @return string Client IP address.
 	 */
 	private function get_client_ip() {
-		if ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
-			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
-			if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-				return $ip;
+		// Check proxy headers in order of reliability.
+		$headers = array(
+			'HTTP_CF_CONNECTING_IP', // Cloudflare.
+			'HTTP_X_FORWARDED_FOR',  // Standard proxy header.
+			'HTTP_X_REAL_IP',        // Nginx proxy.
+			'REMOTE_ADDR',           // Direct connection.
+		);
+
+		foreach ( $headers as $header ) {
+			if ( ! empty( $_SERVER[ $header ] ) ) {
+				$value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+				// X-Forwarded-For may contain comma-separated list; use first IP.
+				$ips = array_map( 'trim', explode( ',', $value ) );
+				$ip  = $ips[0];
+				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+					return $ip;
+				}
 			}
 		}
+
 		return '0.0.0.0';
 	}
 }

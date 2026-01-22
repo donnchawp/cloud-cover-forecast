@@ -100,10 +100,19 @@
 							return response.json();
 						})
 						.then(function(data) {
-							if (data.results && data.results.length > 0) {
-								if (data.results.length === 1) {
+							if (data.results && Array.isArray(data.results) && data.results.length > 0) {
+								// Filter results with valid numeric coordinates.
+								var validResults = data.results.filter(function(r) {
+									return typeof r.latitude === 'number' && typeof r.longitude === 'number';
+								});
+								if (validResults.length === 0) {
+									setSearchState('error');
+									setSearchResults([]);
+									return;
+								}
+								if (validResults.length === 1) {
 									// Auto-select single result
-									var result = data.results[0];
+									var result = validResults[0];
 									setAttributes({
 										latitude: result.latitude,
 										longitude: result.longitude,
@@ -113,7 +122,7 @@
 									setSearchResults([]);
 								} else {
 									// Show multiple results for selection
-									setSearchResults(data.results);
+									setSearchResults(validResults);
 									setSearchState('results');
 								}
 							} else {
@@ -128,6 +137,11 @@
 				}
 
 				function selectLocation(result) {
+					// Validate result has numeric coordinates.
+					if (typeof result.latitude !== 'number' || typeof result.longitude !== 'number') {
+						setSearchState('error');
+						return;
+					}
 					setAttributes({
 						latitude: result.latitude,
 						longitude: result.longitude,

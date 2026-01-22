@@ -21,16 +21,26 @@
 
     // Rate limiting functions
     function getRateLimitData() {
+        var defaultData = { requests: [], windowStart: Date.now() };
         try {
             var data = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
             if (!data) {
-                return { requests: [], windowStart: Date.now() };
+                return defaultData;
             }
-            return JSON.parse(data);
+            var parsed = JSON.parse(data);
+            // Validate structure to prevent tampering.
+            if (!Array.isArray(parsed.requests) || typeof parsed.windowStart !== 'number') {
+                return defaultData;
+            }
+            // Validate array contents are timestamps (numbers).
+            if (!parsed.requests.every(function(r) { return typeof r === 'number'; })) {
+                return defaultData;
+            }
+            return parsed;
         } catch (e) {
             // localStorage may be disabled (private browsing)
             console.warn('localStorage unavailable:', e);
-            return { requests: [], windowStart: Date.now() };
+            return defaultData;
         }
     }
 
@@ -84,11 +94,16 @@
         if (history.pushState) {
             var url = new URL(window.location);
             if (location) {
-                url.searchParams.set('location', location);
+                url.searchParams.set('location', String(location));
             }
-            if (lat && lon) {
-                url.searchParams.set('lat', lat);
-                url.searchParams.set('lon', lon);
+            // Validate coordinates are numeric and within valid ranges.
+            var parsedLat = parseFloat(lat);
+            var parsedLon = parseFloat(lon);
+            if (!isNaN(parsedLat) && !isNaN(parsedLon) &&
+                parsedLat >= -90 && parsedLat <= 90 &&
+                parsedLon >= -180 && parsedLon <= 180) {
+                url.searchParams.set('lat', String(parsedLat));
+                url.searchParams.set('lon', String(parsedLon));
             }
             history.pushState(null, '', url);
         }
