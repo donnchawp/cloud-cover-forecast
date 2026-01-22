@@ -4,7 +4,7 @@ Tags: weather, cloud cover, forecast, photography, astronomy
 Requires at least: 5.0
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Cloud Cover Forecast is a WordPress plugin that displays detailed cloud cover da
 * **Smart Caching**: Built-in caching system to reduce API calls and improve performance
 * **Responsive Design**: Mobile-friendly display with clean, modern styling
 * **Admin Settings**: Easy configuration through WordPress admin panel
+* **Security Hardened**: Input validation, rate limiting, and proxy-aware IP detection
 
 **Perfect for:**
 * Photographers planning outdoor shoots
@@ -117,6 +118,13 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 5. Mobile-responsive display
 
 == Changelog ==
+
+= 1.0.1 =
+* Security: Added coordinate range validation for shortcodes (-90/90 latitude, -180/180 longitude)
+* Security: Improved IP detection for rate limiting behind CDNs and proxies
+* Security: Added validation for localStorage data to prevent tampering
+* Security: Added type checking for geocoding API responses in Gutenberg blocks
+* Security: Added coordinate validation before setting URL parameters
 
 = 1.0.0 =
 * Initial release

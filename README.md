@@ -36,6 +36,12 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 - **Configurable cache TTL** (default: 15 minutes weather, 24 hours geocoding)
 - **WordPress transients** for efficient data storage
 
+### 🔒 Security Hardened
+- **Input validation** for coordinates and location names
+- **Rate limiting** to prevent API abuse
+- **Proxy-aware IP detection** for CDN/reverse proxy compatibility
+- **API response validation** to prevent XSS attacks
+
 ## Installation
 
 ### From WordPress Admin
@@ -239,6 +245,13 @@ This plugin uses vanilla JavaScript and PHP - no compilation or build steps need
 This plugin is licensed under the GPL v2 or later.
 
 ## Changelog
+
+### 1.0.1
+- **Security**: Added coordinate range validation for shortcodes (-90/90 latitude, -180/180 longitude)
+- **Security**: Improved IP detection for rate limiting behind CDNs and proxies
+- **Security**: Added validation for localStorage data to prevent tampering
+- **Security**: Added type checking for geocoding API responses in Gutenberg blocks
+- **Security**: Added coordinate validation before setting URL parameters
 
 ### 1.0.0
 - Initial release
