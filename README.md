@@ -19,7 +19,17 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 - **Sunset/sunrise times** for golden hour planning
 - **Astronomical twilight** times for night photography
 - **Moon phase** and moonrise/moonset times
+- **Blue hour & golden hour indicators** for optimal shooting windows
 - **Specialized rendering** for photography planning
+
+### 📱 Progressive Web App (PWA)
+- **Installable app** - Add to your phone's home screen
+- **Offline support** - View cached forecasts without internet
+- **7-day extended forecast** - Plan ahead with detailed forecasts
+- **Location management** - Save multiple locations with notes
+- **Export/Import** - Backup and restore locations as JSON
+- **Dark/Light themes** - Automatic switching based on system preferences
+- **Local timezone display** - Times shown in each location's timezone
 
 ### 🎯 Multiple Input Methods
 - **Coordinates**: Use latitude and longitude directly
@@ -72,6 +82,12 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 1. Add the **"Cloud Cover Forecast"** block in the block editor
 2. Configure location and settings in the block sidebar
 3. Preview your forecast in real-time
+
+### Progressive Web App (PWA)
+1. Visit `yoursite.com/forecast-app` to access the PWA
+2. Click **"Install App"** to add it to your home screen
+3. Save locations, add notes, and view extended forecasts
+4. Export your locations as JSON for backup
 
 ### Admin Settings
 1. Go to **Settings > Cloud Cover Forecast**
@@ -247,11 +263,21 @@ This plugin is licensed under the GPL v2 or later.
 ## Changelog
 
 ### 1.0.1
-- **Security**: Added coordinate range validation for shortcodes (-90/90 latitude, -180/180 longitude)
+- **New**: Progressive Web App (PWA) with installable forecast application
+- **New**: Save and manage multiple locations with custom names and notes
+- **New**: Export/import locations as JSON for backup and sharing
+- **New**: 7-day extended forecast in PWA
+- **New**: Light/dark theme support with automatic system preference detection
+- **New**: Local timezone display for each location's forecast
+- **New**: Reverse geocoding to get location names from coordinates
+- **New**: Google Maps integration for location links
+- **New**: 3-Day Sunrise & Sunset Forecast Gutenberg block
+- **New**: PWA install button with browser-specific instructions
+- **Improved**: Current hour highlighting with visual separator
+- **Improved**: Blue hour and golden hour indicators
+- **Security**: Added coordinate range validation for shortcodes
 - **Security**: Improved IP detection for rate limiting behind CDNs and proxies
-- **Security**: Added validation for localStorage data to prevent tampering
-- **Security**: Added type checking for geocoding API responses in Gutenberg blocks
-- **Security**: Added coordinate validation before setting URL parameters
+- **Security**: Added validation for localStorage and API responses
 
 ### 1.0.0
 - Initial release

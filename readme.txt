@@ -21,6 +21,12 @@ Cloud Cover Forecast is a WordPress plugin that displays detailed cloud cover da
 * **Flexible Display Options**: Shortcode and Gutenberg block support
 * **Photography-Focused**: Special rendering for photography planning with sunset/sunrise times
 * **Astronomical Data**: Includes moon phase, moonrise/moonset times, and astronomical twilight
+* **Progressive Web App (PWA)**: Installable forecast app with offline support
+* **Location Management**: Save, edit, and organize multiple locations with notes
+* **Export/Import**: Backup and restore your saved locations as JSON
+* **Light/Dark Themes**: Automatic theme switching based on system preferences
+* **Extended Forecast**: 7-day detailed forecast in the PWA
+* **Local Timezone Display**: Shows forecast times in each location's local timezone
 * **Smart Caching**: Built-in caching system to reduce API calls and improve performance
 * **Responsive Design**: Mobile-friendly display with clean, modern styling
 * **Admin Settings**: Easy configuration through WordPress admin panel
@@ -87,7 +93,20 @@ The plugin caches weather data for 15 minutes by default and geocoding data for 
 
 = Is the plugin mobile-friendly? =
 
-Yes! The plugin includes responsive CSS that works well on all device sizes.
+Yes! The plugin includes responsive CSS that works well on all device sizes. Additionally, the PWA (Progressive Web App) can be installed on your phone's home screen for a native app-like experience.
+
+= What is the PWA and how do I use it? =
+
+The PWA (Progressive Web App) is a standalone forecast application accessible at `yoursite.com/forecast-app`. It provides:
+
+* **Installable App**: Add to your phone's home screen for quick access
+* **Offline Support**: View cached forecasts even without internet
+* **Location Management**: Save multiple locations with custom names and notes
+* **7-Day Forecast**: Extended detailed forecasts for all your saved locations
+* **Export/Import**: Backup your locations to JSON and restore them anytime
+* **Dark/Light Themes**: Automatic theme based on your device settings
+
+To install the PWA, visit the forecast app page and look for the "Install App" button or use your browser's "Add to Home Screen" option.
 
 = What is IPGeolocation.io and why does the plugin use it? =
 
@@ -120,11 +139,22 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 == Changelog ==
 
 = 1.0.1 =
-* Security: Added coordinate range validation for shortcodes (-90/90 latitude, -180/180 longitude)
+* New: Progressive Web App (PWA) with installable forecast application
+* New: Save and manage multiple locations with custom names and notes
+* New: Export/import locations as JSON for backup and sharing
+* New: 7-day extended forecast in PWA
+* New: Light/dark theme support with automatic system preference detection
+* New: Local timezone display for each location's forecast
+* New: Reverse geocoding to get location names from coordinates
+* New: Google Maps integration for location links
+* New: 3-Day Sunrise & Sunset Forecast Gutenberg block
+* New: PWA install button with browser-specific instructions
+* Improved: Current hour highlighting with visual separator
+* Improved: Blue hour and golden hour indicators
+* Security: Added coordinate range validation for shortcodes
 * Security: Improved IP detection for rate limiting behind CDNs and proxies
 * Security: Added validation for localStorage data to prevent tampering
-* Security: Added type checking for geocoding API responses in Gutenberg blocks
-* Security: Added coordinate validation before setting URL parameters
+* Security: Added type checking for geocoding API responses
 
 = 1.0.0 =
 * Initial release
