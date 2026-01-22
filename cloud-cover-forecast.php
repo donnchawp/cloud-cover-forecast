@@ -143,70 +143,31 @@ class Cloud_Cover_Forecast_Plugin {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
-		$this->init();
-	}
-
-	/**
-	 * Initialize the plugin
-	 *
-	 * @since 1.0.0
-	 */
-	private function init() {
-		// Load autoloader
 		require_once CLOUD_COVER_FORECAST_PLUGIN_DIR . 'includes/class-autoloader.php';
 		new Cloud_Cover_Forecast_Autoloader();
 
-		// Initialize components
-		$this->init_components();
-
-		// Initialize hooks
-		$this->init_hooks();
-	}
-
-	/**
-	 * Initialize plugin components
-	 *
-	 * @since 1.0.0
-	 */
-	private function init_components() {
-		// Initialize assets
 		$this->assets = new Cloud_Cover_Forecast_Assets( $this );
 		$this->assets->init();
 
-		// Initialize API
 		$this->api = new Cloud_Cover_Forecast_API( $this );
 
-		// Initialize photography renderer (handles both calculations and rendering)
 		$this->photography_renderer = new Cloud_Cover_Forecast_Photography_Renderer( $this );
 
-		// Initialize public block
 		$this->public_block = new Cloud_Cover_Forecast_Public_Block( $this );
 		$this->public_block->init();
 
-		// Initialize sunrise sunset block
 		$this->sunrise_sunset_block = new Cloud_Cover_Forecast_Sunrise_Sunset_Block( $this );
 		$this->sunrise_sunset_block->init();
 
-		// Initialize shortcode
 		$this->shortcode = new Cloud_Cover_Forecast_Shortcode( $this, $this->api, $this->photography_renderer );
 		$this->shortcode->init();
 
-		// Initialize admin
 		$this->admin = new Cloud_Cover_Forecast_Admin( $this );
 		$this->admin->init();
 
-		// Initialize PWA
 		$this->pwa = new Cloud_Cover_Forecast_PWA( $this );
 		$this->pwa->init();
-	}
 
-	/**
-	 * Initialize WordPress hooks
-	 *
-	 * @since 1.0.0
-	 */
-	private function init_hooks() {
-		// Plugin activation/deactivation hooks
 		register_activation_hook( __FILE__, array( $this, 'activate' ) );
 		register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
 	}
