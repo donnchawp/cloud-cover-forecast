@@ -3,14 +3,14 @@
  * Plugin Name: Cloud Cover Forecast
  * Plugin URI: https://github.com/donnchawp/cloud-cover-forecast
  * Description: Display total, low, medium, and high cloud cover percentages for a location using the Open‑Meteo API. Provides a shortcode and an admin settings page.
- * Version: 1.0.1
+ * Version: 1.0.0
  * Author: Donncha O Caoimh
  * Author URI: https://github.com/donnchawp
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: cloud-cover-forecast
  * Requires at least: 5.0
- * Tested up to: 6.4
+ * Tested up to: 6.9
  * Requires PHP: 7.4
  *
  * @package CloudCoverForecast
