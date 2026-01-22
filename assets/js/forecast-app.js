@@ -35,6 +35,8 @@
     showInstallInstructions: false,
     // Edit location state
     editingLocation: null,
+    // Shared location from URL parameters
+    sharedLocation: null,
   };
 
   // Debug mode - enable with ?debug=1 in URL
@@ -715,6 +717,15 @@
       return renderError(state.error);
     }
 
+    // Shared location from URL takes precedence
+    if (state.sharedLocation) {
+      const forecast = state.forecastData['shared'];
+      if (!forecast) {
+        return renderLoading();
+      }
+      return renderForecastView(state.sharedLocation, forecast, 'shared');
+    }
+
     if (!state.homeLocation) {
       return `
         <div class="empty-state">
@@ -733,7 +744,7 @@
       return renderLoading();
     }
 
-    return renderForecastView(state.homeLocation, forecast);
+    return renderForecastView(state.homeLocation, forecast, 'home');
   }
 
   /**
@@ -780,7 +791,7 @@
       return renderLoading();
     }
 
-    return renderForecastView(state.currentLocation, forecast);
+    return renderForecastView(state.currentLocation, forecast, 'current');
   }
 
   /**
@@ -876,6 +887,9 @@
           <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-icon" title="View on Google Maps">
             &#128205;
           </a>
+          <button class="btn btn-icon" data-action="share-location" data-id="${location.id}" title="${escapeHtml(strings.share || 'Share')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
           ${!location.isHome ? `
             <button class="btn btn-icon" data-action="set-home" data-id="${location.id}" title="${escapeHtml(strings.setAsHome)}">
               &#127968;
@@ -893,9 +907,10 @@
    * Render the forecast view.
    * @param {Object} location - Location object.
    * @param {Object} forecast - Forecast data.
+   * @param {string} source - Source identifier ('home', 'current', 'shared').
    * @returns {string} HTML string.
    */
-  function renderForecastView(location, forecast) {
+  function renderForecastView(location, forecast, source) {
     const displayName = location.admin1
       ? `${location.name}, ${location.admin1}`
       : location.name || `${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`;
@@ -914,6 +929,9 @@
             ${forecast.location?.timezone_abbr ? `
               <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
             ` : ''}
+            <button class="btn btn-icon" data-action="share-location" data-source="${source}" title="${escapeHtml(strings.share || 'Share')}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
             ${canSave ? `
               <button class="btn btn-save-location" data-action="save-current-location" title="${escapeHtml(strings.saveLocation || 'Save Location')}">
                 &#128190; ${escapeHtml(strings.saveLocation || 'Save')}
@@ -1483,6 +1501,29 @@
       case 'import-locations':
         triggerImport();
         break;
+
+      case 'share-location':
+        // Share can come from location list (with id) or forecast view (with source)
+        if (id) {
+          const location = state.savedLocations.find((loc) => loc.id === id);
+          if (location) {
+            await shareLocation(location, btn);
+          }
+        } else if (btn.dataset.source) {
+          const source = btn.dataset.source;
+          let location = null;
+          if (source === 'home') {
+            location = state.homeLocation;
+          } else if (source === 'current') {
+            location = state.currentLocation;
+          } else if (source === 'shared') {
+            location = state.sharedLocation;
+          }
+          if (location) {
+            await shareLocation(location, btn);
+          }
+        }
+        break;
     }
   }
 
@@ -1864,6 +1905,124 @@
   }
 
   /**
+   * Generate a shareable URL for a location.
+   * @param {Object} location - Location object with lat, lon, name, admin1, country.
+   * @returns {string} Shareable URL.
+   */
+  function getShareableUrl(location) {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams();
+    params.set('lat', location.lat.toFixed(4));
+    params.set('lon', location.lon.toFixed(4));
+    if (location.name) {
+      params.set('loc', location.name);
+    }
+    if (location.admin1) {
+      params.set('region', location.admin1);
+    }
+    if (location.country) {
+      params.set('country', location.country);
+    }
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  /**
+   * Show a toast message near an element.
+   * @param {string} message - Message to display.
+   * @param {HTMLElement} anchorElement - Element to position the toast near.
+   * @param {number} duration - Duration in ms before auto-hide (default 5000).
+   */
+  function showToast(message, anchorElement, duration = 1000) {
+    // Remove any existing toast
+    const existingToast = document.querySelector('.ccf-toast');
+    if (existingToast) {
+      existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'ccf-toast';
+    toast.textContent = message;
+
+    // Position near the anchor element
+    if (anchorElement) {
+      const rect = anchorElement.getBoundingClientRect();
+      toast.style.position = 'fixed';
+      toast.style.top = `${rect.bottom + 8}px`;
+      toast.style.left = `${rect.left + rect.width / 2}px`;
+      toast.style.transform = 'translateX(-50%)';
+    }
+
+    document.body.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      toast.classList.add('ccf-toast-visible');
+    });
+
+    // Auto-hide after duration
+    setTimeout(() => {
+      toast.classList.remove('ccf-toast-visible');
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  /**
+   * Share a location using the Web Share API or fallback to clipboard.
+   * @param {Object} location - Location object with lat, lon, name, admin1, country.
+   * @param {HTMLElement} buttonElement - The share button element for toast positioning.
+   */
+  async function shareLocation(location, buttonElement) {
+    if (!location) {
+      addDebug('Share: No location provided');
+      return;
+    }
+
+    const displayName = location.admin1
+      ? `${location.name}, ${location.admin1}`
+      : location.name || `${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}`;
+
+    const shareUrl = getShareableUrl(location);
+    const shareTitle = strings.shareLocationTitle || 'Cloud Cover Forecast';
+    const shareText = displayName;
+
+    addDebug(`Share: Starting share for "${displayName}"`);
+    addDebug(`Share: URL = ${shareUrl}`);
+
+    // Try Web Share API first
+    if (navigator.share) {
+      try {
+        addDebug('Share: Using Web Share API');
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        addDebug('Share: Completed successfully');
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') {
+          addDebug('Share: User cancelled');
+          return;
+        }
+        addDebug(`Share: Web Share failed: ${e.message}`);
+        // Fall through to clipboard
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      addDebug('Share: Falling back to clipboard');
+      await navigator.clipboard.writeText(shareUrl);
+      showToast(strings.linkCopiedToClipboard || 'Link copied to clipboard', buttonElement);
+      addDebug('Share: Copied to clipboard');
+    } catch (e) {
+      addDebug(`Share: Clipboard failed: ${e.message}`);
+      // Last resort: show in prompt
+      prompt(strings.copyLink || 'Copy link:', shareUrl);
+    }
+  }
+
+  /**
    * Trigger the file input for importing locations.
    */
   function triggerImport() {
@@ -1982,6 +2141,66 @@
   // APP INITIALIZATION
   // ============================================================
 
+  /**
+   * Check for shared location in URL parameters.
+   * URL format: /forecast-app/?lat=51.8986&lon=-8.4756&name=Cork&region=Cork&country=Ireland
+   * @returns {Object|null} Location object or null if no valid params.
+   */
+  function parseSharedLocationFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const lat = parseFloat(params.get('lat'));
+    const lon = parseFloat(params.get('lon'));
+
+    if (isNaN(lat) || isNaN(lon)) {
+      return null;
+    }
+
+    // Validate coordinate ranges
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      addDebug(`Shared location: Invalid coordinates lat=${lat} lon=${lon}`);
+      return null;
+    }
+
+    const name = params.get('loc') || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    const admin1 = params.get('region') || '';
+    const country = params.get('country') || '';
+
+    addDebug(`Shared location: ${name} (${lat}, ${lon})`);
+
+    return {
+      lat,
+      lon,
+      name: decodeURIComponent(name),
+      admin1: admin1 ? decodeURIComponent(admin1) : '',
+      country: country ? decodeURIComponent(country) : '',
+    };
+  }
+
+  /**
+   * Load forecast for a shared location from URL parameters.
+   */
+  async function loadSharedLocation() {
+    const location = parseSharedLocationFromUrl();
+    if (!location) return;
+
+    state.sharedLocation = location;
+    state.activeTab = 'home';
+    state.isLoading = true;
+    renderApp();
+
+    try {
+      const forecast = await fetchForecast(location);
+      state.forecastData['shared'] = forecast;
+    } catch (e) {
+      state.error = e.message;
+      addDebug(`Shared location error: ${e.message}`);
+    }
+
+    state.isLoading = false;
+    renderApp();
+    scrollToCurrentHour();
+  }
+
   async function init() {
     // Show debug info at startup
     if (DEBUG_MODE) {
@@ -2006,8 +2225,16 @@
       // Clean expired cache.
       await ForecastStorage.cleanExpiredCache();
 
-      // Render initial UI (starts on locations tab).
+      // Check for shared location in URL parameters.
+      const hasSharedLocation = parseSharedLocationFromUrl() !== null;
+
+      // Render initial UI.
       renderApp();
+
+      // If URL has shared location, load it (switches to home tab).
+      if (hasSharedLocation) {
+        await loadSharedLocation();
+      }
 
       if (DEBUG_MODE) {
         addDebug('App rendered successfully');

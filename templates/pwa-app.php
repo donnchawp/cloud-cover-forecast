@@ -158,6 +158,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 				installStep2Firefox: <?php echo wp_json_encode( __( 'Tap "Install"', 'cloud-cover-forecast' ) ); ?>,
 				installStep1Generic: <?php echo wp_json_encode( __( 'Tap the browser menu', 'cloud-cover-forecast' ) ); ?>,
 				installStep2Generic: <?php echo wp_json_encode( __( 'Look for "Install app" or "Add to Home Screen"', 'cloud-cover-forecast' ) ); ?>,
+				// Share labels
+				share: <?php echo wp_json_encode( __( 'Share', 'cloud-cover-forecast' ) ); ?>,
+				shareLocationTitle: <?php echo wp_json_encode( __( 'Cloud Cover Forecast', 'cloud-cover-forecast' ) ); ?>,
+				linkCopiedToClipboard: <?php echo wp_json_encode( __( 'Link copied to clipboard', 'cloud-cover-forecast' ) ); ?>,
+				copyLink: <?php echo wp_json_encode( __( 'Copy link:', 'cloud-cover-forecast' ) ); ?>,
 			}
 		};
 	</script>

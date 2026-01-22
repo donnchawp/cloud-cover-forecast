@@ -1318,3 +1318,28 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+
+.ccf-toast {
+  position: fixed;
+  z-index: 10000;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-color);
+  font-size: var(--font-size-sm);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  max-width: 280px;
+  text-align: center;
+}
+
+.ccf-toast-visible {
+  opacity: 1;
+}

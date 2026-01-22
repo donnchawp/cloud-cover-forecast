@@ -27,6 +27,7 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 - **Offline support** - View cached forecasts without internet
 - **7-day extended forecast** - Plan ahead with detailed forecasts
 - **Location management** - Save multiple locations with notes
+- **Share locations** - Share forecast links via messaging apps, email, or copy to clipboard
 - **Export/Import** - Backup and restore locations as JSON
 - **Dark/Light themes** - Automatic switching based on system preferences
 - **Local timezone display** - Times shown in each location's timezone
@@ -279,6 +280,7 @@ This plugin is licensed under the GPL v2 or later.
 ### 1.0.1
 - **New**: Progressive Web App (PWA) with installable forecast application
 - **New**: Save and manage multiple locations with custom names and notes
+- **New**: Share location forecasts via Web Share API or clipboard
 - **New**: Export/import locations as JSON for backup and sharing
 - **New**: 7-day extended forecast in PWA
 - **New**: Light/dark theme support with automatic system preference detection

@@ -23,6 +23,7 @@ Cloud Cover Forecast is a WordPress plugin that displays detailed cloud cover da
 * **Astronomical Data**: Includes moon phase, moonrise/moonset times, and astronomical twilight
 * **Progressive Web App (PWA)**: Installable forecast app with offline support
 * **Location Management**: Save, edit, and organize multiple locations with notes
+* **Share Locations**: Share forecast links via messaging apps, email, or copy to clipboard
 * **Export/Import**: Backup and restore your saved locations as JSON
 * **Light/Dark Themes**: Automatic theme switching based on system preferences
 * **Extended Forecast**: 7-day detailed forecast in the PWA
@@ -142,6 +143,7 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 = 1.0.1 =
 * New: Progressive Web App (PWA) with installable forecast application
 * New: Save and manage multiple locations with custom names and notes
+* New: Share location forecasts via Web Share API or clipboard
 * New: Export/import locations as JSON for backup and sharing
 * New: 7-day extended forecast in PWA
 * New: Light/dark theme support with automatic system preference detection
