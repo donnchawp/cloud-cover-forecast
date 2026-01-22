@@ -1661,6 +1661,12 @@
     state.error = null;
     state.searchResults = [];
 
+    // Clear URL parameters and shared location when switching tabs
+    if (window.location.search) {
+      state.sharedLocation = null;
+      history.replaceState(null, '', window.location.pathname);
+    }
+
     renderApp();
 
     if (tab === 'home') {
