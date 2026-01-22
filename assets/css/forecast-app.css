@@ -154,6 +154,63 @@
 }
 
 /* ============================================================
+   FONT SIZE SETTINGS (4 levels, 3px increments)
+   ============================================================ */
+
+/* Small font size (-3px from medium) */
+.font-small {
+  --font-size-xs: 7px;
+  --font-size-sm: 9px;
+  --font-size-md: 11px;
+  --font-size-lg: 13px;
+  --font-size-xl: 15px;
+  --grid-cell-width: 42px;
+  --grid-cell-height: 25px;
+  --grid-label-width: 82px;
+}
+
+/* Medium font size (default - no overrides needed) */
+.font-medium {
+  /* Uses default :root values: xs:10, sm:12, md:14, lg:16, xl:18 */
+}
+
+/* Large font size (+3px from medium) */
+.font-large {
+  --font-size-xs: 13px;
+  --font-size-sm: 15px;
+  --font-size-md: 17px;
+  --font-size-lg: 19px;
+  --font-size-xl: 21px;
+  --grid-cell-width: 54px;
+  --grid-cell-height: 31px;
+  --grid-label-width: 98px;
+}
+
+/* Extra large font size (+6px from medium) */
+.font-xlarge {
+  --font-size-xs: 16px;
+  --font-size-sm: 18px;
+  --font-size-md: 20px;
+  --font-size-lg: 22px;
+  --font-size-xl: 24px;
+  --grid-cell-width: 60px;
+  --grid-cell-height: 34px;
+  --grid-label-width: 106px;
+}
+
+/* Double extra large font size (+9px from medium) */
+.font-xxlarge {
+  --font-size-xs: 19px;
+  --font-size-sm: 21px;
+  --font-size-md: 23px;
+  --font-size-lg: 25px;
+  --font-size-xl: 27px;
+  --grid-cell-width: 66px;
+  --grid-cell-height: 37px;
+  --grid-label-width: 114px;
+}
+
+/* ============================================================
    BASE STYLES
    ============================================================ */
 
@@ -246,6 +303,47 @@ body {
 
 .theme-toggle:hover {
   background: var(--border-color);
+}
+
+/* Font Size Toggle */
+.font-size-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--bg-tertiary);
+  border: none;
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s, font-size 0.2s;
+  font-family: serif;
+}
+
+.font-size-toggle:hover {
+  background: var(--border-color);
+}
+
+.font-size-toggle.font-size-icon-small {
+  font-size: 11px;
+}
+
+.font-size-toggle.font-size-icon-medium {
+  font-size: 15px;
+}
+
+.font-size-toggle.font-size-icon-large {
+  font-size: 19px;
+}
+
+.font-size-toggle.font-size-icon-xlarge {
+  font-size: 23px;
+}
+
+.font-size-toggle.font-size-icon-xxlarge {
+  font-size: 27px;
 }
 
 /* Install Button */

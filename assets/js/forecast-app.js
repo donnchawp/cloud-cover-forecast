@@ -30,6 +30,7 @@
     searchResults: [],
     isSearching: false,
     theme: localStorage.getItem('ccf-theme') || 'auto',
+    fontSize: localStorage.getItem('ccf-font-size') || 'medium',
     // PWA Install state
     deferredInstallPrompt: null,
     showInstallInstructions: false,
@@ -380,6 +381,70 @@
   }
 
   // ============================================================
+  // FONT SIZE SETTINGS
+  // ============================================================
+
+  /**
+   * Apply the current font size to the document.
+   */
+  function applyFontSize() {
+    const html = document.documentElement;
+    html.classList.remove('font-small', 'font-medium', 'font-large', 'font-xlarge', 'font-xxlarge');
+    html.classList.add(`font-${state.fontSize}`);
+  }
+
+  /**
+   * Toggle between font sizes: small -> medium -> large -> xlarge -> xxlarge -> small.
+   */
+  function toggleFontSize() {
+    // Save scroll position before re-render
+    const gridData = document.getElementById('grid-data');
+    const scrollLeft = gridData ? gridData.scrollLeft : 0;
+
+    const sizes = ['small', 'medium', 'large', 'xlarge', 'xxlarge'];
+    let currentIndex = sizes.indexOf(state.fontSize);
+    if (currentIndex === -1) currentIndex = 1; // Default to medium if not found
+    state.fontSize = sizes[(currentIndex + 1) % sizes.length];
+    localStorage.setItem('ccf-font-size', state.fontSize);
+    applyFontSize();
+    renderApp();
+
+    // Restore scroll position after re-render
+    requestAnimationFrame(() => {
+      const newGridData = document.getElementById('grid-data');
+      if (newGridData && scrollLeft > 0) {
+        newGridData.scrollLeft = scrollLeft;
+      }
+    });
+  }
+
+  /**
+   * Get the label for the current font size.
+   * @returns {string} Font size label.
+   */
+  function getFontSizeLabel() {
+    switch (state.fontSize) {
+      case 'small': return 'A';
+      case 'large': return 'A';
+      default: return 'A'; // medium
+    }
+  }
+
+  /**
+   * Get the CSS class for font size icon styling.
+   * @returns {string} CSS class.
+   */
+  function getFontSizeClass() {
+    switch (state.fontSize) {
+      case 'small': return 'font-size-icon-small';
+      case 'large': return 'font-size-icon-large';
+      case 'xlarge': return 'font-size-icon-xlarge';
+      case 'xxlarge': return 'font-size-icon-xxlarge';
+      default: return 'font-size-icon-medium';
+    }
+  }
+
+  // ============================================================
   // COLOR SCHEMES
   // ============================================================
 
@@ -516,6 +581,7 @@
           <div class="app-status">
             ${!state.isOnline ? `<span class="offline-badge">${escapeHtml(strings.offline)}</span>` : ''}
             ${shouldShowInstallButton() ? `<button class="install-btn" data-action="install" title="${escapeHtml(strings.installApp || 'Install App')}">&#8681;</button>` : ''}
+            <button class="font-size-toggle ${getFontSizeClass()}" data-action="toggle-font-size" title="${escapeHtml(strings.fontSize || 'Font size')}">${getFontSizeLabel()}</button>
             <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme">${getThemeIcon()}</button>
           </div>
         </div>
@@ -1427,6 +1493,10 @@
         toggleTheme();
         break;
 
+      case 'toggle-font-size':
+        toggleFontSize();
+        break;
+
       case 'install':
         handleInstallClick();
         break;
@@ -2211,8 +2281,9 @@
     }
 
     try {
-      // Apply saved theme.
+      // Apply saved theme and font size.
       applyTheme();
+      applyFontSize();
 
       // Open database and load saved data.
       await ForecastStorage.openDatabase();

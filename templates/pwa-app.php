@@ -163,6 +163,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				shareLocationTitle: <?php echo wp_json_encode( __( 'Cloud Cover Forecast', 'cloud-cover-forecast' ) ); ?>,
 				linkCopiedToClipboard: <?php echo wp_json_encode( __( 'Link copied to clipboard', 'cloud-cover-forecast' ) ); ?>,
 				copyLink: <?php echo wp_json_encode( __( 'Copy link:', 'cloud-cover-forecast' ) ); ?>,
+				// Font size label
+				fontSize: <?php echo wp_json_encode( __( 'Font size', 'cloud-cover-forecast' ) ); ?>,
 			}
 		};
 	</script>
