@@ -131,7 +131,10 @@ class Cloud_Cover_Forecast_Shortcode {
 			return $this->error_box( __( 'Invalid latitude/longitude. Provide either lat/lon coordinates or a location name.', 'cloud-cover-forecast' ) );
 		}
 
-		$cache_key = $this->plugin::TRANSIENT_PREFIX . md5( implode( '|', array( $lat, $lon, $hours, wp_timezone_string() ) ) );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			md5( implode( '|', array( $lat, $lon, $hours, wp_timezone_string() ) ) )
+		);
 		$data      = get_transient( $cache_key );
 
 		if ( false === $data ) {
@@ -141,7 +144,6 @@ class Cloud_Cover_Forecast_Shortcode {
 			}
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			set_transient( $cache_key, $data, max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS );
-			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		if ( empty( $data['rows'] ) ) {

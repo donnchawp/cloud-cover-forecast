@@ -58,12 +58,20 @@ class Cloud_Cover_Forecast_Plugin {
 	const GEOCODING_PREFIX = 'cloud_cover_forecast_geocoding_';
 
 	/**
-	 * Option key used to track plugin transients.
+	 * Cache version option key used for cache busting.
 	 *
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const TRANSIENT_INDEX_OPTION = 'cloud_cover_forecast_transient_index';
+	const CACHE_VERSION_OPTION = 'cloud_cover_forecast_cache_version';
+
+	/**
+	 * Rate limit cache prefix.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const RATE_LIMIT_PREFIX = 'cloud_cover_forecast_rate_limit_';
 
 	/**
 	 * Admin instance
@@ -204,81 +212,52 @@ class Cloud_Cover_Forecast_Plugin {
 	}
 
 	/**
-	 * Store a transient key for later cleanup.
+	 * Build a versioned transient key for plugin cache entries.
 	 *
 	 * @since 1.0.0
-	 * @param string $key Transient key to track.
-	 * @return void
+	 * @param string $prefix Key prefix.
+	 * @param string $suffix Key suffix.
+	 * @return string
 	 */
-	public function register_transient_key( string $key ): void {
-		$keys = $this->get_tracked_transient_keys();
-		if ( in_array( $key, $keys, true ) ) {
-			return;
-		}
-
-		$keys[] = $key;
-		update_option( self::TRANSIENT_INDEX_OPTION, $keys, false );
+	public function get_transient_key( string $prefix, string $suffix ): string {
+		$version = $this->get_cache_version();
+		return $prefix . $version . '_' . $suffix;
 	}
 
 	/**
-	 * Remove a transient key from the tracking list.
-	 *
-	 * @since 1.0.0
-	 * @param string $key Transient key to remove.
-	 * @return void
-	 */
-	public function unregister_transient_key( string $key ): void {
-		$keys = $this->get_tracked_transient_keys();
-		$position = array_search( $key, $keys, true );
-
-		if ( false === $position ) {
-			return;
-		}
-
-		unset( $keys[ $position ] );
-		$keys = array_values( $keys );
-
-		if ( empty( $keys ) ) {
-			delete_option( self::TRANSIENT_INDEX_OPTION );
-			return;
-		}
-
-		update_option( self::TRANSIENT_INDEX_OPTION, $keys, false );
-	}
-
-	/**
-	 * Get all tracked transient keys.
-	 *
-	 * @since 1.0.0
-	 * @return string[]
-	 */
-	public function get_tracked_transient_keys(): array {
-		$keys = get_option( self::TRANSIENT_INDEX_OPTION, array() );
-
-		if ( ! is_array( $keys ) ) {
-			return array();
-		}
-
-		return array_values( array_map( 'strval', array_unique( $keys ) ) );
-	}
-
-	/**
-	 * Clear all tracked transients and reset the index.
+	 * Clear all plugin cache by bumping the cache version.
 	 *
 	 * @since 1.0.0
 	 * @return void
 	 */
-	public function clear_tracked_transients(): void {
-		$keys = $this->get_tracked_transient_keys();
-		if ( empty( $keys ) ) {
-			return;
-		}
+	public function clear_cache(): void {
+		$this->bump_cache_version();
+	}
 
-		foreach ( $keys as $key ) {
-			delete_transient( $key );
+	/**
+	 * Get current cache version.
+	 *
+	 * @since 1.0.0
+	 * @return int
+	 */
+	private function get_cache_version(): int {
+		$version = intval( get_option( self::CACHE_VERSION_OPTION, 1 ) );
+		if ( $version < 1 ) {
+			$version = 1;
+			update_option( self::CACHE_VERSION_OPTION, $version, false );
 		}
+		return $version;
+	}
 
-		delete_option( self::TRANSIENT_INDEX_OPTION );
+	/**
+	 * Increment cache version to invalidate existing transients.
+	 *
+	 * @since 1.0.0
+	 * @return void
+	 */
+	private function bump_cache_version(): void {
+		$version = $this->get_cache_version() + 1;
+		update_option( self::CACHE_VERSION_OPTION, $version, false );
 	}
 
 	/**

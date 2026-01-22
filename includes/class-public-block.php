@@ -501,7 +501,10 @@ class Cloud_Cover_Forecast_Public_Block {
 	 */
 	private function is_rate_limited() {
 		$ip = $this->get_client_ip();
-		$transient_key = 'cloud_cover_forecast_rate_limit_' . md5( $ip );
+		$transient_key = $this->plugin->get_transient_key(
+			$this->plugin::RATE_LIMIT_PREFIX,
+			md5( $ip )
+		);
 
 		$rate_data = get_transient( $transient_key );
 		if ( ! $rate_data ) {
@@ -515,7 +518,6 @@ class Cloud_Cover_Forecast_Public_Block {
 		// Reset window if expired
 		if ( $now - $window_start > ( $this->rate_limit_config['window_minutes'] * 60 ) ) {
 			delete_transient( $transient_key );
-			$this->plugin->unregister_transient_key( $transient_key );
 			return false;
 		}
 
@@ -530,7 +532,10 @@ class Cloud_Cover_Forecast_Public_Block {
 	 */
 	private function record_request() {
 		$ip = $this->get_client_ip();
-		$transient_key = 'cloud_cover_forecast_rate_limit_' . md5( $ip );
+		$transient_key = $this->plugin->get_transient_key(
+			$this->plugin::RATE_LIMIT_PREFIX,
+			md5( $ip )
+		);
 
 		$rate_data = get_transient( $transient_key );
 		$now = time();
@@ -554,7 +559,6 @@ class Cloud_Cover_Forecast_Public_Block {
 
 		// Store for the window duration
 		set_transient( $transient_key, $rate_data, $this->rate_limit_config['window_minutes'] * 60 );
-		$this->plugin->register_transient_key( $transient_key );
 	}
 
 	/**

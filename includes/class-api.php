@@ -90,7 +90,10 @@ class Cloud_Cover_Forecast_API {
 		$hours = max( 1, min( 168, $hours ) );
 		$url = add_query_arg( $params, 'https://api.open-meteo.com/v1/forecast' );
 
-		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'open_meteo_' . md5( $url );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			'open_meteo_' . md5( $url )
+		);
 		$res       = get_transient( $cache_key );
 
 		if ( false === $res ) {
@@ -121,7 +124,6 @@ class Cloud_Cover_Forecast_API {
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
 			set_transient( $cache_key, $res, $cache_ttl_seconds );
-			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -395,7 +397,10 @@ class Cloud_Cover_Forecast_API {
 
 		$url = add_query_arg( $params, 'https://api.open-meteo.com/v1/forecast' );
 
-		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'extended_' . md5( $url );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			'extended_' . md5( $url )
+		);
 		$res       = get_transient( $cache_key );
 
 		if ( false === $res ) {
@@ -432,7 +437,6 @@ class Cloud_Cover_Forecast_API {
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
 			set_transient( $cache_key, $res, $cache_ttl_seconds );
-			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -578,7 +582,10 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		// Check cache first (15 minute cache)
-		$cache_key = $this->plugin::GEOCODING_PREFIX . md5( strtolower( trim( $location_name ) ) );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::GEOCODING_PREFIX,
+			md5( strtolower( trim( $location_name ) ) )
+		);
 		$cached    = get_transient( $cache_key );
 		if ( false !== $cached ) {
 			return $cached;
@@ -635,7 +642,6 @@ class Cloud_Cover_Forecast_API {
 
 			// Cache result for quicker lookups
 			set_transient( $cache_key, $geocoded, 15 * MINUTE_IN_SECONDS );
-			$this->plugin->register_transient_key( $cache_key );
 
 			return $geocoded;
 		}
@@ -655,7 +661,6 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		set_transient( $cache_key, $results, 15 * MINUTE_IN_SECONDS );
-		$this->plugin->register_transient_key( $cache_key );
 
 		return $results;
 	}
@@ -674,7 +679,10 @@ class Cloud_Cover_Forecast_API {
 		$lon = round( $lon, 4 );
 
 		// Check cache first
-		$cache_key = $this->plugin::GEOCODING_PREFIX . 'reverse_' . md5( "{$lat},{$lon}" );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::GEOCODING_PREFIX,
+			'reverse_' . md5( "{$lat},{$lon}" )
+		);
 		$cached    = get_transient( $cache_key );
 		if ( false !== $cached ) {
 			return $cached;
@@ -757,7 +765,6 @@ class Cloud_Cover_Forecast_API {
 
 		// Cache for 24 hours (reverse geocoding results rarely change)
 		set_transient( $cache_key, $result, DAY_IN_SECONDS );
-		$this->plugin->register_transient_key( $cache_key );
 
 		return $result;
 	}
@@ -867,7 +874,10 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		// Check cache first (24 hour cache for moon data)
-		$cache_key = $this->plugin::GEOCODING_PREFIX . 'moon_' . md5( $lat . '|' . $lon . '|' . $date );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::GEOCODING_PREFIX,
+			'moon_' . md5( $lat . '|' . $lon . '|' . $date )
+		);
 		$cached = get_transient( $cache_key );
 		if ( false !== $cached ) {
 			return $cached;
@@ -923,7 +933,6 @@ class Cloud_Cover_Forecast_API {
 
 		// Cache for 24 hours
 		set_transient( $cache_key, $moon_data, 24 * HOUR_IN_SECONDS );
-		$this->plugin->register_transient_key( $cache_key );
 
 		return $moon_data;
 	}
@@ -944,7 +953,10 @@ class Cloud_Cover_Forecast_API {
 		);
 		$url = add_query_arg( $params, $endpoint );
 
-		$cache_key = $this->plugin::TRANSIENT_PREFIX . 'metno_' . md5( $url );
+		$cache_key = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			'metno_' . md5( $url )
+		);
 		$res       = get_transient( $cache_key );
 		if ( false === $res ) {
 			$rate_check = $this->can_make_request( 'met_no_forecast' );
@@ -976,7 +988,6 @@ class Cloud_Cover_Forecast_API {
 			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
 			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
 			set_transient( $cache_key, $res, $cache_ttl_seconds );
-			$this->plugin->register_transient_key( $cache_key );
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -1039,7 +1050,10 @@ class Cloud_Cover_Forecast_API {
 			return true;
 		}
 
-		$key   = $this->plugin::TRANSIENT_PREFIX . 'rate_' . $service;
+		$key   = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			'rate_' . $service
+		);
 		$state = get_transient( $key );
 		$now   = time();
 
@@ -1081,7 +1095,10 @@ class Cloud_Cover_Forecast_API {
 			return;
 		}
 
-		$key   = $this->plugin::TRANSIENT_PREFIX . 'rate_' . $service;
+		$key   = $this->plugin->get_transient_key(
+			$this->plugin::TRANSIENT_PREFIX,
+			'rate_' . $service
+		);
 		$state = get_transient( $key );
 		$now   = time();
 
@@ -1095,7 +1112,6 @@ class Cloud_Cover_Forecast_API {
 		}
 
 		set_transient( $key, $state, (int) $config['window'] );
-		$this->plugin->register_transient_key( $key );
 	}
 
 	/**

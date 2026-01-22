@@ -20,15 +20,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 function cloud_cover_forecast_uninstall() {
 	// Delete plugin options
 	delete_option( 'cloud_cover_forecast_settings_v1' );
-	delete_option( 'cloud_cover_forecast_transient_index' );
-
-	// Delete all tracked transients
-	$tracked_keys = get_option( 'cloud_cover_forecast_transient_index', array() );
-	if ( is_array( $tracked_keys ) && ! empty( $tracked_keys ) ) {
-		foreach ( $tracked_keys as $key ) {
-			delete_transient( $key );
-		}
-	}
+	delete_option( 'cloud_cover_forecast_cache_version' );
 
 	// Clean up any orphaned transients (belt and suspenders approach)
 	global $wpdb;
@@ -67,15 +59,7 @@ function cloud_cover_forecast_uninstall() {
 
 			// Delete options for this site
 			delete_option( 'cloud_cover_forecast_settings_v1' );
-			delete_option( 'cloud_cover_forecast_transient_index' );
-
-			// Delete transients for this site
-			$tracked_keys = get_option( 'cloud_cover_forecast_transient_index', array() );
-			if ( is_array( $tracked_keys ) && ! empty( $tracked_keys ) ) {
-				foreach ( $tracked_keys as $key ) {
-					delete_transient( $key );
-				}
-			}
+			delete_option( 'cloud_cover_forecast_cache_version' );
 
 			// Clean up orphaned transients for this site
 			foreach ( $prefixes as $prefix ) {

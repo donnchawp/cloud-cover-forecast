@@ -529,7 +529,7 @@ class Cloud_Cover_Forecast_Admin {
 			return;
 		}
 
-		$this->plugin->clear_tracked_transients();
+		$this->plugin->clear_cache();
 	}
 
 	/**
