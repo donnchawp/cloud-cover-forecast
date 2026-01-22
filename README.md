@@ -102,6 +102,12 @@ A WordPress plugin that displays detailed cloud cover data for any location worl
 - **High Accuracy**: Based on multiple meteorological models
 - **Global Coverage**: Worldwide weather data
 
+### Nominatim/OpenStreetMap
+- **Reverse Geocoding**: Convert coordinates to location names
+- **Free Service**: No API key required
+- **OpenStreetMap Data**: Community-maintained geographic data
+- **Privacy Policy**: https://nominatim.org/release-docs/latest/api/Reverse/
+
 ### IPGeolocation.io API
 - **Astronomical Data**: Moon phase, moonrise/moonset times, and astronomical twilight
 - **High Precision**: Accurate astronomical calculations for any location
@@ -152,6 +158,14 @@ This plugin connects to external services to provide weather forecasts. **By ins
 - **API Key**: Not required
 - **User-Agent**: Includes site name, URL, and admin email (required by Met.no terms)
 - **User Consent**: Automatic (required for core functionality)
+
+#### Nominatim/OpenStreetMap API (https://nominatim.openstreetmap.org)
+- **Purpose**: Reverse geocoding - convert coordinates to location names
+- **Data Sent**: Geographic coordinates
+- **Privacy Policy**: https://osmfoundation.org/wiki/Privacy_Policy
+- **Frequency**: Once per reverse geocode request (rate limited to 1 request/second)
+- **API Key**: Not required
+- **User Consent**: Automatic (used when saving locations in PWA)
 
 #### IPGeolocation Astronomy API (https://api.ipgeolocation.io) - OPTIONAL
 - **Purpose**: Moon phase, moonrise/moonset times, and astronomical twilight data

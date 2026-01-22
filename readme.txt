@@ -40,8 +40,9 @@ Cloud Cover Forecast is a WordPress plugin that displays detailed cloud cover da
 
 **Data Sources:**
 * Weather data from Open-Meteo and met.no APIs (free, no API key required)
-* Location geocoding for city/country name lookup through Open Meteo.
-* Astronomical calculations for sun/moon data uses [ip Geolocation](https://ipgeolocation.io/).
+* Location geocoding for city/country name lookup through Open-Meteo
+* Reverse geocoding (coordinates to location names) through [Nominatim/OpenStreetMap](https://nominatim.org/)
+* Astronomical calculations for sun/moon data uses [IPGeolocation](https://ipgeolocation.io/)
 
 == Installation ==
 
@@ -187,6 +188,7 @@ This plugin uses multiple APIs to provide comprehensive weather and astronomical
 **External Services Used:**
 * **Open-Meteo API**: Free weather data service (no API key required)
 * **Met.no API**: Norwegian Meteorological Institute weather data (no API key required)
+* **Nominatim/OpenStreetMap**: Reverse geocoding service (no API key required)
 * **IPGeolocation.io API**: Professional astronomical data service (API key required)
 
 **Data Transmission:**
@@ -209,6 +211,7 @@ This plugin uses multiple APIs to provide comprehensive weather and astronomical
 **External Services:**
 * **Open-Meteo Weather API**: Free weather data service (no authentication required)
 * **Open-Meteo Geocoding API**: Free location-to-coordinates conversion (no authentication required)
+* **Nominatim/OpenStreetMap API**: Free reverse geocoding - coordinates to location names (no authentication required)
 * **IPGeolocation.io API**: Professional astronomical data service (registration and API key required)
 
 **IPGeolocation.io Integration:**
