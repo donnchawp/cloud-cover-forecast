@@ -1110,16 +1110,19 @@
   function renderJumpButtons() {
     return `
       <div class="jump-buttons">
-        <button class="jump-btn" data-action="jump-to" data-target="prev-day" title="${escapeHtml(strings.previousDay || 'Previous day')}">
-          <span class="jump-btn-icon">&#9664;</span>
-        </button>
-        <button class="jump-btn" data-action="jump-to" data-target="now" title="${escapeHtml(strings.jumpToNow || 'Jump to now')}">
-          <span class="jump-btn-icon">&#9201;</span>
-          <span>${escapeHtml(strings.now || 'Now')}</span>
-        </button>
-        <button class="jump-btn" data-action="jump-to" data-target="next-day" title="${escapeHtml(strings.nextDay || 'Next day')}">
-          <span class="jump-btn-icon">&#9654;</span>
-        </button>
+        <span class="current-day-display" id="current-day-display"></span>
+        <div class="jump-buttons-nav">
+          <button class="jump-btn" data-action="jump-to" data-target="prev-day" title="${escapeHtml(strings.previousDay || 'Previous day')}">
+            <span class="jump-btn-icon">&#9664;</span>
+          </button>
+          <button class="jump-btn" data-action="jump-to" data-target="now" title="${escapeHtml(strings.jumpToNow || 'Jump to now')}">
+            <span class="jump-btn-icon">&#9201;</span>
+            <span>${escapeHtml(strings.now || 'Now')}</span>
+          </button>
+          <button class="jump-btn" data-action="jump-to" data-target="next-day" title="${escapeHtml(strings.nextDay || 'Next day')}">
+            <span class="jump-btn-icon">&#9654;</span>
+          </button>
+        </div>
       </div>
     `;
   }
@@ -1828,6 +1831,42 @@
   }
 
   /**
+   * Update the current day display based on scroll position.
+   */
+  function updateCurrentDayDisplay() {
+    const gridData = document.getElementById('grid-data');
+    const display = document.getElementById('current-day-display');
+    if (!gridData || !display) return;
+
+    // Find the first visible column based on scroll position
+    const currentScroll = gridData.scrollLeft;
+    const columns = gridData.querySelectorAll('.grid-column');
+    let visibleDate = null;
+
+    for (const col of columns) {
+      // Find the first column that's at or past the scroll position
+      if (col.offsetLeft >= currentScroll - 20) {
+        visibleDate = col.dataset.date;
+        break;
+      }
+      // Keep track of the last column we passed
+      visibleDate = col.dataset.date;
+    }
+
+    if (visibleDate) {
+      // Parse the date string (YYYY-MM-DD format)
+      const [year, month, day] = visibleDate.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+
+      // Get day of week (first 3 letters) and date of month
+      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+      const dateOfMonth = date.getDate();
+
+      display.textContent = `${dayOfWeek} ${dateOfMonth}`;
+    }
+  }
+
+  /**
    * Handle search button click.
    */
   async function handleSearchClick() {
@@ -2426,7 +2465,28 @@
         const scrollLeft = currentCol.offsetLeft - grid.offsetWidth / 4;
         grid.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
       }
+      // Set up scroll listener and update day display
+      setupGridScrollListener();
+      updateCurrentDayDisplay();
     });
+  }
+
+  /** Debounce timer for scroll event. */
+  let scrollDebounceTimer = null;
+
+  /**
+   * Set up scroll listener on the grid to update day display.
+   */
+  function setupGridScrollListener() {
+    const grid = document.getElementById('grid-data');
+    if (!grid || grid.dataset.scrollListenerAttached) return;
+
+    grid.addEventListener('scroll', () => {
+      // Debounce to avoid excessive updates
+      if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+      scrollDebounceTimer = setTimeout(updateCurrentDayDisplay, 50);
+    });
+    grid.dataset.scrollListenerAttached = 'true';
   }
 
   // ============================================================

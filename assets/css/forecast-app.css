@@ -1538,10 +1538,17 @@ body {
 .jump-buttons {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
+  justify-content: space-between;
   padding: var(--spacing-xs) var(--spacing-md);
   background: var(--bg-secondary);
+}
+
+.jump-buttons-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  flex: 1;
 }
 
 .jump-btn {
@@ -1565,5 +1572,13 @@ body {
 
 .jump-btn-icon {
   font-size: var(--font-size-sm);
+}
+
+.current-day-display {
+  min-width: 60px;
+  text-align: left;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
