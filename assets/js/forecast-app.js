@@ -457,6 +457,140 @@
   };
 
   // ============================================================
+  // PHOTOGRAPHY SCORE CALCULATION
+  // ============================================================
+
+  /**
+   * Calculate photography score for an hour (0-100).
+   * Higher scores indicate better conditions for photography.
+   * @param {Object} hour - Hourly weather data.
+   * @param {string} sunlightClass - Current sunlight class (day, golden, blue, night).
+   * @returns {number} Score from 0-100.
+   */
+  function calculatePhotoScore(hour, sunlightClass) {
+    let score = 100;
+
+    // Cloud penalty - low clouds are worst, high thin clouds can be good
+    const cloudLow = hour.cloud_low || 0;
+    const cloudMid = hour.cloud_mid || 0;
+    const cloudHigh = hour.cloud_high || 0;
+    const cloudTotal = hour.cloud_total || 0;
+
+    // Low clouds heavily penalized (block light, featureless)
+    score -= cloudLow * 0.8;
+    // Mid clouds moderately penalized
+    score -= cloudMid * 0.4;
+    // High clouds less penalized (can create drama during golden hour)
+    if (sunlightClass === 'sunlight-golden' || sunlightClass === 'sunlight-blue') {
+      // High clouds during golden/blue hour can be beneficial
+      score -= Math.max(0, cloudHigh - 40) * 0.2;
+    } else {
+      score -= cloudHigh * 0.3;
+    }
+
+    // Rain penalty
+    const rainChance = hour.rain_chance || 0;
+    score -= rainChance * 0.5;
+
+    // Visibility penalty (poor visibility is bad)
+    const visibility = hour.visibility || 10000;
+    if (visibility < 5000) {
+      score -= (5000 - visibility) / 100;
+    }
+
+    // Wind penalty (affects long exposures and stability)
+    const windSpeed = hour.wind_speed || 0;
+    if (windSpeed > 30) {
+      score -= (windSpeed - 30) * 0.3;
+    }
+
+    // Bonus for golden/blue hour
+    if (sunlightClass === 'sunlight-golden') {
+      score += 15;
+    } else if (sunlightClass === 'sunlight-blue') {
+      score += 10;
+    }
+
+    // Ensure score stays in range
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  /**
+   * Get score class for photography score.
+   * @param {number} score - Score from 0-100.
+   * @returns {string} CSS class.
+   */
+  function getScoreClass(score) {
+    if (score >= 80) return 'score-excellent';
+    if (score >= 60) return 'score-good';
+    if (score >= 40) return 'score-fair';
+    return 'score-poor';
+  }
+
+  /**
+   * Get score label for photography score.
+   * @param {number} score - Score from 0-100.
+   * @returns {string} Label string.
+   */
+  function getScoreLabel(score) {
+    if (score >= 80) return 'excellent';
+    if (score >= 60) return 'good';
+    if (score >= 40) return 'fair';
+    return 'poor';
+  }
+
+  /**
+   * Get star rating string.
+   * @param {number} score - Score from 0-100.
+   * @returns {string} Star characters.
+   */
+  function getStarRating(score) {
+    const stars = Math.round(score / 20);
+    return '\u2605'.repeat(stars) + '\u2606'.repeat(5 - stars);
+  }
+
+  /**
+   * Calculate average photo score for a time window.
+   * @param {Array} hourly - Array of hourly data.
+   * @param {number} startIndex - Start index.
+   * @param {number} endIndex - End index.
+   * @param {Object} dayData - Daily data for sunlight calculation.
+   * @param {string} timezone - Timezone identifier.
+   * @returns {number} Average score.
+   */
+  function calculateWindowScore(hourly, startIndex, endIndex, dayData, timezone) {
+    if (startIndex < 0 || endIndex > hourly.length || startIndex >= endIndex) {
+      return 0;
+    }
+
+    let totalScore = 0;
+    let count = 0;
+
+    for (let i = startIndex; i < endIndex; i++) {
+      const hour = hourly[i];
+      const hourDate = new Date(hour.time);
+      const sunlightClass = getSunlightClass(hour, hourDate, dayData, timezone);
+      totalScore += calculatePhotoScore(hour, sunlightClass);
+      count++;
+    }
+
+    return count > 0 ? Math.round(totalScore / count) : 0;
+  }
+
+  /**
+   * Get cloud description text.
+   * @param {number} cloudTotal - Total cloud coverage percentage.
+   * @returns {string} Description.
+   */
+  function getCloudDescription(cloudTotal) {
+    if (cloudTotal <= 10) return 'Clear';
+    if (cloudTotal <= 25) return 'Mostly clear';
+    if (cloudTotal <= 50) return 'Partly cloudy';
+    if (cloudTotal <= 75) return 'Mostly cloudy';
+    return 'Overcast';
+  }
+
+  // ============================================================
   // API FUNCTIONS
   // ============================================================
 
@@ -970,6 +1104,27 @@
   }
 
   /**
+   * Render jump buttons for quick navigation.
+   * @returns {string} HTML string.
+   */
+  function renderJumpButtons() {
+    return `
+      <div class="jump-buttons">
+        <button class="jump-btn" data-action="jump-to" data-target="prev-day" title="${escapeHtml(strings.previousDay || 'Previous day')}">
+          <span class="jump-btn-icon">&#9664;</span>
+        </button>
+        <button class="jump-btn" data-action="jump-to" data-target="now" title="${escapeHtml(strings.jumpToNow || 'Jump to now')}">
+          <span class="jump-btn-icon">&#9201;</span>
+          <span>${escapeHtml(strings.now || 'Now')}</span>
+        </button>
+        <button class="jump-btn" data-action="jump-to" data-target="next-day" title="${escapeHtml(strings.nextDay || 'Next day')}">
+          <span class="jump-btn-icon">&#9654;</span>
+        </button>
+      </div>
+    `;
+  }
+
+  /**
    * Render the forecast view.
    * @param {Object} location - Location object.
    * @param {Object} forecast - Forecast data.
@@ -984,13 +1139,28 @@
     const canSave = !location.id && !isLocationSaved(location.lat, location.lon);
     const alreadySaved = !location.id && isLocationSaved(location.lat, location.lon);
 
+    // Get today's sunrise/sunset times
+    const today = forecast.daily?.[0];
+    const twilight = today?.twilight || {};
+    const timezone = forecast.location?.timezone;
+    const sunrise = twilight.sunrise || (today?.sunrise ? formatDateTime(today.sunrise, 'time', timezone) : '');
+    const sunset = twilight.sunset || (today?.sunset ? formatDateTime(today.sunset, 'time', timezone) : '');
+
     return `
       <div class="forecast-view">
         <div class="forecast-header">
-          <h2 class="forecast-location">
-            ${escapeHtml(displayName)}
-            <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps">&#128205;</a>
-          </h2>
+          <div class="forecast-header-main">
+            <h2 class="forecast-location">
+              ${escapeHtml(displayName)}
+              <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps">&#128205;</a>
+            </h2>
+            ${sunrise && sunset ? `
+              <div class="forecast-sun-times">
+                <span class="sun-time sunrise">&#9728;&#xFE0E; ${escapeHtml(sunrise)}</span>
+                <span class="sun-time sunset">&#9790; ${escapeHtml(sunset)}</span>
+              </div>
+            ` : ''}
+          </div>
           <div class="forecast-header-actions">
             ${forecast.location?.timezone_abbr ? `
               <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
@@ -1008,8 +1178,7 @@
             ` : ''}
           </div>
         </div>
-        ${renderSolarInfo(forecast)}
-        ${renderLunarInfo(forecast)}
+        ${renderJumpButtons()}
         ${renderForecastGrid(forecast)}
       </div>
     `;
@@ -1142,6 +1311,7 @@
     return `
       <div class="grid-row-labels">
         <div class="grid-label header-label">Time</div>
+        <div class="grid-label photo-score-label">${escapeHtml(strings.photoScore || 'Photo')}</div>
         <div class="grid-label section-header">${escapeHtml(strings.clouds)}</div>
         <div class="grid-label">${escapeHtml(strings.total)}</div>
         <div class="grid-label">${escapeHtml(strings.low)}</div>
@@ -1198,7 +1368,7 @@
           const dayMoon = forecast.moon?.[dateStr];
           const dayData = dailyByDate[dateStr];
 
-          return renderHourColumn(hour, index, isNewDay, isCurrent, isPast, dayMoon, dayData, timezone);
+          return renderHourColumn(hour, index, isNewDay, isCurrent, isPast, dayMoon, dayData, timezone, dateStr);
         }).join('')}
       </div>
     `;
@@ -1213,9 +1383,11 @@
    * @param {boolean} isPast - Whether this hour is in the past.
    * @param {Object} moon - Moon data for this day.
    * @param {Object} dayData - Daily data for this day (sunrise, sunset, twilight).
+   * @param {string} timezone - Timezone identifier.
+   * @param {string} dateStr - Date string (YYYY-MM-DD) for this hour.
    * @returns {string} HTML string.
    */
-  function renderHourColumn(hour, index, isNewDay, isCurrent, isPast, moon, dayData, timezone) {
+  function renderHourColumn(hour, index, isNewDay, isCurrent, isPast, moon, dayData, timezone, dateStr) {
     const hourDate = new Date(hour.time);
     const timeStr = formatDateTime(hour.time, 'hour', timezone);
     const dayLabel = isNewDay ? formatDateTime(hour.time, 'day', timezone) : '';
@@ -1226,12 +1398,20 @@
     const moonVisible = isMoonVisible(hourDate, moon, timezone);
     const moonIllumination = moon ? moon.moon_illumination : 0;
 
+    // Calculate photography score
+    const photoScore = calculatePhotoScore(hour, sunlightClass);
+    const scoreClass = getScoreClass(photoScore);
+
     return `
-      <div class="grid-column ${isCurrent ? 'current-hour' : ''} ${isPast ? 'past-hour' : ''} ${isNewDay ? 'day-boundary' : ''}" data-index="${index}">
+      <div class="grid-column ${isCurrent ? 'current-hour' : ''} ${isPast ? 'past-hour' : ''} ${isNewDay ? 'day-boundary' : ''}" data-index="${index}" data-date="${dateStr}">
         <div class="grid-cell time-cell ${isNewDay ? 'new-day' : ''}">
           ${dayLabel ? `<span class="day-label">${escapeHtml(dayLabel)}</span>` : ''}
           <span class="hour-label">${escapeHtml(timeStr)}</span>
           ${isCurrent ? `<span class="now-badge">${escapeHtml(strings.now)}</span>` : ''}
+        </div>
+        <div class="grid-cell photo-score-cell ${scoreClass}">
+          ${photoScore}
+          <div class="score-bar"><div class="score-fill" style="width: ${photoScore}%"></div></div>
         </div>
         <div class="grid-cell section-spacer"></div>
         <div class="grid-cell cloud-cell ${getColorClass(hour.cloud_total, COLOR_THRESHOLDS.cloud)}">${formatValue(hour.cloud_total, '%')}</div>
@@ -1594,6 +1774,56 @@
           }
         }
         break;
+
+      case 'jump-to':
+        const target = btn.dataset.target;
+        if (target) {
+          jumpToTarget(target);
+        }
+        break;
+    }
+  }
+
+  /**
+   * Jump to a target position in the grid.
+   * @param {string} target - Target ('now', 'prev-day', 'next-day').
+   */
+  function jumpToTarget(target) {
+    const gridData = document.getElementById('grid-data');
+    if (!gridData) return;
+
+    if (target === 'now') {
+      // Scroll to current hour
+      const currentCol = gridData.querySelector('.current-hour');
+      if (currentCol) {
+        const scrollLeft = currentCol.offsetLeft - gridData.offsetWidth / 4;
+        gridData.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+      }
+      return;
+    }
+
+    if (target === 'prev-day' || target === 'next-day') {
+      // Find current visible date based on scroll position
+      const currentScroll = gridData.scrollLeft;
+      let currentDateIndex = 0;
+      const dayBoundaries = gridData.querySelectorAll('.grid-column.day-boundary');
+
+      // Find which day boundary we're currently at or past
+      for (let i = 0; i < dayBoundaries.length; i++) {
+        if (dayBoundaries[i].offsetLeft <= currentScroll + 50) {
+          currentDateIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      // Calculate target day index
+      let targetIndex = target === 'prev-day' ? currentDateIndex - 1 : currentDateIndex + 1;
+      targetIndex = Math.max(0, Math.min(targetIndex, dayBoundaries.length - 1));
+
+      if (dayBoundaries[targetIndex]) {
+        gridData.scrollTo({ left: dayBoundaries[targetIndex].offsetLeft, behavior: 'smooth' });
+      }
     }
   }
 

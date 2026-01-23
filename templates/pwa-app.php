@@ -168,6 +168,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				copyLink: <?php echo wp_json_encode( __( 'Copy link:', 'cloud-cover-forecast' ) ); ?>,
 				// Font size label
 				fontSize: <?php echo wp_json_encode( __( 'Font size', 'cloud-cover-forecast' ) ); ?>,
+				// Photo score label
+				photoScore: <?php echo wp_json_encode( __( 'Photo', 'cloud-cover-forecast' ) ); ?>,
+				// Jump button labels
+				jumpToNow: <?php echo wp_json_encode( __( 'Jump to now', 'cloud-cover-forecast' ) ); ?>,
+				previousDay: <?php echo wp_json_encode( __( 'Previous day', 'cloud-cover-forecast' ) ); ?>,
+				nextDay: <?php echo wp_json_encode( __( 'Next day', 'cloud-cover-forecast' ) ); ?>,
 			}
 		};
 	</script>
