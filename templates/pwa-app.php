@@ -27,6 +27,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="<?php echo esc_attr__( 'Cloud Cover', 'cloud-cover-forecast' ); ?>">
 	<meta name="description" content="<?php echo esc_attr__( 'Detailed weather forecasting for photographers and astronomers', 'cloud-cover-forecast' ); ?>">
+	<?php if ( $pwa->is_noindex_enabled() ) : ?>
+	<meta name="robots" content="noindex, nofollow">
+	<?php endif; ?>
 
 	<title><?php echo esc_html__( 'Cloud Cover Forecast', 'cloud-cover-forecast' ); ?></title>
 
@@ -179,7 +182,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<script>
 		if ('serviceWorker' in navigator) {
 			window.addEventListener('load', function() {
-				navigator.serviceWorker.register('<?php echo esc_url( home_url( '/ccf-sw.js' ) ); ?>', { scope: '/forecast-app/' })
+				navigator.serviceWorker.register('<?php echo esc_url( home_url( '/ccf-sw.js' ) ); ?>', { scope: '<?php echo esc_js( $pwa->get_sw_scope() ); ?>' })
 					.then(function(registration) {
 						console.log('ServiceWorker registered:', registration.scope);
 					})

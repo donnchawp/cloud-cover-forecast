@@ -261,6 +261,8 @@ class Cloud_Cover_Forecast_Plugin {
 			'show_chart'      => 1,
 			'provider'        => 'open-meteo',
 			'astro_api_key'   => '', // IPGeolocation API key for moon data
+			'pwa_path'        => 'forecast-app', // PWA URL path (without slashes)
+			'pwa_noindex'     => 1, // Discourage search engine indexing
 		);
 	}
 

@@ -142,6 +142,30 @@ class Cloud_Cover_Forecast_Admin {
 			'cloud-cover-forecast-settings',
 			'cloud_cover_forecast_main'
 		);
+
+		// PWA Settings Section
+		add_settings_section(
+			'cloud_cover_forecast_pwa',
+			__( 'PWA Settings', 'cloud-cover-forecast' ),
+			array( $this, 'pwa_settings_section_callback' ),
+			'cloud-cover-forecast-settings'
+		);
+
+		add_settings_field(
+			'cloud_cover_forecast_pwa_path',
+			__( 'PWA URL Path', 'cloud-cover-forecast' ),
+			array( $this, 'render_pwa_path_field' ),
+			'cloud-cover-forecast-settings',
+			'cloud_cover_forecast_pwa'
+		);
+
+		add_settings_field(
+			'cloud_cover_forecast_pwa_noindex',
+			__( 'Discourage Search Engines', 'cloud-cover-forecast' ),
+			array( $this, 'render_pwa_noindex_field' ),
+			'cloud-cover-forecast-settings',
+			'cloud_cover_forecast_pwa'
+		);
 	}
 
 	/**
@@ -151,6 +175,18 @@ class Cloud_Cover_Forecast_Admin {
 	 */
 	public function settings_section_callback() {
 		echo '<p>' . esc_html__( 'Set default location and behaviour for the [cloud_cover] shortcode.', 'cloud-cover-forecast' ) . '</p>';
+	}
+
+	/**
+	 * PWA settings section callback
+	 *
+	 * @since 1.0.0
+	 */
+	public function pwa_settings_section_callback() {
+		$pwa = $this->plugin->get_pwa();
+		echo '<p>' . esc_html__( 'Configure the Progressive Web App (PWA) settings.', 'cloud-cover-forecast' ) . '</p>';
+		echo '<p><strong>' . esc_html__( 'Current PWA URL:', 'cloud-cover-forecast' ) . '</strong> ';
+		echo '<a href="' . esc_url( $pwa->get_pwa_url() ) . '" target="_blank">' . esc_html( $pwa->get_pwa_url() ) . '</a></p>';
 	}
 
 	/**
@@ -495,6 +531,46 @@ class Cloud_Cover_Forecast_Admin {
 	}
 
 	/**
+	 * Render PWA path field
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_pwa_path_field() {
+		$opts = $this->plugin->get_settings();
+		$pwa_path = isset( $opts['pwa_path'] ) ? $opts['pwa_path'] : Cloud_Cover_Forecast_PWA::DEFAULT_ENDPOINT;
+		printf(
+			'<code>%1$s/</code><input type="text" name="%2$s[pwa_path]" value="%3$s" class="regular-text" pattern="[a-zA-Z0-9_-]+" style="width: 200px;" /><code>/</code>',
+			esc_html( home_url() ),
+			esc_attr( $this->plugin::OPTION_KEY ),
+			esc_attr( $pwa_path )
+		);
+		echo '<p class="description">' .
+			esc_html__( 'The URL path for the PWA. Use an obscure path to make it harder to discover. Only letters, numbers, hyphens, and underscores allowed.', 'cloud-cover-forecast' ) .
+			'<br><strong>' . esc_html__( 'Tip:', 'cloud-cover-forecast' ) . '</strong> ' .
+			esc_html__( 'Use a random string like "wx-7f3a9b" instead of predictable names.', 'cloud-cover-forecast' ) .
+		'</p>';
+	}
+
+	/**
+	 * Render PWA noindex field
+	 *
+	 * @since 1.0.0
+	 */
+	public function render_pwa_noindex_field() {
+		$opts = $this->plugin->get_settings();
+		$checked = ! empty( $opts['pwa_noindex'] ) ? 'checked' : '';
+		printf(
+			'<label><input type="checkbox" name="%1$s[pwa_noindex]" value="1" %2$s /> %3$s</label>',
+			esc_attr( $this->plugin::OPTION_KEY ),
+			esc_attr( $checked ),
+			esc_html__( 'Add noindex/nofollow meta tags and X-Robots-Tag headers', 'cloud-cover-forecast' )
+		);
+		echo '<p class="description">' .
+			esc_html__( 'When enabled, search engines will be instructed not to index the PWA. This helps keep your installation private.', 'cloud-cover-forecast' ) .
+		'</p>';
+	}
+
+	/**
 	 * Render clear cache field
 	 *
 	 * @since 1.0.0
@@ -638,6 +714,22 @@ class Cloud_Cover_Forecast_Admin {
 		$out['show_chart']      = ! empty( $input['show_chart'] ) ? 1 : 0;
 		$out['astro_api_key']   = sanitize_text_field( $input['astro_api_key'] ?? $out['astro_api_key'] );
 		$out['provider']        = 'open-meteo';
+
+		// PWA settings
+		$old_settings = $this->plugin->get_settings();
+
+		// Sanitize PWA path: only allow alphanumeric, hyphens, and underscores
+		if ( isset( $input['pwa_path'] ) ) {
+			$pwa_path = preg_replace( '/[^a-zA-Z0-9_-]/', '', $input['pwa_path'] );
+			$out['pwa_path'] = ! empty( $pwa_path ) ? $pwa_path : Cloud_Cover_Forecast_PWA::DEFAULT_ENDPOINT;
+
+			// Flush rewrite rules if path changed
+			if ( $out['pwa_path'] !== $old_settings['pwa_path'] ) {
+				update_option( 'ccf_pwa_flush_rewrite', true );
+			}
+		}
+
+		$out['pwa_noindex'] = ! empty( $input['pwa_noindex'] ) ? 1 : 0;
 
 		return $out;
 	}

@@ -29,12 +29,12 @@ class Cloud_Cover_Forecast_PWA {
 	private $plugin;
 
 	/**
-	 * PWA endpoint slug
+	 * Default PWA endpoint slug (used as fallback)
 	 *
 	 * @since 1.0.0
 	 * @var string
 	 */
-	const ENDPOINT = 'forecast-app';
+	const DEFAULT_ENDPOINT = 'forecast-app';
 
 	/**
 	 * Constructor
@@ -44,6 +44,31 @@ class Cloud_Cover_Forecast_PWA {
 	 */
 	public function __construct( $plugin ) {
 		$this->plugin = $plugin;
+	}
+
+	/**
+	 * Get the PWA endpoint slug from settings
+	 *
+	 * @since 1.0.0
+	 * @return string PWA endpoint slug.
+	 */
+	public function get_endpoint() {
+		$settings = $this->plugin->get_settings();
+		$path = isset( $settings['pwa_path'] ) ? $settings['pwa_path'] : self::DEFAULT_ENDPOINT;
+		// Sanitize: only allow alphanumeric, hyphens, and underscores
+		$path = preg_replace( '/[^a-zA-Z0-9_-]/', '', $path );
+		return ! empty( $path ) ? $path : self::DEFAULT_ENDPOINT;
+	}
+
+	/**
+	 * Check if noindex is enabled for the PWA
+	 *
+	 * @since 1.0.0
+	 * @return bool True if noindex is enabled.
+	 */
+	public function is_noindex_enabled() {
+		$settings = $this->plugin->get_settings();
+		return ! empty( $settings['pwa_noindex'] );
 	}
 
 	/**
@@ -75,13 +100,14 @@ class Cloud_Cover_Forecast_PWA {
 	 * @since 1.0.0
 	 */
 	public function register_rewrite_rules() {
+		$endpoint = $this->get_endpoint();
 		add_rewrite_rule(
-			'^' . self::ENDPOINT . '/?$',
+			'^' . preg_quote( $endpoint, '/' ) . '/?$',
 			'index.php?ccf_pwa=1',
 			'top'
 		);
 
-		// Flush rewrite rules if needed (only on activation).
+		// Flush rewrite rules if needed (only on activation or path change).
 		if ( get_option( 'ccf_pwa_flush_rewrite' ) ) {
 			flush_rewrite_rules();
 			delete_option( 'ccf_pwa_flush_rewrite' );
@@ -151,11 +177,21 @@ class Cloud_Cover_Forecast_PWA {
 		$manifest = file_get_contents( $manifest_path );
 		$manifest_data = json_decode( $manifest, true );
 
+		// Update start_url and scope to use the configured endpoint.
+		$endpoint = $this->get_endpoint();
+		$manifest_data['start_url'] = '/' . $endpoint . '/';
+		$manifest_data['scope'] = '/' . $endpoint . '/';
+
 		// Update icon paths to absolute URLs.
 		if ( isset( $manifest_data['icons'] ) ) {
 			foreach ( $manifest_data['icons'] as &$icon ) {
 				$icon['src'] = CLOUD_COVER_FORECAST_PLUGIN_URL . 'pwa/' . $icon['src'];
 			}
+		}
+
+		// Send X-Robots-Tag header if noindex is enabled.
+		if ( $this->is_noindex_enabled() ) {
+			header( 'X-Robots-Tag: noindex, nofollow', true );
 		}
 
 		header( 'Content-Type: application/manifest+json' );
@@ -176,10 +212,18 @@ class Cloud_Cover_Forecast_PWA {
 			exit;
 		}
 
+		// Read and modify the service worker to use the configured endpoint.
+		$sw_content = file_get_contents( $sw_path );
+		$endpoint = $this->get_endpoint();
+
+		// Replace hardcoded paths with the configured endpoint.
+		$sw_content = str_replace( '/forecast-app/', '/' . $endpoint . '/', $sw_content );
+		$sw_content = str_replace( '/forecast-app', '/' . $endpoint, $sw_content );
+
 		header( 'Content-Type: application/javascript' );
 		header( 'Cache-Control: no-cache' );
 		header( 'Service-Worker-Allowed: /' );
-		readfile( $sw_path );
+		echo $sw_content;
 		exit;
 	}
 
@@ -189,6 +233,11 @@ class Cloud_Cover_Forecast_PWA {
 	 * @since 1.0.0
 	 */
 	private function render_pwa_app() {
+		// Send X-Robots-Tag header if noindex is enabled.
+		if ( $this->is_noindex_enabled() ) {
+			header( 'X-Robots-Tag: noindex, nofollow', true );
+		}
+
 		// Make $pwa available to the template.
 		$pwa = $this;
 
@@ -316,6 +365,26 @@ class Cloud_Cover_Forecast_PWA {
 	 */
 	public function get_ajax_url() {
 		return admin_url( 'admin-ajax.php' );
+	}
+
+	/**
+	 * Get the full PWA URL
+	 *
+	 * @since 1.0.0
+	 * @return string Full PWA URL.
+	 */
+	public function get_pwa_url() {
+		return home_url( '/' . $this->get_endpoint() . '/' );
+	}
+
+	/**
+	 * Get the service worker scope
+	 *
+	 * @since 1.0.0
+	 * @return string Service worker scope.
+	 */
+	public function get_sw_scope() {
+		return '/' . $this->get_endpoint() . '/';
 	}
 
 	/**
