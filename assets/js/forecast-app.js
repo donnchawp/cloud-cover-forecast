@@ -1801,6 +1801,8 @@
       if (currentCol) {
         const scrollLeft = currentCol.offsetLeft - gridData.offsetWidth / 4;
         gridData.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+        // Update day display after scroll settles
+        setTimeout(updateCurrentDayDisplay, 100);
       }
       return;
     }
