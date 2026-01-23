@@ -918,6 +918,22 @@ body {
   opacity: 0.5;
 }
 
+.grid-column.day-boundary {
+  position: relative;
+}
+
+.grid-column.day-boundary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent-danger);
+  z-index: 1;
+  pointer-events: none;
+}
+
 .grid-column.current-hour {
   background: rgba(74, 222, 128, 0.1);
   border-left: 2px solid rgba(239, 68, 68, 0.4);
@@ -942,9 +958,6 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
-.time-cell.new-day {
-  border-left: 2px solid var(--accent-secondary);
-}
 
 .day-label {
   font-size: 9px;

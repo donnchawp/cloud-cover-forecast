@@ -1227,7 +1227,7 @@
     const moonIllumination = moon ? moon.moon_illumination : 0;
 
     return `
-      <div class="grid-column ${isCurrent ? 'current-hour' : ''} ${isPast ? 'past-hour' : ''}" data-index="${index}">
+      <div class="grid-column ${isCurrent ? 'current-hour' : ''} ${isPast ? 'past-hour' : ''} ${isNewDay ? 'day-boundary' : ''}" data-index="${index}">
         <div class="grid-cell time-cell ${isNewDay ? 'new-day' : ''}">
           ${dayLabel ? `<span class="day-label">${escapeHtml(dayLabel)}</span>` : ''}
           <span class="hour-label">${escapeHtml(timeStr)}</span>
