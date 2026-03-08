@@ -37,13 +37,22 @@ class Cloud_Cover_Forecast_PWA {
 	const DEFAULT_ENDPOINT = 'forecast-app';
 
 	/**
+	 * Rate limiter instance.
+	 *
+	 * @since 1.0.0
+	 * @var Cloud_Cover_Forecast_Rate_Limiter
+	 */
+	private $rate_limiter;
+
+	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
 	 * @param Cloud_Cover_Forecast_Plugin $plugin Plugin instance.
 	 */
 	public function __construct( $plugin ) {
-		$this->plugin = $plugin;
+		$this->plugin       = $plugin;
+		$this->rate_limiter = new Cloud_Cover_Forecast_Rate_Limiter( $plugin, 'pwa' );
 	}
 
 	/**
@@ -256,10 +265,9 @@ class Cloud_Cover_Forecast_PWA {
 	 * @since 1.0.0
 	 */
 	public function ajax_extended_forecast() {
-		// Verify nonce if provided.
-		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
-		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'ccf_pwa_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'cloud-cover-forecast' ) ) );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			status_header( 429 );
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ) ) );
 		}
 
 		$lat = isset( $_REQUEST['lat'] ) ? floatval( $_REQUEST['lat'] ) : null;
@@ -267,6 +275,11 @@ class Cloud_Cover_Forecast_PWA {
 
 		if ( null === $lat || null === $lon ) {
 			wp_send_json_error( array( 'message' => __( 'Latitude and longitude are required.', 'cloud-cover-forecast' ) ) );
+		}
+
+		// Validate coordinate ranges.
+		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid coordinates.', 'cloud-cover-forecast' ) ) );
 		}
 
 		$api = $this->plugin->get_api();
@@ -291,10 +304,9 @@ class Cloud_Cover_Forecast_PWA {
 	 * @since 1.0.0
 	 */
 	public function ajax_geocode() {
-		// Verify nonce if provided.
-		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
-		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'ccf_pwa_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'cloud-cover-forecast' ) ) );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			status_header( 429 );
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ) ) );
 		}
 
 		$query = isset( $_REQUEST['query'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['query'] ) ) : '';
@@ -319,10 +331,9 @@ class Cloud_Cover_Forecast_PWA {
 	 * @since 1.0.0
 	 */
 	public function ajax_reverse_geocode() {
-		// Verify nonce if provided.
-		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
-		if ( ! empty( $nonce ) && ! wp_verify_nonce( $nonce, 'ccf_pwa_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'cloud-cover-forecast' ) ) );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			status_header( 429 );
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ) ) );
 		}
 
 		$lat = isset( $_REQUEST['lat'] ) ? floatval( $_REQUEST['lat'] ) : null;
@@ -332,7 +343,7 @@ class Cloud_Cover_Forecast_PWA {
 			wp_send_json_error( array( 'message' => __( 'Latitude and longitude are required.', 'cloud-cover-forecast' ) ) );
 		}
 
-		// Validate coordinate ranges
+		// Validate coordinate ranges.
 		if ( $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180 ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid coordinates.', 'cloud-cover-forecast' ) ) );
 		}
@@ -345,16 +356,6 @@ class Cloud_Cover_Forecast_PWA {
 		}
 
 		wp_send_json_success( $result );
-	}
-
-	/**
-	 * Get the PWA nonce for AJAX requests
-	 *
-	 * @since 1.0.0
-	 * @return string Nonce value.
-	 */
-	public function get_nonce() {
-		return wp_create_nonce( 'ccf_pwa_nonce' );
 	}
 
 	/**

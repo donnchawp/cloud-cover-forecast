@@ -2,10 +2,9 @@
     'use strict';
 
     // Rate limiting configuration
-    // Note: This is client-side rate limiting (1 min window)
-    // Server-side uses 10 requests per 5 minutes
+    // Note: This is client-side guidance only; server-side enforcement is authoritative.
     var RATE_LIMIT_WINDOW = 60; // 1 minute in seconds
-    var RATE_LIMIT_MAX_REQUESTS = 5; // Max requests per window (allows ~2 location lookups with geocoding)
+    var RATE_LIMIT_MAX_REQUESTS = 10; // Max requests per window
     var RATE_LIMIT_STORAGE_KEY = 'cloud_cover_forecast_rate_limit';
 
     /**
@@ -142,7 +141,6 @@
             // Get AJAX data from localized script
             if (typeof cloudCoverForecastPublic !== 'undefined') {
                 blockData.ajaxUrl = cloudCoverForecastPublic.ajaxUrl;
-                blockData.nonce = cloudCoverForecastPublic.nonce;
                 blockData.strings = cloudCoverForecastPublic.strings || blockData.strings;
             }
 
@@ -214,7 +212,6 @@
                     dataType: 'json',
                     data: {
                         action: 'cloud_cover_forecast_public_geocode',
-                        nonce: blockData.nonce,
                         location: location
                     }
                 })
@@ -403,8 +400,7 @@
                     location: locationName,
                     hours: blockData.maxHours || 48,
                     show_photography: blockData.showPhotographyMode ? 1 : 0,
-                    show_other_forecast_apps: blockData.showOtherForecastApps ? 1 : 0,
-                    nonce: blockData.nonce
+                    show_other_forecast_apps: blockData.showOtherForecastApps ? 1 : 0
                 };
 
                 return $.post(blockData.ajaxUrl, ajaxData)

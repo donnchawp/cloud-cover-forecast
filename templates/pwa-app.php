@@ -88,12 +88,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	</div>
 
 	<!-- App Configuration -->
-	<script>
-		window.CCF_CONFIG = {
-			ajaxUrl: <?php echo wp_json_encode( $pwa->get_ajax_url() ); ?>,
-			nonce: <?php echo wp_json_encode( $pwa->get_nonce() ); ?>,
-			pluginUrl: <?php echo wp_json_encode( CLOUD_COVER_FORECAST_PLUGIN_URL ); ?>,
-			strings: {
+		<script>
+			window.CCF_CONFIG = {
+				ajaxUrl: <?php echo wp_json_encode( $pwa->get_ajax_url() ); ?>,
+				pluginUrl: <?php echo wp_json_encode( CLOUD_COVER_FORECAST_PLUGIN_URL ); ?>,
+				strings: {
 				appTitle: <?php echo wp_json_encode( __( 'Cloud Cover Forecast', 'cloud-cover-forecast' ) ); ?>,
 				home: <?php echo wp_json_encode( __( 'Home', 'cloud-cover-forecast' ) ); ?>,
 				current: <?php echo wp_json_encode( __( 'Current', 'cloud-cover-forecast' ) ); ?>,

@@ -35,14 +35,23 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	private $api;
 
 	/**
+	 * Rate limiter instance.
+	 *
+	 * @since 1.0.0
+	 * @var Cloud_Cover_Forecast_Rate_Limiter
+	 */
+	private $rate_limiter;
+
+	/**
 	 * Constructor
 	 *
 	 * @since 1.0.0
 	 * @param Cloud_Cover_Forecast_Plugin $plugin Plugin instance.
 	 */
 	public function __construct( $plugin ) {
-		$this->plugin = $plugin;
-		$this->api = $plugin->get_api();
+		$this->plugin       = $plugin;
+		$this->api          = $plugin->get_api();
+		$this->rate_limiter = new Cloud_Cover_Forecast_Rate_Limiter( $plugin, 'sunrise' );
 	}
 
 	/**
@@ -107,9 +116,8 @@ class Cloud_Cover_Forecast_Sunrise_Sunset_Block {
 	 * @since 1.0.0
 	 */
 	public function handle_ajax_geocode() {
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, 'sunrise_sunset_geocode' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'cloud-cover-forecast' ) ), 403 );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ) ), 429 );
 		}
 
 		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';

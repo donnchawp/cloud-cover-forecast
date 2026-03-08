@@ -43,19 +43,12 @@ class Cloud_Cover_Forecast_Public_Block {
 	private $photography_renderer;
 
 	/**
-	 * Rate limiting configuration
-	 *
-	 * Set to 10 requests per 5 minutes to allow for paired geocoding + forecast lookups.
-	 * Each location search typically requires 2 requests (geocode + forecast).
+	 * Rate limiter instance.
 	 *
 	 * @since 1.0.0
-	 * @var array
+	 * @var Cloud_Cover_Forecast_Rate_Limiter
 	 */
-	private $rate_limit_config = array(
-		'window_minutes' => 5,
-		'max_requests'   => 10,
-		'ban_minutes'    => 15,
-	);
+	private $rate_limiter;
 
 	/**
 	 * Tracks whether frontend assets were enqueued.
@@ -72,9 +65,10 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @param Cloud_Cover_Forecast_Plugin $plugin Plugin instance.
 	 */
 	public function __construct( $plugin ) {
-		$this->plugin = $plugin;
-		$this->api = $plugin->get_api();
-		$this->photography_renderer = $plugin->get_photography_renderer();
+		$this->plugin                = $plugin;
+		$this->api                   = $plugin->get_api();
+		$this->photography_renderer  = $plugin->get_photography_renderer();
+		$this->rate_limiter          = new Cloud_Cover_Forecast_Rate_Limiter( $plugin, 'public' );
 	}
 
 	/**
@@ -173,7 +167,6 @@ class Cloud_Cover_Forecast_Public_Block {
 			'cloudCoverForecastPublic',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce' => wp_create_nonce( 'cloud_cover_forecast_public_lookup' ),
 				'strings' => array(
 					'searchingText' => __( 'Searching...', 'cloud-cover-forecast' ),
 					'locationNotFoundText' => __( 'Location not found. Please try a different search term.', 'cloud-cover-forecast' ),
@@ -251,15 +244,8 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @since 1.0.0
 	 */
 	public function handle_ajax_lookup() {
-		// Verify nonce first
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, 'cloud_cover_forecast_public_lookup' ) ) {
-			wp_send_json_error( __( 'Security check failed.', 'cloud-cover-forecast' ) );
-		}
-
-		// Check rate limiting
-		if ( $this->is_rate_limited() ) {
-			wp_send_json_error( __( 'Rate limit exceeded. Please try again later.', 'cloud-cover-forecast' ) );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			wp_send_json_error( __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ), 429 );
 		}
 
 		// Get and validate parameters with proper sanitization
@@ -318,9 +304,6 @@ class Cloud_Cover_Forecast_Public_Block {
 			)
 		);
 
-		// Record the request for rate limiting
-		$this->record_request();
-
 		wp_send_json_success( array( 'html' => $html ) );
 	}
 
@@ -330,14 +313,8 @@ class Cloud_Cover_Forecast_Public_Block {
 	 * @since 1.0.0
 	 */
 	public function handle_ajax_geocode() {
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, 'cloud_cover_forecast_public_lookup' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed.', 'cloud-cover-forecast' ) ), 403 );
-		}
-
-		// Check rate limiting
-		if ( $this->is_rate_limited() ) {
-			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded. Please try again later.', 'cloud-cover-forecast' ) ), 429 );
+		if ( ! $this->rate_limiter->is_allowed() ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please try again in a minute.', 'cloud-cover-forecast' ) ), 429 );
 		}
 
 		$location = isset( $_POST['location'] ) ? sanitize_text_field( wp_unslash( $_POST['location'] ) ) : '';
@@ -366,9 +343,6 @@ class Cloud_Cover_Forecast_Public_Block {
 
 			wp_send_json_error( array( 'message' => $results->get_error_message() ), $status );
 		}
-
-		// Record the request for rate limiting
-		$this->record_request();
 
 		wp_send_json_success(
 			array(
@@ -493,104 +467,4 @@ class Cloud_Cover_Forecast_Public_Block {
 		<?php
 	}
 
-	/**
-	 * Check if the current IP is rate limited
-	 *
-	 * @since 1.0.0
-	 * @return bool True if rate limited, false otherwise.
-	 */
-	private function is_rate_limited() {
-		$ip = $this->get_client_ip();
-		$transient_key = $this->plugin->get_transient_key(
-			$this->plugin::RATE_LIMIT_PREFIX,
-			md5( $ip )
-		);
-
-		$rate_data = get_transient( $transient_key );
-		if ( ! $rate_data ) {
-			return false;
-		}
-
-		$now = time();
-		$window_start = $rate_data['window_start'];
-		$request_count = $rate_data['count'];
-
-		// Reset window if expired
-		if ( $now - $window_start > ( $this->rate_limit_config['window_minutes'] * 60 ) ) {
-			delete_transient( $transient_key );
-			return false;
-		}
-
-		// Check if rate limit exceeded
-		return $request_count >= $this->rate_limit_config['max_requests'];
-	}
-
-	/**
-	 * Record a request for rate limiting
-	 *
-	 * @since 1.0.0
-	 */
-	private function record_request() {
-		$ip = $this->get_client_ip();
-		$transient_key = $this->plugin->get_transient_key(
-			$this->plugin::RATE_LIMIT_PREFIX,
-			md5( $ip )
-		);
-
-		$rate_data = get_transient( $transient_key );
-		$now = time();
-
-		if ( ! $rate_data ) {
-			$rate_data = array(
-				'window_start' => $now,
-				'count' => 1,
-			);
-		} else {
-			// Reset window if expired
-			if ( $now - $rate_data['window_start'] > ( $this->rate_limit_config['window_minutes'] * 60 ) ) {
-				$rate_data = array(
-					'window_start' => $now,
-					'count' => 1,
-				);
-			} else {
-				$rate_data['count']++;
-			}
-		}
-
-		// Store for the window duration
-		set_transient( $transient_key, $rate_data, $this->rate_limit_config['window_minutes'] * 60 );
-	}
-
-	/**
-	 * Get client IP address for rate limiting.
-	 *
-	 * Checks proxy headers in priority order to get the real client IP
-	 * when behind CDNs or reverse proxies.
-	 *
-	 * @since 1.0.0
-	 * @return string Client IP address.
-	 */
-	private function get_client_ip() {
-		// Check proxy headers in order of reliability.
-		$headers = array(
-			'HTTP_CF_CONNECTING_IP', // Cloudflare.
-			'HTTP_X_FORWARDED_FOR',  // Standard proxy header.
-			'HTTP_X_REAL_IP',        // Nginx proxy.
-			'REMOTE_ADDR',           // Direct connection.
-		);
-
-		foreach ( $headers as $header ) {
-			if ( ! empty( $_SERVER[ $header ] ) ) {
-				$value = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
-				// X-Forwarded-For may contain comma-separated list; use first IP.
-				$ips = array_map( 'trim', explode( ',', $value ) );
-				$ip  = $ips[0];
-				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
-					return $ip;
-				}
-			}
-		}
-
-		return '0.0.0.0';
-	}
 }

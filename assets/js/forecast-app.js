@@ -12,7 +12,7 @@
   'use strict';
 
   const { CCF_CONFIG, ForecastStorage } = global;
-  const { ajaxUrl, nonce, strings } = CCF_CONFIG;
+  const { ajaxUrl, strings } = CCF_CONFIG;
 
   // ============================================================
   // APP STATE
@@ -205,7 +205,6 @@
   async function ajax(action, data = {}) {
     const params = new URLSearchParams({
       action,
-      nonce,
       ...data,
     });
 
