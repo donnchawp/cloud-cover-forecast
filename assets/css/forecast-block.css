@@ -1,0 +1,345 @@
+/**
+ * Cloud Cover Forecast - shortcode and block styles
+ *
+ * Colour, shape and elevation come from assets/css/forecast-tokens.css, which
+ * is enqueued as a dependency of this file.
+ *
+ * @package CloudCoverForecast
+ * @since 1.0.0
+ */
+
+/* ============================================================
+   CARD & LAYOUT
+   ============================================================ */
+
+.cloud-cover-forecast-wrap {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ccf-text);
+}
+
+.cloud-cover-forecast-card {
+  background: var(--ccf-bg-card);
+  border: 1px solid var(--ccf-border);
+  border-radius: var(--ccf-radius);
+  padding: 14px;
+  margin: 10px 0;
+  box-shadow: var(--ccf-shadow);
+}
+
+.cloud-cover-forecast-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.cloud-cover-forecast-grid.cols-5 {
+  grid-template-columns: 110px repeat(4, 1fr);
+}
+
+.cloud-cover-forecast-row {
+  display: contents;
+}
+
+.cloud-cover-forecast-h {
+  font-weight: 600;
+}
+
+.cloud-cover-forecast-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--ccf-bg-badge);
+  color: var(--ccf-text-secondary);
+}
+
+.cloud-cover-forecast-meta {
+  color: var(--ccf-text-muted);
+  font-size: 12px;
+}
+
+.cloud-cover-forecast-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--ccf-border);
+}
+
+.cloud-cover-forecast-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.cloud-cover-forecast-footer {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ccf-border);
+}
+
+.cloud-cover-forecast-chart {
+  width: 100%;
+  height: 220px;
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+
+.cloud-cover-forecast-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.cloud-cover-forecast-th,
+.cloud-cover-forecast-td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--ccf-border-subtle);
+}
+
+.cloud-cover-forecast-th:first-child,
+.cloud-cover-forecast-td:first-child {
+  text-align: left;
+}
+
+/* Wide hourly tables scroll rather than overflowing narrow themes. */
+.cloud-cover-forecast-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ============================================================
+   PHOTOGRAPHY WIDGET
+   ============================================================ */
+
+.cloud-cover-forecast-photography {
+  background: linear-gradient(135deg, var(--ccf-bg-subtle) 0%, var(--ccf-bg-raised) 100%);
+}
+
+.cloud-cover-forecast-summary {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: var(--ccf-bg-subtle);
+  border-radius: var(--ccf-radius-sm);
+  border: 1px solid var(--ccf-border);
+}
+
+.cloud-cover-forecast-ratings {
+  margin-top: 8px;
+  color: var(--ccf-text-secondary);
+}
+
+.cloud-cover-forecast-moon {
+  margin-top: 6px;
+  color: var(--ccf-moon);
+  font-weight: 500;
+}
+
+.cloud-cover-forecast-opportunities {
+  margin-bottom: 15px;
+  padding: 12px;
+  background: var(--ccf-opp-bg);
+  border-radius: var(--ccf-radius-sm);
+  border: 1px solid var(--ccf-opp-border);
+}
+
+.cloud-cover-forecast-opportunities h4 {
+  margin: 0 0 10px;
+  color: var(--ccf-opp-heading);
+}
+
+.cloud-cover-forecast-opportunity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.cloud-cover-forecast-opportunity .time-label {
+  font-weight: 500;
+  color: var(--ccf-text-secondary);
+  min-width: 120px;
+}
+
+.cloud-cover-forecast-opportunity .time-value {
+  color: var(--ccf-success);
+  font-weight: 600;
+}
+
+.cloud-cover-forecast-opportunity .rating-stars {
+  color: var(--ccf-star);
+}
+
+.cloud-cover-forecast-opportunity .quality-badge {
+  background: var(--ccf-success-solid);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* ============================================================
+   PHOTOGRAPHY TABLE
+   ============================================================ */
+
+.cloud-cover-forecast-photography-table th,
+.cloud-cover-forecast-photography-table td {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.cloud-cover-forecast-photography-table th:first-child,
+.cloud-cover-forecast-photography-table td:first-child {
+  text-align: left;
+}
+
+.cloud-cover-forecast-photography-table .event-condition-cell {
+  font-size: 13px;
+  text-align: left;
+  max-width: 220px;
+}
+
+.cloud-cover-forecast-photography-table .event-meta {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 6px;
+  font-weight: 600;
+}
+
+.cloud-cover-forecast-photography-table .condition-text {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.cloud-cover-forecast-photography-table .sunrise-golden-hour-row,
+.cloud-cover-forecast-photography-table .sunset-golden-hour-row,
+.cloud-cover-forecast-photography-table .golden-hour-row {
+  background: var(--ccf-row-golden);
+}
+
+.cloud-cover-forecast-photography-table .astro-dark-row {
+  background: var(--ccf-row-astro);
+}
+
+.cloud-cover-forecast-photography-table .nighttime-row {
+  background: var(--ccf-row-night);
+}
+
+.cloud-cover-forecast-photography-table .past-hour-row {
+  opacity: .65;
+}
+
+.cloud-cover-forecast-photography-table .past-hour-row td {
+  color: var(--ccf-text-muted);
+}
+
+.cloud-cover-forecast-photography-table .current-hour-row td {
+  background: var(--ccf-row-current);
+  color: var(--ccf-text);
+  font-weight: 600;
+}
+
+.cloud-cover-forecast-photography-table .current-hour-row td:first-child {
+  border-left: 4px solid var(--ccf-accent);
+}
+
+.cloud-cover-current-hour-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--ccf-accent);
+  color: var(--ccf-accent-contrast);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.cloud-cover-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  background: var(--ccf-warn-badge-bg);
+  color: var(--ccf-warn-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   NOTICES & STATES
+   ============================================================ */
+
+.cloud-cover-forecast-provider-note {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--ccf-warn-border);
+  background: var(--ccf-warn-bg);
+  color: var(--ccf-warn-text);
+  font-size: 13px;
+  border-radius: var(--ccf-radius-sm);
+}
+
+.cloud-cover-forecast-err {
+  color: var(--ccf-err-text);
+  background: var(--ccf-err-bg);
+  border: 1px solid var(--ccf-err-border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.cloud-cover-forecast-skel {
+  background: linear-gradient(90deg, var(--ccf-skel-a), var(--ccf-skel-b), var(--ccf-skel-a));
+  background-size: 200% 100%;
+  animation: cloud-cover-forecast-shimmer 1.4s infinite;
+}
+
+.cloud-cover-forecast-skel.h16 {
+  height: 16px;
+  border-radius: var(--ccf-radius-sm);
+}
+
+.cloud-cover-forecast-skel.h24 {
+  height: 24px;
+  border-radius: var(--ccf-radius-sm);
+}
+
+.cloud-cover-forecast-skel.mt8 {
+  margin-top: 8px;
+}
+
+@keyframes cloud-cover-forecast-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+.cloud-cover-forecast-wrap :focus-visible {
+  outline: 2px solid var(--ccf-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-cover-forecast-skel {
+    animation: none;
+    background: var(--ccf-skel-b);
+  }
+
+  .cloud-cover-forecast-wrap * {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,0 +1,232 @@
+/**
+ * Cloud Cover Forecast - shared design tokens
+ *
+ * Single source of truth for colour, shape and elevation across the shortcode,
+ * the photography widget and the public lookup block. Loaded as a dependency
+ * of forecast-block.css and public-block.css.
+ *
+ * Naming mirrors the PWA's token vocabulary (assets/css/forecast-app.css) so
+ * the two surfaces stay recognisably the same product. Everything is prefixed
+ * --ccf- to avoid colliding with theme variables.
+ *
+ * Themes that force a colour scheme can opt in or out explicitly by setting
+ * data-ccf-theme="light" or data-ccf-theme="dark" on <html> or <body>.
+ *
+ * @package CloudCoverForecast
+ * @since 1.0.0
+ */
+
+:root {
+  /* Surfaces */
+  --ccf-bg-card: #ffffff;
+  --ccf-bg-subtle: #f8fafc;
+  --ccf-bg-raised: #f1f5f9;
+  --ccf-bg-badge: #f3f4f6;
+  --ccf-bg-hover: #eef2f7;
+
+  /* Text */
+  --ccf-text: #1d2327;
+  --ccf-text-secondary: #374151;
+  --ccf-text-muted: #6b7280;
+  --ccf-text-on-accent: #ffffff;
+
+  /* Borders */
+  --ccf-border: #e1e5e9;
+  --ccf-border-subtle: #f1f5f9;
+  --ccf-border-strong: #d8dde3;
+
+  /* Interactive (search form, buttons, links) */
+  --ccf-interactive: #0073aa;
+  --ccf-interactive-hover: #005a87;
+  --ccf-interactive-ring: rgba(0, 115, 170, .25);
+  --ccf-disabled: #ccc;
+
+  /* Accent (current hour, emphasis) */
+  --ccf-accent: #2563eb;
+  --ccf-accent-contrast: #ffffff;
+
+  /* Semantic */
+  --ccf-success: #059669;
+  --ccf-success-solid: #10b981;
+  --ccf-star: #f59e0b;
+  --ccf-moon: #6366f1;
+
+  /* Event row tints */
+  --ccf-row-golden: #fef3c7;
+  --ccf-row-astro: #ddd6fe;
+  --ccf-row-night: #e0e7ff;
+  --ccf-row-current: #dbeafe;
+
+  /* Opportunities panel */
+  --ccf-opp-bg: #fef7ff;
+  --ccf-opp-border: #e879f9;
+  --ccf-opp-heading: #7c3aed;
+
+  /* Warning / provider notices */
+  --ccf-warn-bg: #fff7ed;
+  --ccf-warn-border: #f59e0b;
+  --ccf-warn-text: #92400e;
+  --ccf-warn-badge-bg: #fef3c7;
+
+  /* Rate-limit notice */
+  --ccf-notice-bg: #fff3cd;
+  --ccf-notice-border: #ffeaa7;
+  --ccf-notice-text: #856404;
+
+  /* Errors */
+  --ccf-err-bg: #f8d7da;
+  --ccf-err-border: #f5c6cb;
+  --ccf-err-text: #721c24;
+
+  /* Data table */
+  --ccf-table-head-bg: #f1f5f9;
+  --ccf-table-head-text: #0f172a;
+  --ccf-table-border: rgba(100, 116, 139, .35);
+  --ccf-table-rule: rgba(148, 163, 184, .3);
+  --ccf-table-row-hover: rgba(241, 245, 249, .6);
+
+  /* Skeleton shimmer */
+  --ccf-skel-a: #f3f4f6;
+  --ccf-skel-b: #e5e7eb;
+
+  /* Shape & elevation */
+  --ccf-radius: 14px;
+  --ccf-radius-sm: 8px;
+  --ccf-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+  --ccf-shadow-lg: 0 16px 32px -18px rgba(15, 23, 42, .35);
+}
+
+/* ============================================================
+   DARK
+   ============================================================ */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-ccf-theme="light"]) {
+    --ccf-bg-card: #1e293b;
+    --ccf-bg-subtle: #172033;
+    --ccf-bg-raised: #0f172a;
+    --ccf-bg-badge: #334155;
+    --ccf-bg-hover: #263449;
+
+    --ccf-text: #f8fafc;
+    --ccf-text-secondary: #cbd5e1;
+    --ccf-text-muted: #94a3b8;
+    --ccf-text-on-accent: #0f172a;
+
+    --ccf-border: #334155;
+    --ccf-border-subtle: #263449;
+    --ccf-border-strong: #475569;
+
+    --ccf-interactive: #4f9fd8;
+    --ccf-interactive-hover: #7bbbe8;
+    --ccf-interactive-ring: rgba(79, 159, 216, .35);
+    --ccf-disabled: #475569;
+
+    --ccf-accent: #60a5fa;
+    --ccf-accent-contrast: #0f172a;
+
+    --ccf-success: #34d399;
+    --ccf-success-solid: #059669;
+    --ccf-star: #fbbf24;
+    --ccf-moon: #a5b4fc;
+
+    --ccf-row-golden: #3f2f0c;
+    --ccf-row-astro: #2e2555;
+    --ccf-row-night: #1e1b4b;
+    --ccf-row-current: #1e3a5f;
+
+    --ccf-opp-bg: #2a1832;
+    --ccf-opp-border: #86198f;
+    --ccf-opp-heading: #c4b5fd;
+
+    --ccf-warn-bg: #302008;
+    --ccf-warn-border: #b45309;
+    --ccf-warn-text: #fcd34d;
+    --ccf-warn-badge-bg: #422006;
+
+    --ccf-notice-bg: #2f2606;
+    --ccf-notice-border: #854d0e;
+    --ccf-notice-text: #fde68a;
+
+    --ccf-err-bg: #3f1414;
+    --ccf-err-border: #7f1d1d;
+    --ccf-err-text: #fca5a5;
+
+    --ccf-table-head-bg: #0f172a;
+    --ccf-table-head-text: #e2e8f0;
+    --ccf-table-border: rgba(148, 163, 184, .3);
+    --ccf-table-rule: rgba(148, 163, 184, .2);
+    --ccf-table-row-hover: rgba(51, 65, 85, .5);
+
+    --ccf-skel-a: #1e293b;
+    --ccf-skel-b: #334155;
+
+    --ccf-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+    --ccf-shadow-lg: 0 16px 32px -18px rgba(0, 0, 0, .7);
+  }
+}
+
+/* Explicit dark, regardless of system preference. */
+:root[data-ccf-theme="dark"] {
+  --ccf-bg-card: #1e293b;
+  --ccf-bg-subtle: #172033;
+  --ccf-bg-raised: #0f172a;
+  --ccf-bg-badge: #334155;
+  --ccf-bg-hover: #263449;
+
+  --ccf-text: #f8fafc;
+  --ccf-text-secondary: #cbd5e1;
+  --ccf-text-muted: #94a3b8;
+  --ccf-text-on-accent: #0f172a;
+
+  --ccf-border: #334155;
+  --ccf-border-subtle: #263449;
+  --ccf-border-strong: #475569;
+
+  --ccf-interactive: #4f9fd8;
+  --ccf-interactive-hover: #7bbbe8;
+  --ccf-interactive-ring: rgba(79, 159, 216, .35);
+  --ccf-disabled: #475569;
+
+  --ccf-accent: #60a5fa;
+  --ccf-accent-contrast: #0f172a;
+
+  --ccf-success: #34d399;
+  --ccf-success-solid: #059669;
+  --ccf-star: #fbbf24;
+  --ccf-moon: #a5b4fc;
+
+  --ccf-row-golden: #3f2f0c;
+  --ccf-row-astro: #2e2555;
+  --ccf-row-night: #1e1b4b;
+  --ccf-row-current: #1e3a5f;
+
+  --ccf-opp-bg: #2a1832;
+  --ccf-opp-border: #86198f;
+  --ccf-opp-heading: #c4b5fd;
+
+  --ccf-warn-bg: #302008;
+  --ccf-warn-border: #b45309;
+  --ccf-warn-text: #fcd34d;
+  --ccf-warn-badge-bg: #422006;
+
+  --ccf-notice-bg: #2f2606;
+  --ccf-notice-border: #854d0e;
+  --ccf-notice-text: #fde68a;
+
+  --ccf-err-bg: #3f1414;
+  --ccf-err-border: #7f1d1d;
+  --ccf-err-text: #fca5a5;
+
+  --ccf-table-head-bg: #0f172a;
+  --ccf-table-head-text: #e2e8f0;
+  --ccf-table-border: rgba(148, 163, 184, .3);
+  --ccf-table-rule: rgba(148, 163, 184, .2);
+  --ccf-table-row-hover: rgba(51, 65, 85, .5);
+
+  --ccf-skel-a: #1e293b;
+  --ccf-skel-b: #334155;
+
+  --ccf-shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  --ccf-shadow-lg: 0 16px 32px -18px rgba(0, 0, 0, .7);
+}

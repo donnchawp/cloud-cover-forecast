@@ -1582,3 +1582,71 @@ body {
   color: var(--text-primary);
 }
 
+
+/* ============================================================
+   ACCESSIBILITY
+   ============================================================ */
+
+/*
+ * A single visible focus indicator for every interactive control.
+ * :focus-visible keeps it out of the way of pointer users while
+ * guaranteeing keyboard users can always see where they are.
+ */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--accent-secondary);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Text fields already recolour their border on focus; pair it with the ring. */
+.search-input:focus-visible,
+.form-input:focus-visible,
+.form-textarea:focus-visible {
+  outline: 3px solid var(--accent-secondary);
+  outline-offset: 1px;
+}
+
+/* Touch targets. The grid keeps its own compact sizing. */
+.tab-btn,
+.jump-btn,
+.btn,
+.theme-toggle,
+.font-size-toggle,
+.install-btn,
+.search-btn {
+  min-height: 44px;
+}
+
+.btn-icon {
+  min-width: 44px;
+}
+
+/* Visually hidden, still announced. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

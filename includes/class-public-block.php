@@ -145,10 +145,11 @@ class Cloud_Cover_Forecast_Public_Block {
 		}
 
 		// Enqueue CSS
+		Cloud_Cover_Forecast_Assets::register_tokens();
 		wp_enqueue_style(
 			'cloud-cover-forecast-public-block',
 			CLOUD_COVER_FORECAST_PLUGIN_URL . 'assets/css/public-block.css',
-			array(),
+			array( 'cloud-cover-forecast-tokens' ),
 			CLOUD_COVER_FORECAST_VERSION
 		);
 

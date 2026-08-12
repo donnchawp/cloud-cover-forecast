@@ -173,6 +173,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 				jumpToNow: <?php echo wp_json_encode( __( 'Jump to now', 'cloud-cover-forecast' ) ); ?>,
 				previousDay: <?php echo wp_json_encode( __( 'Previous day', 'cloud-cover-forecast' ) ); ?>,
 				nextDay: <?php echo wp_json_encode( __( 'Next day', 'cloud-cover-forecast' ) ); ?>,
+				// Generic actions
+				close: <?php echo wp_json_encode( __( 'Close', 'cloud-cover-forecast' ) ); ?>,
+				cancel: <?php echo wp_json_encode( __( 'Cancel', 'cloud-cover-forecast' ) ); ?>,
+				save: <?php echo wp_json_encode( __( 'Save', 'cloud-cover-forecast' ) ); ?>,
+				edit: <?php echo wp_json_encode( __( 'Edit', 'cloud-cover-forecast' ) ); ?>,
+				saved: <?php echo wp_json_encode( __( 'Saved', 'cloud-cover-forecast' ) ); ?>,
+				skipped: <?php echo wp_json_encode( __( 'skipped', 'cloud-cover-forecast' ) ); ?>,
+				optional: <?php echo wp_json_encode( __( 'optional', 'cloud-cover-forecast' ) ); ?>,
+				// Edit location form
+				editLocation: <?php echo wp_json_encode( __( 'Edit Location', 'cloud-cover-forecast' ) ); ?>,
+				name: <?php echo wp_json_encode( __( 'Name', 'cloud-cover-forecast' ) ); ?>,
+				region: <?php echo wp_json_encode( __( 'Region', 'cloud-cover-forecast' ) ); ?>,
+				regionPlaceholder: <?php echo wp_json_encode( __( 'State, province, or region', 'cloud-cover-forecast' ) ); ?>,
+				notes: <?php echo wp_json_encode( __( 'Notes', 'cloud-cover-forecast' ) ); ?>,
+				notesPlaceholder: <?php echo wp_json_encode( __( 'Add notes about this location...', 'cloud-cover-forecast' ) ); ?>,
+				saveLocation: <?php echo wp_json_encode( __( 'Save Location', 'cloud-cover-forecast' ) ); ?>,
+				locationSaved: <?php echo wp_json_encode( __( 'Location saved', 'cloud-cover-forecast' ) ); ?>,
+				// Import / export
+				export: <?php echo wp_json_encode( __( 'Export', 'cloud-cover-forecast' ) ); ?>,
+				exportLocations: <?php echo wp_json_encode( __( 'Export', 'cloud-cover-forecast' ) ); ?>,
+				import: <?php echo wp_json_encode( __( 'Import', 'cloud-cover-forecast' ) ); ?>,
+				importLocations: <?php echo wp_json_encode( __( 'Import', 'cloud-cover-forecast' ) ); ?>,
+				importedLocations: <?php echo wp_json_encode( __( 'Imported', 'cloud-cover-forecast' ) ); ?>,
+				noLocationsToExport: <?php echo wp_json_encode( __( 'No locations to export', 'cloud-cover-forecast' ) ); ?>,
+				noNewLocations: <?php echo wp_json_encode( __( 'No new locations to import', 'cloud-cover-forecast' ) ); ?>,
+				exportCopiedToClipboard: <?php echo wp_json_encode( __( 'Locations copied to clipboard. Paste into a text file to save.', 'cloud-cover-forecast' ) ); ?>,
+				exportFailed: <?php echo wp_json_encode( __( 'Export failed. Would you like to see the data to copy manually?', 'cloud-cover-forecast' ) ); ?>,
+				importError: <?php echo wp_json_encode( __( 'Failed to import locations. Please check the file format.', 'cloud-cover-forecast' ) ); ?>,
 			}
 		};
 	</script>

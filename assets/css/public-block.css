@@ -3,10 +3,11 @@
     max-width: 100%;
     margin: 20px 0;
     padding: 20px;
-    background: #fff;
-    border: 1px solid #e1e5e9;
+    background: var(--ccf-bg-card);
+    color: var(--ccf-text);
+    border: 1px solid var(--ccf-border);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ccf-shadow);
     width: 100%;
     box-sizing: border-box;
 }
@@ -23,22 +24,24 @@
     flex: 1;
     min-width: 200px;
     padding: 12px 16px;
-    border: 2px solid #e1e5e9;
+    border: 2px solid var(--ccf-border);
     border-radius: 6px;
     font-size: 16px;
+    background: var(--ccf-bg-card);
+    color: var(--ccf-text);
     transition: border-color 0.3s ease;
 }
 
 .cloud-cover-forecast-public-lookup .location-search-input:focus {
     outline: none;
-    border-color: #0073aa;
-    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
+    border-color: var(--ccf-interactive);
+    box-shadow: 0 0 0 3px var(--ccf-interactive-ring);
 }
 
 .cloud-cover-forecast-public-lookup .location-search-button {
     padding: 12px 24px;
-    background: #0073aa;
-    color: white;
+    background: var(--ccf-interactive);
+    color: var(--ccf-text-on-accent);
     border: none;
     border-radius: 6px;
     font-size: 16px;
@@ -49,11 +52,11 @@
 }
 
 .cloud-cover-forecast-public-lookup .location-search-button:hover:not(:disabled) {
-    background: #005a87;
+    background: var(--ccf-interactive-hover);
 }
 
 .cloud-cover-forecast-public-lookup .location-search-button:disabled {
-    background: #ccc;
+    background: var(--ccf-disabled);
     cursor: not-allowed;
 }
 
@@ -69,8 +72,8 @@
 }
 
 .cloud-cover-forecast-public-lookup .location-results-wrapper {
-    border: 1px solid #e1e5e9;
-    background: #f8fafc;
+    border: 1px solid var(--ccf-border);
+    background: var(--ccf-bg-subtle);
     border-radius: 6px;
     padding: 12px;
 }
@@ -78,7 +81,7 @@
 .cloud-cover-forecast-public-lookup .location-results-title {
     margin: 0 0 10px;
     font-weight: 600;
-    color: #1d2327;
+    color: var(--ccf-text);
 }
 
 .cloud-cover-forecast-public-lookup .location-results-list {
@@ -97,38 +100,38 @@
     align-items: flex-start;
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #d8dde3;
+    border: 1px solid var(--ccf-border-strong);
     border-radius: 6px;
-    background: #fff;
-    color: #1d2327;
+    background: var(--ccf-bg-card);
+    color: var(--ccf-text);
     cursor: pointer;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cloud-cover-forecast-public-lookup .location-results-button:hover,
 .cloud-cover-forecast-public-lookup .location-results-button:focus {
-    border-color: #0073aa;
-    box-shadow: 0 0 0 3px rgba(0, 115, 170, 0.1);
-    background: #fff;
-    color: #1d2327;
+    border-color: var(--ccf-interactive);
+    box-shadow: 0 0 0 3px var(--ccf-interactive-ring);
+    background: var(--ccf-bg-card);
+    color: var(--ccf-text);
     outline: none;
 }
 
 .cloud-cover-forecast-public-lookup .location-results-label {
     font-weight: 600;
-    color: #1d2327;
+    color: var(--ccf-text);
 }
 
 .cloud-cover-forecast-public-lookup .location-results-meta {
     font-size: 13px;
-    color: #555d66;
+    color: var(--ccf-text-muted);
     margin-top: 4px;
 }
 
 .cloud-cover-forecast-public-lookup .location-results-cta {
     font-size: 12px;
     margin-top: 6px;
-    color: #0073aa;
+    color: var(--ccf-interactive);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -139,8 +142,8 @@
     display: inline-block;
     width: 20px;
     height: 20px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #0073aa;
+    border: 2px solid var(--ccf-border-subtle);
+    border-top: 2px solid var(--ccf-interactive);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -159,15 +162,15 @@
 }
 
 .cloud-cover-forecast-public-lookup .error-message .error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: var(--ccf-err-bg);
+    color: var(--ccf-err-text);
+    border: 1px solid var(--ccf-err-border);
 }
 
 .cloud-cover-forecast-public-lookup .rate-limit-message .rate-limit-error {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeaa7;
+    background: var(--ccf-notice-bg);
+    color: var(--ccf-notice-text);
+    border: 1px solid var(--ccf-notice-border);
 }
 
 .cloud-cover-forecast-public-lookup .forecast-results {
@@ -177,9 +180,9 @@
 
 .cloud-cover-forecast-instructions {
     margin: 20px 0;
-    border: 1px solid #d8dde3;
+    border: 1px solid var(--ccf-border-strong);
     border-radius: 6px;
-    background: #f8fafc;
+    background: var(--ccf-bg-subtle);
 }
 
 .cloud-cover-forecast-instructions .instructions-toggle {
@@ -192,14 +195,14 @@
     background: none;
     font-size: 16px;
     font-weight: 600;
-    color: #1d2327;
+    color: var(--ccf-text);
     cursor: pointer;
     text-align: left;
 }
 
 .cloud-cover-forecast-instructions .instructions-toggle:hover,
 .cloud-cover-forecast-instructions .instructions-toggle:focus {
-    background: #eef2f7;
+    background: var(--ccf-bg-hover);
     outline: none;
 }
 
@@ -211,8 +214,8 @@
 .cloud-cover-forecast-instructions .instructions-content {
     padding: 0 16px 16px;
     font-size: 14px;
-    color: #1d2327;
-    border-top: 1px solid #d8dde3;
+    color: var(--ccf-text);
+    border-top: 1px solid var(--ccf-border-strong);
 }
 
 .cloud-cover-forecast-instructions .instructions-content[hidden] {
@@ -330,27 +333,27 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    background: #ffffff;
+    background: var(--ccf-bg-card);
     border-radius: 14px;
-    box-shadow: 0 16px 32px -18px rgba(15, 23, 42, 0.35);
-    border: 1px solid rgba(100, 116, 139, 0.35);
+    box-shadow: var(--ccf-shadow-lg);
+    border: 1px solid var(--ccf-table-border);
     overflow: hidden;
 }
 
 .cloud-cover-forecast-table thead th {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--ccf-table-head-bg);
+    color: var(--ccf-table-head-text);
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 12px 14px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    border-bottom: 1px solid var(--ccf-table-rule);
 }
 
 .cloud-cover-forecast-table tbody td {
     padding: 12px 14px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    border-bottom: 1px solid var(--ccf-table-rule);
 }
 
 .cloud-cover-forecast-table tbody tr {
@@ -362,7 +365,7 @@
 }
 
 .cloud-cover-forecast-table tbody tr:hover {
-    background: rgba(241, 245, 249, 0.6);
+    background: var(--ccf-table-row-hover);
 }
 
 .cloud-cover-forecast-photography-table {
@@ -462,17 +465,17 @@
 }
 
 .cloud-cover-forecast-photography-table .past-hour-row td {
-    color: #6b7280;
+    color: var(--ccf-text-muted);
 }
 
 .cloud-cover-forecast-photography-table .current-hour-row td {
-    background: #dbeafe;
-    color: #1f2937;
+    background: var(--ccf-row-current);
+    color: var(--ccf-text);
     font-weight: 600;
 }
 
 .cloud-cover-forecast-photography-table .current-hour-row td:first-child {
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid var(--ccf-accent);
 }
 
 .cloud-cover-current-hour-label {
@@ -481,8 +484,8 @@
     margin-left: 6px;
     padding: 2px 8px;
     border-radius: 9999px;
-    background: #2563eb;
-    color: #fff;
+    background: var(--ccf-accent);
+    color: var(--ccf-bg-card);
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -494,8 +497,8 @@
     align-items: center;
     padding: 2px 6px;
     border-radius: 9999px;
-    background: #fef3c7;
-    color: #92400e;
+    background: var(--ccf-warn-badge-bg);
+    color: var(--ccf-warn-text);
     font-size: 11px;
     font-weight: 600;
     line-height: 1;
@@ -505,9 +508,9 @@
 .cloud-cover-forecast-provider-note {
     margin-top: 10px;
     padding: 8px 12px;
-    border-left: 4px solid #f59e0b;
-    background: #fff7ed;
-    color: #92400e;
+    border-left: 4px solid var(--ccf-warn-border);
+    background: var(--ccf-warn-bg);
+    color: var(--ccf-warn-text);
     font-size: 13px;
     border-radius: 8px;
 }
@@ -515,7 +518,7 @@
 /* Accessibility improvements */
 .cloud-cover-forecast-public-lookup .location-search-input:focus,
 .cloud-cover-forecast-public-lookup .location-search-button:focus {
-    outline: 2px solid #0073aa;
+    outline: 2px solid var(--ccf-interactive);
     outline-offset: 2px;
 }
 

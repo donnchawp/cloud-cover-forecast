@@ -713,19 +713,19 @@
           <h1 class="app-title">${escapeHtml(strings.appTitle)}</h1>
           <div class="app-status">
             ${!state.isOnline ? `<span class="offline-badge">${escapeHtml(strings.offline)}</span>` : ''}
-            ${shouldShowInstallButton() ? `<button class="install-btn" data-action="install" title="${escapeHtml(strings.installApp || 'Install App')}">&#8681;</button>` : ''}
-            <button class="font-size-toggle ${getFontSizeClass()}" data-action="toggle-font-size" title="${escapeHtml(strings.fontSize || 'Font size')}">${getFontSizeLabel()}</button>
-            <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme">${getThemeIcon()}</button>
+            ${shouldShowInstallButton() ? `<button class="install-btn" data-action="install" title="${escapeHtml(strings.installApp || 'Install App')}" aria-label="${escapeHtml(strings.installApp || 'Install App')}">&#8681;</button>` : ''}
+            <button class="font-size-toggle ${getFontSizeClass()}" data-action="toggle-font-size" title="${escapeHtml(strings.fontSize || 'Font size')}" aria-label="${escapeHtml(strings.fontSize || 'Font size')}">${getFontSizeLabel()}</button>
+            <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme" aria-label="Toggle theme">${getThemeIcon()}</button>
           </div>
         </div>
-        <nav class="app-tabs">
-          <button class="tab-btn ${state.activeTab === 'home' ? 'active' : ''}" data-tab="home">
+        <nav class="app-tabs" aria-label="${escapeHtml(strings.appTitle)}">
+          <button class="tab-btn ${state.activeTab === 'home' ? 'active' : ''}" data-tab="home"${state.activeTab === 'home' ? ' aria-current="page"' : ''}>
             ${escapeHtml(strings.home)}
           </button>
-          <button class="tab-btn ${state.activeTab === 'current' ? 'active' : ''}" data-tab="current">
+          <button class="tab-btn ${state.activeTab === 'current' ? 'active' : ''}" data-tab="current"${state.activeTab === 'current' ? ' aria-current="page"' : ''}>
             ${escapeHtml(strings.current)}
           </button>
-          <button class="tab-btn ${state.activeTab === 'locations' ? 'active' : ''}" data-tab="locations">
+          <button class="tab-btn ${state.activeTab === 'locations' ? 'active' : ''}" data-tab="locations"${state.activeTab === 'locations' ? ' aria-current="page"' : ''}>
             ${escapeHtml(strings.locations)}
           </button>
         </nav>
@@ -744,19 +744,26 @@
    * Render install instructions modal for Safari/Firefox.
    * @returns {string} HTML string.
    */
+  /**
+   * iOS Share glyph, drawn inline.
+   *
+   * Previously this was the character U+F048, which sits in the Unicode
+   * Private Use Area and only renders inside Apple's own icon fonts; everywhere
+   * else it showed as a blank box.
+   */
+  const SHARE_ICON = '<svg class="install-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v13"/><path d="m8 7 4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+
   function renderInstallInstructions() {
     const browser = getBrowserType();
     const isIOSDevice = isIOS();
 
     let instructions = '';
-    let icon = '';
 
     if (isIOSDevice) {
       if (browser === 'safari') {
-        icon = '&#61512;'; // Share icon approximation
         instructions = `
           <ol class="install-steps">
-            <li>${escapeHtml(strings.installStep1Safari || 'Tap the Share button')} <span class="install-icon">&#61512;</span></li>
+            <li>${escapeHtml(strings.installStep1Safari || 'Tap the Share button')} ${SHARE_ICON}</li>
             <li>${escapeHtml(strings.installStep2Safari || 'Scroll down and tap "Add to Home Screen"')}</li>
             <li>${escapeHtml(strings.installStep3Safari || 'Tap "Add" in the top right')}</li>
           </ol>
@@ -764,7 +771,7 @@
       } else if (browser === 'chrome-ios') {
         instructions = `
           <ol class="install-steps">
-            <li>${escapeHtml(strings.installStep1ChromeIOS || 'Tap the Share button')} <span class="install-icon">&#61512;</span></li>
+            <li>${escapeHtml(strings.installStep1ChromeIOS || 'Tap the Share button')} ${SHARE_ICON}</li>
             <li>${escapeHtml(strings.installStep2ChromeIOS || 'Tap "Add to Home Screen"')}</li>
             <li>${escapeHtml(strings.installStep3ChromeIOS || 'Tap "Add" to confirm')}</li>
           </ol>
@@ -772,7 +779,7 @@
       } else if (browser === 'firefox') {
         instructions = `
           <ol class="install-steps">
-            <li>${escapeHtml(strings.installStep1FirefoxIOS || 'Tap the menu button')} <span class="install-icon">&#8943;</span></li>
+            <li>${escapeHtml(strings.installStep1FirefoxIOS || 'Tap the menu button')} <span class="install-icon" aria-hidden="true">&#8943;</span></li>
             <li>${escapeHtml(strings.installStep2FirefoxIOS || 'Tap "Share"')}</li>
             <li>${escapeHtml(strings.installStep3FirefoxIOS || 'Tap "Add to Home Screen"')}</li>
           </ol>
@@ -789,14 +796,14 @@
       if (browser === 'firefox') {
         instructions = `
           <ol class="install-steps">
-            <li>${escapeHtml(strings.installStep1Firefox || 'Tap the menu button')} <span class="install-icon">&#8942;</span></li>
+            <li>${escapeHtml(strings.installStep1Firefox || 'Tap the menu button')} <span class="install-icon" aria-hidden="true">&#8942;</span></li>
             <li>${escapeHtml(strings.installStep2Firefox || 'Tap "Install"')}</li>
           </ol>
         `;
       } else {
         instructions = `
           <ol class="install-steps">
-            <li>${escapeHtml(strings.installStep1Generic || 'Tap the browser menu')} <span class="install-icon">&#8942;</span></li>
+            <li>${escapeHtml(strings.installStep1Generic || 'Tap the browser menu')} <span class="install-icon" aria-hidden="true">&#8942;</span></li>
             <li>${escapeHtml(strings.installStep2Generic || 'Look for "Install app" or "Add to Home Screen"')}</li>
           </ol>
         `;
@@ -805,9 +812,9 @@
 
     return `
       <div class="install-modal-overlay" data-action="close-install">
-        <div class="install-modal">
-          <button class="install-modal-close" data-action="close-install">&times;</button>
-          <h2>${escapeHtml(strings.installTitle || 'Install App')}</h2>
+        <div class="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-modal-title">
+          <button class="install-modal-close" data-action="close-install" aria-label="${escapeHtml(strings.close || 'Close')}">&times;</button>
+          <h2 id="install-modal-title">${escapeHtml(strings.installTitle || 'Install App')}</h2>
           <p class="install-description">${escapeHtml(strings.installDescription || 'Install this app on your device for quick access.')}</p>
           ${instructions}
         </div>
@@ -829,9 +836,9 @@
 
     return `
       <div class="edit-modal-overlay" data-action="cancel-edit">
-        <div class="edit-modal">
-          <button class="edit-modal-close" data-action="cancel-edit">&times;</button>
-          <h2>${escapeHtml(strings.editLocation || 'Edit Location')}</h2>
+        <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+          <button class="edit-modal-close" data-action="cancel-edit" aria-label="${escapeHtml(strings.close || 'Close')}">&times;</button>
+          <h2 id="edit-modal-title">${escapeHtml(strings.editLocation || 'Edit Location')}</h2>
           <form class="edit-form" id="edit-location-form">
             <div class="form-group">
               <label for="edit-name">${escapeHtml(strings.name || 'Name')}</label>
@@ -1002,25 +1009,28 @@
       <div class="locations-panel">
         <div class="search-box">
           <input
-            type="text"
+            type="search"
             class="search-input"
             id="location-search"
             placeholder="${escapeHtml(strings.searchLocation)}"
+            aria-label="${escapeHtml(strings.searchLocation)}"
             autocomplete="off"
           >
           <button class="search-btn" id="search-btn" ${state.isSearching ? 'disabled' : ''}>
             ${state.isSearching ? escapeHtml(strings.loading) : 'Search'}
           </button>
         </div>
-        ${state.searchResults.length > 0 ? renderSearchResults() : ''}
+        <div class="search-results-region" role="region" aria-live="polite" aria-label="${escapeHtml(strings.searchLocation)}">
+          ${state.searchResults.length > 0 ? renderSearchResults() : ''}
+        </div>
         <div class="saved-locations">
           <div class="locations-header">
             <h2>${escapeHtml(strings.locations)}</h2>
             <div class="locations-actions">
-              <button class="btn btn-sm" data-action="export-locations" title="${escapeHtml(strings.exportLocations || 'Export')}">
+              <button class="btn btn-sm" data-action="export-locations" title="${escapeHtml(strings.exportLocations || 'Export')}" aria-label="${escapeHtml(strings.exportLocations || 'Export')}">
                 &#8599; ${escapeHtml(strings.export || 'Export')}
               </button>
-              <button class="btn btn-sm" data-action="import-locations" title="${escapeHtml(strings.importLocations || 'Import')}">
+              <button class="btn btn-sm" data-action="import-locations" title="${escapeHtml(strings.importLocations || 'Import')}" aria-label="${escapeHtml(strings.importLocations || 'Import')}">
                 &#8601; ${escapeHtml(strings.import || 'Import')}
               </button>
               <input type="file" id="import-file" accept=".json" style="display: none;">
@@ -1073,28 +1083,28 @@
       <li class="location-item ${location.isHome ? 'is-home' : ''}" data-id="${location.id}">
         <button class="location-info" data-action="view-location" data-id="${location.id}">
           <span class="location-name">
-            ${location.isHome ? '<span class="home-badge">&#127968;</span>' : ''}
+            ${location.isHome ? '<span class="home-badge" aria-hidden="true">&#127968;</span>' : ''}
             ${escapeHtml(displayName)}
           </span>
           ${location.notes ? `<span class="location-notes">${escapeHtml(location.notes)}</span>` : ''}
           <span class="location-coords">${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}</span>
         </button>
         <div class="location-actions">
-          <button class="btn btn-icon" data-action="edit-location" data-id="${location.id}" title="${escapeHtml(strings.edit || 'Edit')}">
+          <button class="btn btn-icon" data-action="edit-location" data-id="${location.id}" title="${escapeHtml(strings.edit || 'Edit')}" aria-label="${escapeHtml(strings.edit || 'Edit')}">
             &#9998;
           </button>
-          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-icon" title="View on Google Maps">
+          <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn btn-icon" title="View on Google Maps" aria-label="View on Google Maps">
             &#128205;
           </a>
-          <button class="btn btn-icon" data-action="share-location" data-id="${location.id}" title="${escapeHtml(strings.share || 'Share')}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <button class="btn btn-icon" data-action="share-location" data-id="${location.id}" title="${escapeHtml(strings.share || 'Share')}" aria-label="${escapeHtml(strings.share || 'Share')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
           ${!location.isHome ? `
-            <button class="btn btn-icon" data-action="set-home" data-id="${location.id}" title="${escapeHtml(strings.setAsHome)}">
+            <button class="btn btn-icon" data-action="set-home" data-id="${location.id}" title="${escapeHtml(strings.setAsHome)}" aria-label="${escapeHtml(strings.setAsHome)}">
               &#127968;
             </button>
           ` : ''}
-          <button class="btn btn-icon btn-danger" data-action="delete-location" data-id="${location.id}" title="${escapeHtml(strings.delete)}">
+          <button class="btn btn-icon btn-danger" data-action="delete-location" data-id="${location.id}" title="${escapeHtml(strings.delete)}" aria-label="${escapeHtml(strings.delete)}">
             &#128465;
           </button>
         </div>
@@ -1111,15 +1121,15 @@
       <div class="jump-buttons">
         <span class="current-day-display" id="current-day-display"></span>
         <div class="jump-buttons-nav">
-          <button class="jump-btn" data-action="jump-to" data-target="prev-day" title="${escapeHtml(strings.previousDay || 'Previous day')}">
-            <span class="jump-btn-icon">&#9664;</span>
+          <button class="jump-btn" data-action="jump-to" data-target="prev-day" title="${escapeHtml(strings.previousDay || 'Previous day')}" aria-label="${escapeHtml(strings.previousDay || 'Previous day')}">
+            <span class="jump-btn-icon" aria-hidden="true">&#9664;</span>
           </button>
-          <button class="jump-btn" data-action="jump-to" data-target="now" title="${escapeHtml(strings.jumpToNow || 'Jump to now')}">
-            <span class="jump-btn-icon">&#9201;</span>
+          <button class="jump-btn" data-action="jump-to" data-target="now" title="${escapeHtml(strings.jumpToNow || 'Jump to now')}" aria-label="${escapeHtml(strings.jumpToNow || 'Jump to now')}">
+            <span class="jump-btn-icon" aria-hidden="true">&#9201;</span>
             <span>${escapeHtml(strings.now || 'Now')}</span>
           </button>
-          <button class="jump-btn" data-action="jump-to" data-target="next-day" title="${escapeHtml(strings.nextDay || 'Next day')}">
-            <span class="jump-btn-icon">&#9654;</span>
+          <button class="jump-btn" data-action="jump-to" data-target="next-day" title="${escapeHtml(strings.nextDay || 'Next day')}" aria-label="${escapeHtml(strings.nextDay || 'Next day')}">
+            <span class="jump-btn-icon" aria-hidden="true">&#9654;</span>
           </button>
         </div>
       </div>
@@ -1154,7 +1164,7 @@
           <div class="forecast-header-main">
             <h2 class="forecast-location">
               ${escapeHtml(displayName)}
-              <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps">&#128205;</a>
+              <a href="${mapsUrl}" target="_blank" rel="noopener" class="maps-link" title="View on Google Maps" aria-label="View on Google Maps">&#128205;</a>
             </h2>
             ${sunrise && sunset ? `
               <div class="forecast-sun-times">
@@ -1167,11 +1177,11 @@
             ${forecast.location?.timezone_abbr ? `
               <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
             ` : ''}
-            <button class="btn btn-icon" data-action="share-location" data-source="${source}" title="${escapeHtml(strings.share || 'Share')}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <button class="btn btn-icon" data-action="share-location" data-source="${source}" title="${escapeHtml(strings.share || 'Share')}" aria-label="${escapeHtml(strings.share || 'Share')}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
             ${canSave ? `
-              <button class="btn btn-save-location" data-action="save-current-location" title="${escapeHtml(strings.saveLocation || 'Save Location')}">
+              <button class="btn btn-save-location" data-action="save-current-location" title="${escapeHtml(strings.saveLocation || 'Save Location')}" aria-label="${escapeHtml(strings.saveLocation || 'Save Location')}">
                 &#128190; ${escapeHtml(strings.saveLocation || 'Save')}
               </button>
             ` : ''}
@@ -1591,8 +1601,8 @@
    */
   function renderLoading() {
     return `
-      <div class="loading-state">
-        <div class="loading-spinner"></div>
+      <div class="loading-state" role="status" aria-live="polite">
+        <div class="loading-spinner" aria-hidden="true"></div>
         <p>${escapeHtml(strings.loading)}</p>
       </div>
     `;
@@ -1605,8 +1615,8 @@
    */
   function renderError(message) {
     return `
-      <div class="error-state">
-        <div class="error-icon">&#9888;</div>
+      <div class="error-state" role="alert">
+        <div class="error-icon" aria-hidden="true">&#9888;</div>
         <h2>${escapeHtml(strings.error)}</h2>
         <p>${escapeHtml(message)}</p>
         <button class="btn btn-primary" data-action="retry">
@@ -1790,6 +1800,15 @@
    * Jump to a target position in the grid.
    * @param {string} target - Target ('now', 'prev-day', 'next-day').
    */
+  /**
+   * Scroll behaviour honouring the user's motion preference.
+   * CSS scroll-behavior does not apply to programmatic scrollTo() calls.
+   * @returns {'auto'|'smooth'} Behaviour to pass to scrollTo().
+   */
+  function scrollBehavior() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  }
+
   function jumpToTarget(target) {
     const gridData = document.getElementById('grid-data');
     if (!gridData) return;
@@ -1799,7 +1818,7 @@
       const currentCol = gridData.querySelector('.current-hour');
       if (currentCol) {
         const scrollLeft = currentCol.offsetLeft - gridData.offsetWidth / 4;
-        gridData.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+        gridData.scrollTo({ left: Math.max(0, scrollLeft), behavior: scrollBehavior() });
         // Update day display after scroll settles
         setTimeout(updateCurrentDayDisplay, 100);
       }
@@ -1826,7 +1845,7 @@
       targetIndex = Math.max(0, Math.min(targetIndex, dayBoundaries.length - 1));
 
       if (dayBoundaries[targetIndex]) {
-        gridData.scrollTo({ left: dayBoundaries[targetIndex].offsetLeft, behavior: 'smooth' });
+        gridData.scrollTo({ left: dayBoundaries[targetIndex].offsetLeft, behavior: scrollBehavior() });
       }
     }
   }
@@ -2464,7 +2483,7 @@
       const currentCol = grid?.querySelector('.current-hour');
       if (currentCol && grid) {
         const scrollLeft = currentCol.offsetLeft - grid.offsetWidth / 4;
-        grid.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+        grid.scrollTo({ left: Math.max(0, scrollLeft), behavior: scrollBehavior() });
       }
       // Set up scroll listener and update day display
       setupGridScrollListener();

@@ -27,17 +27,69 @@ class Cloud_Cover_Forecast_API {
 	private $plugin;
 
 	/**
-	 * Per-service rate limit configuration (max requests within window seconds).
+	 * Per-service rate limit configuration.
 	 *
-	 * @var array<string,array<string,int>>
+	 * Each service maps to a list of windows, all of which must have headroom
+	 * before a request is allowed. Multiple windows let us respect providers
+	 * that publish both burst (per-minute) and volume (per-day) limits.
+	 *
+	 * Budgets are deliberately set below each provider's published ceiling so
+	 * that two Open-Meteo services sharing one quota cannot exhaust it:
+	 *
+	 * - Open-Meteo free tier: 600/min, 5,000/hour, 10,000/day (shared across
+	 *   the forecast and geocoding endpoints). Allocated 420/min, 2,800/hour,
+	 *   9,000/day in total.
+	 * - Met.no: 20 requests/second per application. Allocated 200/min.
+	 * - Nominatim: absolute maximum of 1 request per second.
+	 * - IPGeolocation free tier: 1,000 requests/day.
+	 *
+	 * @since 1.0.0
+	 * @var array<string,array<int,array<string,int>>>
 	 */
 	private const SERVICE_RATE_LIMITS = array(
-		'open_meteo_forecast'      => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 45 ),
-		'open_meteo_geocoding'     => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 20 ),
-		'met_no_forecast'          => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 15 ),
-		'ipgeolocation_astronomy'  => array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 60 ),
-		'nominatim_reverse'        => array( 'window' => MINUTE_IN_SECONDS, 'max_requests' => 1 ), // Nominatim requires max 1 req/sec
+		'open_meteo_forecast'     => array(
+			array( 'window' => MINUTE_IN_SECONDS, 'max_requests' => 300 ),
+			array( 'window' => HOUR_IN_SECONDS,   'max_requests' => 2000 ),
+			array( 'window' => DAY_IN_SECONDS,    'max_requests' => 7000 ),
+		),
+		'open_meteo_geocoding'    => array(
+			array( 'window' => MINUTE_IN_SECONDS, 'max_requests' => 120 ),
+			array( 'window' => HOUR_IN_SECONDS,   'max_requests' => 800 ),
+			array( 'window' => DAY_IN_SECONDS,    'max_requests' => 2000 ),
+		),
+		'met_no_forecast'         => array(
+			array( 'window' => MINUTE_IN_SECONDS, 'max_requests' => 200 ),
+			array( 'window' => HOUR_IN_SECONDS,   'max_requests' => 3000 ),
+		),
+		'ipgeolocation_astronomy' => array(
+			array( 'window' => HOUR_IN_SECONDS, 'max_requests' => 100 ),
+			array( 'window' => DAY_IN_SECONDS,  'max_requests' => 900 ),
+		),
+		'nominatim_reverse'       => array(
+			array( 'window' => 1, 'max_requests' => 1 ),
+		),
 	);
+
+	/**
+	 * Cron hook fired to refresh a stale cache entry out of band.
+	 *
+	 * @since 1.0.0
+	 * @var string
+	 */
+	const REFRESH_HOOK = 'cloud_cover_forecast_refresh_cache';
+
+	/**
+	 * How long a cached response stays usable after it goes stale.
+	 *
+	 * Stale entries are served immediately while a refresh happens in the
+	 * background, and are the fallback when a provider is unreachable. Keeping
+	 * a long grace period means an outage degrades to slightly old data rather
+	 * than an error page.
+	 *
+	 * @since 1.0.0
+	 * @var int
+	 */
+	private const STALE_GRACE = 12 * HOUR_IN_SECONDS;
 
 	/**
 	 * Constructor
@@ -47,6 +99,8 @@ class Cloud_Cover_Forecast_API {
 	 */
 	public function __construct( $plugin ) {
 		$this->plugin = $plugin;
+
+		add_action( self::REFRESH_HOOK, array( $this, 'refresh_cached_response' ), 10, 3 );
 	}
 
 	/**
@@ -94,36 +148,9 @@ class Cloud_Cover_Forecast_API {
 			$this->plugin::TRANSIENT_PREFIX,
 			'open_meteo_' . md5( $url )
 		);
-		$res       = get_transient( $cache_key );
-
-		if ( false === $res ) {
-			$rate_check = $this->can_make_request( 'open_meteo_forecast' );
-			if ( is_wp_error( $rate_check ) ) {
-				return $rate_check;
-			}
-
-			$res = wp_remote_get(
-				$url,
-				array(
-					'timeout'    => 12,
-					'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-					'sslverify'  => true,
-				)
-			);
-			$this->increment_rate_counter( 'open_meteo_forecast' );
-
-			if ( is_wp_error( $res ) ) {
-				return new WP_Error( 'cloud_cover_forecast_network', __( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' ) );
-			}
-
-			$code = wp_remote_retrieve_response_code( $res );
-			if ( 200 !== $code ) {
-				return new WP_Error( 'cloud_cover_forecast_http', __( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' ) );
-			}
-
-			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
-			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
-			set_transient( $cache_key, $res, $cache_ttl_seconds );
+		$res = $this->get_cached_remote( 'open_meteo_forecast', $url, $cache_key );
+		if ( is_wp_error( $res ) ) {
+			return $res;
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -401,42 +428,9 @@ class Cloud_Cover_Forecast_API {
 			$this->plugin::TRANSIENT_PREFIX,
 			'extended_' . md5( $url )
 		);
-		$res       = get_transient( $cache_key );
-
-		if ( false === $res ) {
-			$rate_check = $this->can_make_request( 'open_meteo_forecast' );
-			if ( is_wp_error( $rate_check ) ) {
-				return $rate_check;
-			}
-
-			$res = wp_remote_get(
-				$url,
-				array(
-					'timeout'    => 15,
-					'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
-					'sslverify'  => true,
-				)
-			);
-			$this->increment_rate_counter( 'open_meteo_forecast' );
-
-			if ( is_wp_error( $res ) ) {
-				return new WP_Error(
-					'cloud_cover_forecast_network',
-					__( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' )
-				);
-			}
-
-			$code = wp_remote_retrieve_response_code( $res );
-			if ( 200 !== $code ) {
-				return new WP_Error(
-					'cloud_cover_forecast_http',
-					__( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' )
-				);
-			}
-
-			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
-			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
-			set_transient( $cache_key, $res, $cache_ttl_seconds );
+		$res = $this->get_cached_remote( 'open_meteo_forecast', $url, $cache_key );
+		if ( is_wp_error( $res ) ) {
+			return $res;
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -957,37 +951,9 @@ class Cloud_Cover_Forecast_API {
 			$this->plugin::TRANSIENT_PREFIX,
 			'metno_' . md5( $url )
 		);
-		$res       = get_transient( $cache_key );
-		if ( false === $res ) {
-			$rate_check = $this->can_make_request( 'met_no_forecast' );
-			if ( is_wp_error( $rate_check ) ) {
-				return $rate_check;
-			}
-
-			$res = wp_remote_get(
-				$url,
-				array(
-					'timeout'   => 15,
-					'user-agent' => $this->get_met_no_user_agent(),
-					'headers'   => array(
-						'Accept' => 'application/json',
-					),
-					'sslverify' => true,
-				)
-			);
-			$this->increment_rate_counter( 'met_no_forecast' );
-			if ( is_wp_error( $res ) ) {
-				return new WP_Error( 'cloud_cover_forecast_metno_network', __( 'Network error occurred while fetching Met.no data.', 'cloud-cover-forecast' ), array( 'url' => $url ) );
-			}
-			$code = wp_remote_retrieve_response_code( $res );
-			if ( 200 !== $code ) {
-				return new WP_Error( 'cloud_cover_forecast_metno_http', __( 'Met.no service temporarily unavailable.', 'cloud-cover-forecast' ), array( 'url' => $url, 'status' => $code ) );
-			}
-
-			// Use same cache TTL as Open-Meteo to keep sources synchronized
-			$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
-			$cache_ttl_seconds = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
-			set_transient( $cache_key, $res, $cache_ttl_seconds );
+		$res = $this->get_cached_remote( 'met_no_forecast', $url, $cache_key );
+		if ( is_wp_error( $res ) ) {
+			return $res;
 		}
 
 		$body = wp_remote_retrieve_body( $res );
@@ -1045,42 +1011,244 @@ class Cloud_Cover_Forecast_API {
 	 * @return true|WP_Error
 	 */
 	private function can_make_request( string $service ) {
-		$config = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
-		if ( ! $config ) {
+		$windows = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
+		if ( ! $windows ) {
 			return true;
 		}
 
-		$key   = $this->plugin->get_transient_key(
-			$this->plugin::TRANSIENT_PREFIX,
-			'rate_' . $service
-		);
-		$state = get_transient( $key );
-		$now   = time();
+		$now = time();
 
-		if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) ) {
-			return true;
-		}
+		foreach ( $windows as $config ) {
+			$state = get_transient( $this->get_rate_limit_key( $service, (int) $config['window'] ) );
 
-		$window_elapsed = $now - (int) $state['window_start'];
-		if ( $window_elapsed >= (int) $config['window'] ) {
-			return true;
-		}
+			if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) ) {
+				continue;
+			}
 
-		if ( (int) $state['count'] >= (int) $config['max_requests'] ) {
-			$retry_after = max( 1, (int) $config['window'] - $window_elapsed );
-			return new WP_Error(
-				'cloud_cover_forecast_rate_limited',
-				sprintf(
-				/* translators: 1: external service name, 2: number of seconds to wait before retrying. */
-					__( 'Rate limit reached for %1$s. Please wait %2$d seconds and try again.', 'cloud-cover-forecast' ),
-					$this->get_service_label( $service ),
-					$retry_after
-				),
-				array( 'retry_after' => $retry_after )
-			);
+			$window_elapsed = $now - (int) $state['window_start'];
+			if ( $window_elapsed >= (int) $config['window'] ) {
+				continue;
+			}
+
+			if ( (int) $state['count'] >= (int) $config['max_requests'] ) {
+				$retry_after = max( 1, (int) $config['window'] - $window_elapsed );
+				return new WP_Error(
+					'cloud_cover_forecast_rate_limited',
+					sprintf(
+					/* translators: 1: external service name, 2: number of seconds to wait before retrying. */
+						__( 'Rate limit reached for %1$s. Please wait %2$d seconds and try again.', 'cloud-cover-forecast' ),
+						$this->get_service_label( $service ),
+						$retry_after
+					),
+					array( 'retry_after' => $retry_after )
+				);
+			}
 		}
 
 		return true;
+	}
+
+	/**
+	 * Build the transient key holding a service's counter for one window.
+	 *
+	 * Deliberately not versioned via get_transient_key(): clearing the plugin
+	 * cache must not reset rate counters, or a cache flush would let the site
+	 * exceed a provider's published limits.
+	 *
+	 * @since 1.0.0
+	 * @param string $service Service key.
+	 * @param int    $window  Window duration in seconds.
+	 * @return string Transient key.
+	 */
+	private function get_rate_limit_key( string $service, int $window ): string {
+		return $this->plugin::TRANSIENT_PREFIX . 'rate_' . $service . '_' . $window;
+	}
+
+	/**
+	 * Default wp_remote_get() arguments for a service.
+	 *
+	 * Timeouts are kept short because these requests can sit on the page render
+	 * path; a slow provider should degrade to stale data, not stall the page.
+	 *
+	 * @since 1.0.0
+	 * @param string $service Service key.
+	 * @return array Request arguments.
+	 */
+	private function get_request_args( string $service ): array {
+		$args = array(
+			'timeout'    => 5,
+			'user-agent' => 'Cloud Cover Forecast Plugin/' . CLOUD_COVER_FORECAST_VERSION,
+			'sslverify'  => true,
+			'headers'    => array(),
+		);
+
+		if ( 'met_no_forecast' === $service ) {
+			$args['user-agent']       = $this->get_met_no_user_agent();
+			$args['headers']['Accept'] = 'application/json';
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Fetch a URL through the stale-while-revalidate cache.
+	 *
+	 * Fresh entries are returned directly. Stale entries are returned
+	 * immediately and refreshed by a background cron event, so only the very
+	 * first request for a location ever waits on the network.
+	 *
+	 * @since 1.0.0
+	 * @param string $service   Service key for rate limiting.
+	 * @param string $url       Request URL.
+	 * @param string $cache_key Transient key.
+	 * @return array|WP_Error Raw HTTP response array, or error.
+	 */
+	private function get_cached_remote( string $service, string $url, string $cache_key ) {
+		$cached = get_transient( $cache_key );
+
+		if ( is_array( $cached ) && isset( $cached['response'], $cached['fresh_until'] ) ) {
+			if ( time() < (int) $cached['fresh_until'] ) {
+				return $cached['response'];
+			}
+
+			$this->schedule_refresh( $service, $url, $cache_key );
+			return $cached['response'];
+		}
+
+		return $this->fetch_and_cache( $service, $url, $cache_key );
+	}
+
+	/**
+	 * Queue a background refresh for a stale cache entry.
+	 *
+	 * A short lock stops concurrent requests queueing the same refresh many
+	 * times over while the first one is still pending.
+	 *
+	 * @since 1.0.0
+	 * @param string $service   Service key.
+	 * @param string $url       Request URL.
+	 * @param string $cache_key Transient key.
+	 */
+	private function schedule_refresh( string $service, string $url, string $cache_key ): void {
+		$lock_key = $this->plugin::TRANSIENT_PREFIX . 'refresh_lock_' . md5( $cache_key );
+		if ( false !== get_transient( $lock_key ) ) {
+			return;
+		}
+		set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
+
+		wp_schedule_single_event( time(), self::REFRESH_HOOK, array( $service, $url, $cache_key ) );
+	}
+
+	/**
+	 * Cron callback: refresh one cache entry.
+	 *
+	 * @since 1.0.0
+	 * @param string $service   Service key.
+	 * @param string $url       Request URL.
+	 * @param string $cache_key Transient key.
+	 */
+	public function refresh_cached_response( $service, $url, $cache_key ): void {
+		$this->fetch_and_cache( (string) $service, (string) $url, (string) $cache_key );
+		delete_transient( $this->plugin::TRANSIENT_PREFIX . 'refresh_lock_' . md5( (string) $cache_key ) );
+	}
+
+	/**
+	 * Perform the request and store the result.
+	 *
+	 * Falls back to whatever is already cached whenever the request cannot be
+	 * made or does not succeed, so transient provider problems never surface
+	 * as an error when usable data exists.
+	 *
+	 * @since 1.0.0
+	 * @param string $service   Service key.
+	 * @param string $url       Request URL.
+	 * @param string $cache_key Transient key.
+	 * @return array|WP_Error Raw HTTP response array, or error.
+	 */
+	private function fetch_and_cache( string $service, string $url, string $cache_key ) {
+		$existing = get_transient( $cache_key );
+
+		// Require 'fresh_until' as well as 'response': a raw wp_remote_get()
+		// array left over from an older plugin version also has a 'response'
+		// key, but it holds the status code rather than a cached payload.
+		$is_wrapped = is_array( $existing ) && isset( $existing['response'], $existing['fresh_until'] );
+		$fallback   = $is_wrapped ? $existing['response'] : null;
+
+		$rate_check = $this->can_make_request( $service );
+		if ( is_wp_error( $rate_check ) ) {
+			return null !== $fallback ? $fallback : $rate_check;
+		}
+
+		$args = $this->get_request_args( $service );
+
+		// Conditional request: providers answer 304 when nothing has changed,
+		// which Met.no's terms of service ask API consumers to support. The
+		// header must echo the previous Last-Modified exactly.
+		if ( $is_wrapped && ! empty( $existing['last_modified'] ) ) {
+			$args['headers']['If-Modified-Since'] = $existing['last_modified'];
+		}
+
+		$res = wp_remote_get( $url, $args );
+		$this->increment_rate_counter( $service );
+
+		if ( is_wp_error( $res ) ) {
+			if ( null !== $fallback ) {
+				return $fallback;
+			}
+			return new WP_Error(
+				'cloud_cover_forecast_network',
+				__( 'Network error occurred while fetching weather data.', 'cloud-cover-forecast' ),
+				array( 'url' => $url )
+			);
+		}
+
+		$code = wp_remote_retrieve_response_code( $res );
+
+		if ( 304 === $code && null !== $fallback ) {
+			$this->store_response( $cache_key, $fallback, (string) ( $existing['last_modified'] ?? '' ) );
+			return $fallback;
+		}
+
+		if ( 200 !== $code ) {
+			if ( null !== $fallback ) {
+				return $fallback;
+			}
+			return new WP_Error(
+				'cloud_cover_forecast_http',
+				__( 'Weather service temporarily unavailable. Please try again later.', 'cloud-cover-forecast' ),
+				array( 'url' => $url, 'status' => $code )
+			);
+		}
+
+		$this->store_response( $cache_key, $res, (string) wp_remote_retrieve_header( $res, 'last-modified' ) );
+
+		return $res;
+	}
+
+	/**
+	 * Store a response with its freshness deadline.
+	 *
+	 * The transient itself outlives the freshness window by STALE_GRACE so the
+	 * entry remains available to serve stale and to revalidate against.
+	 *
+	 * @since 1.0.0
+	 * @param string $cache_key     Transient key.
+	 * @param array  $response      Raw HTTP response array.
+	 * @param string $last_modified Last-Modified header value, if any.
+	 */
+	private function store_response( string $cache_key, array $response, string $last_modified ): void {
+		$cache_ttl_minutes = $this->plugin->get_settings()['cache_ttl'] ?? 15;
+		$fresh_seconds     = max( 1, intval( $cache_ttl_minutes ) ) * MINUTE_IN_SECONDS;
+
+		set_transient(
+			$cache_key,
+			array(
+				'response'      => $response,
+				'fresh_until'   => time() + $fresh_seconds,
+				'last_modified' => $last_modified,
+			),
+			$fresh_seconds + self::STALE_GRACE
+		);
 	}
 
 	/**
@@ -1090,28 +1258,31 @@ class Cloud_Cover_Forecast_API {
 	 * @param string $service Service key.
 	 */
 	private function increment_rate_counter( string $service ): void {
-		$config = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
-		if ( ! $config ) {
+		$windows = self::SERVICE_RATE_LIMITS[ $service ] ?? null;
+		if ( ! $windows ) {
 			return;
 		}
 
-		$key   = $this->plugin->get_transient_key(
-			$this->plugin::TRANSIENT_PREFIX,
-			'rate_' . $service
-		);
-		$state = get_transient( $key );
-		$now   = time();
+		$now = time();
 
-		if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) || ( $now - (int) $state['window_start'] ) >= (int) $config['window'] ) {
-			$state = array(
-				'window_start' => $now,
-				'count'        => 1,
-			);
-		} else {
-			$state['count'] = (int) $state['count'] + 1;
+		foreach ( $windows as $config ) {
+			$window = (int) $config['window'];
+			$key    = $this->get_rate_limit_key( $service, $window );
+			$state  = get_transient( $key );
+
+			if ( ! is_array( $state ) || ! isset( $state['window_start'], $state['count'] ) || ( $now - (int) $state['window_start'] ) >= $window ) {
+				$state = array(
+					'window_start' => $now,
+					'count'        => 1,
+				);
+			} else {
+				$state['count'] = (int) $state['count'] + 1;
+			}
+
+			// Expire when the window closes, not a full window from now.
+			$expires_in = max( 1, $window - ( $now - (int) $state['window_start'] ) );
+			set_transient( $key, $state, $expires_in );
 		}
-
-		set_transient( $key, $state, (int) $config['window'] );
 	}
 
 	/**
