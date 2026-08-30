@@ -97,6 +97,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				home: <?php echo wp_json_encode( __( 'Home', 'cloud-cover-forecast' ) ); ?>,
 				current: <?php echo wp_json_encode( __( 'Current', 'cloud-cover-forecast' ) ); ?>,
 				locations: <?php echo wp_json_encode( __( 'Locations', 'cloud-cover-forecast' ) ); ?>,
+				// View tabs and location switching
+				hours: <?php echo wp_json_encode( __( 'Hours', 'cloud-cover-forecast' ) ); ?>,
+				outlook: <?php echo wp_json_encode( __( 'Outlook', 'cloud-cover-forecast' ) ); ?>,
+				day: <?php echo wp_json_encode( __( 'Day', 'cloud-cover-forecast' ) ); ?>,
+				changeLocation: <?php echo wp_json_encode( __( 'Change location', 'cloud-cover-forecast' ) ); ?>,
+				useMyLocation: <?php echo wp_json_encode( __( 'Use my location', 'cloud-cover-forecast' ) ); ?>,
 				loading: <?php echo wp_json_encode( __( 'Loading...', 'cloud-cover-forecast' ) ); ?>,
 				error: <?php echo wp_json_encode( __( 'Error', 'cloud-cover-forecast' ) ); ?>,
 				retry: <?php echo wp_json_encode( __( 'Retry', 'cloud-cover-forecast' ) ); ?>,

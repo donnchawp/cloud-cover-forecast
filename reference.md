@@ -247,6 +247,32 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### PWA navigation: view tabs instead of location tabs (2026-08-30)
+
+Tabs used to select a *location* (Home / Current / Locations). They now select
+a *view* of one selected location, with location switching moved to the header.
+
+- New state: `activeView` ('hours' | 'outlook' | 'day'), `selectedLocation`,
+  `selectedDayIndex`, `showLocationPicker`. `currentLocation` and
+  `sharedLocation` are gone — GPS results and shared URLs are just locations
+  that get selected like any other.
+- `selectLocation()` is the single path by which a location reaches the
+  screen, whether from the picker, a shared URL, GPS or launch.
+  `forecastKey()` keys the forecast cache on id, or on rounded coordinates for
+  anything unsaved, replacing the magic `'current'` and `'shared'` keys.
+- `viewLocation()` no longer assigns `state.homeLocation`. That assignment was
+  why the Home tab showed whichever location was last tapped.
+  `state.homeLocation` is now written only in `loadSavedLocations()`, from
+  storage.
+- The tab bar moved to the bottom of the app shell, with
+  `padding-bottom: var(--safe-bottom)` to clear the iOS home indicator, and
+  the active marker moved to the top edge of the button.
+- `renderLocationsTab()` became `renderLocationPicker()`, a labelled dialog
+  over the active view, with "Use my location" added above the saved list.
+- New UI strings: `hours`, `outlook`, `day`, `changeLocation`, `useMyLocation`.
+
+`renderOutlookView()` and `renderDayView()` are placeholders in this change.
+
 ### Sunrise/sunset colour score (2026-08-30)
 
 `forecast-scoring.js` gains `sunriseSunsetScore( hourly, dayData, event )`,

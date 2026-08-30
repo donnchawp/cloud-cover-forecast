@@ -28,9 +28,17 @@
   // ============================================================
 
   const state = {
-    activeTab: 'locations',
+    // Which view of the selected location is showing.
+    activeView: 'hours',
+    // The location every view renders. Set from the home location at launch,
+    // from a shared URL, from the picker, or from GPS.
+    selectedLocation: null,
+    // Day the Day view is showing, as an index into forecast.daily.
+    selectedDayIndex: 0,
+    showLocationPicker: false,
+    // The designated home. Loaded at launch; not the same thing as whatever
+    // location happens to be selected.
     homeLocation: null,
-    currentLocation: null,
     savedLocations: [],
     forecastData: {},
     isLoading: false,
@@ -45,9 +53,46 @@
     showInstallInstructions: false,
     // Edit location state
     editingLocation: null,
-    // Shared location from URL parameters
-    sharedLocation: null,
   };
+
+  // The three view tabs, in bar order.
+  const VIEWS = ['hours', 'outlook', 'day'];
+
+  /**
+   * Key a location into state.forecastData.
+   *
+   * Saved locations key on their id; anything unsaved (GPS, a shared URL)
+   * keys on rounded coordinates, so the same place resolves to the same
+   * cache entry however it was chosen.
+   *
+   * @param {Object} location - Location object.
+   * @returns {string|number|null} Cache key.
+   */
+  function forecastKey(location) {
+    if (!location) return null;
+    if (location.id) return location.id;
+    return location.lat.toFixed(4) + ',' + location.lon.toFixed(4);
+  }
+
+  /**
+   * The forecast for the selected location, if it has been fetched.
+   * @returns {Object|null} Forecast data.
+   */
+  function selectedForecast() {
+    const key = forecastKey(state.selectedLocation);
+    return key === null ? null : (state.forecastData[key] || null);
+  }
+
+  /**
+   * Display name for a location.
+   * @param {Object} location - Location object.
+   * @returns {string} Name.
+   */
+  function locationDisplayName(location) {
+    if (!location) return '';
+    if (location.admin1) return location.name + ', ' + location.admin1;
+    return location.name || location.lat.toFixed(2) + ', ' + location.lon.toFixed(2);
+  }
 
   // Debug mode - enable with ?debug=1 in URL
   const DEBUG_MODE = new URLSearchParams(window.location.search).has('debug');
@@ -598,7 +643,12 @@
     app.innerHTML = `
       <header class="app-header">
         <div class="app-header-content">
-          <h1 class="app-title">${escapeHtml(strings.appTitle)}</h1>
+          <h1 class="app-title">
+            <button class="location-switch" data-action="open-location-picker" aria-label="${escapeHtml(locationDisplayName(state.selectedLocation) || strings.appTitle)}. ${escapeHtml(strings.changeLocation || 'Change location')}" aria-haspopup="dialog">
+              <span class="location-switch-name">${escapeHtml(locationDisplayName(state.selectedLocation) || strings.appTitle)}</span>
+              <span class="location-switch-chevron" aria-hidden="true">&#9662;</span>
+            </button>
+          </h1>
           <div class="app-status">
             ${!state.isOnline ? `<span class="offline-badge">${escapeHtml(strings.offline)}</span>` : ''}
             ${shouldShowInstallButton() ? `<button class="install-btn" data-action="install" title="${escapeHtml(strings.installApp || 'Install App')}" aria-label="${escapeHtml(strings.installApp || 'Install App')}">&#8681;</button>` : ''}
@@ -606,21 +656,18 @@
             <button class="theme-toggle" data-action="toggle-theme" title="Toggle theme" aria-label="Toggle theme">${getThemeIcon()}</button>
           </div>
         </div>
-        <nav class="app-tabs" aria-label="${escapeHtml(strings.appTitle)}">
-          <button class="tab-btn ${state.activeTab === 'home' ? 'active' : ''}" data-tab="home"${state.activeTab === 'home' ? ' aria-current="page"' : ''}>
-            ${escapeHtml(strings.home)}
-          </button>
-          <button class="tab-btn ${state.activeTab === 'current' ? 'active' : ''}" data-tab="current"${state.activeTab === 'current' ? ' aria-current="page"' : ''}>
-            ${escapeHtml(strings.current)}
-          </button>
-          <button class="tab-btn ${state.activeTab === 'locations' ? 'active' : ''}" data-tab="locations"${state.activeTab === 'locations' ? ' aria-current="page"' : ''}>
-            ${escapeHtml(strings.locations)}
-          </button>
-        </nav>
       </header>
       <main class="app-content" id="app-content">
-        ${renderTabContent()}
+        ${renderViewContent()}
       </main>
+      <nav class="app-tabs" aria-label="${escapeHtml(strings.appTitle)}">
+        ${VIEWS.map((view) => `
+          <button class="tab-btn ${state.activeView === view ? 'active' : ''}" data-tab="${view}"${state.activeView === view ? ' aria-current="page"' : ''}>
+            ${escapeHtml(strings[view] || view)}
+          </button>
+        `).join('')}
+      </nav>
+      ${state.showLocationPicker ? renderLocationPicker() : ''}
       ${state.showInstallInstructions ? renderInstallInstructions() : ''}
       ${state.editingLocation ? renderEditModal() : ''}
     `;
@@ -782,27 +829,10 @@
   }
 
   /**
-   * Render the current tab content.
+   * Render the active view's content.
    * @returns {string} HTML string.
    */
-  function renderTabContent() {
-    switch (state.activeTab) {
-      case 'home':
-        return renderHomeTab();
-      case 'current':
-        return renderCurrentTab();
-      case 'locations':
-        return renderLocationsTab();
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Render the home tab.
-   * @returns {string} HTML string.
-   */
-  function renderHomeTab() {
+  function renderViewContent() {
     if (state.isLoading) {
       return renderLoading();
     }
@@ -811,89 +841,49 @@
       return renderError(state.error);
     }
 
-    // Shared location from URL takes precedence
-    if (state.sharedLocation) {
-      const forecast = state.forecastData['shared'];
-      if (!forecast) {
-        return renderLoading();
-      }
-      return renderForecastView(state.sharedLocation, forecast, 'shared');
-    }
-
-    if (!state.homeLocation) {
+    if (!state.selectedLocation) {
       return `
         <div class="empty-state">
           <div class="empty-icon">&#127968;</div>
           <h2>${escapeHtml(strings.noHomeLocation)}</h2>
           <p>${escapeHtml(strings.addFirstLocation)}</p>
-          <button class="btn btn-primary" data-action="go-to-locations">
-            ${escapeHtml(strings.goToLocations)}
+          <button class="btn btn-primary" data-action="open-location-picker">
+            ${escapeHtml(strings.changeLocation || 'Change location')}
           </button>
         </div>
       `;
     }
 
-    const forecast = state.forecastData[state.homeLocation.id];
+    const forecast = selectedForecast();
     if (!forecast) {
       return renderLoading();
     }
 
-    return renderForecastView(state.homeLocation, forecast, 'home');
+    switch (state.activeView) {
+      case 'outlook':
+        return renderOutlookView(forecast);
+      case 'day':
+        return renderDayView(forecast);
+      default:
+        return renderForecastView(state.selectedLocation, forecast);
+    }
   }
 
   /**
-   * Render the current location tab.
+   * Render the location picker, shown over the active view.
    * @returns {string} HTML string.
    */
-  function renderCurrentTab() {
-    if (state.isLoading) {
-      return `
-        <div class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>${escapeHtml(strings.gettingLocation)}</p>
-        </div>
-      `;
-    }
-
-    if (state.error) {
-      if (state.error.includes('denied') || state.error.includes('permission')) {
-        return `
-          <div class="empty-state">
-            <div class="empty-icon">&#128205;</div>
-            <h2>${escapeHtml(strings.locationDenied)}</h2>
-            <p>${escapeHtml(strings.enableLocation)}</p>
-            <button class="btn btn-primary" data-action="retry-location">
-              ${escapeHtml(strings.retry)}
-            </button>
-          </div>
-        `;
-      }
-      return renderError(state.error);
-    }
-
-    if (!state.currentLocation) {
-      return `
-        <div class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>${escapeHtml(strings.gettingLocation)}</p>
-        </div>
-      `;
-    }
-
-    const forecast = state.forecastData['current'];
-    if (!forecast) {
-      return renderLoading();
-    }
-
-    return renderForecastView(state.currentLocation, forecast, 'current');
-  }
-
-  /**
-   * Render the locations tab.
-   * @returns {string} HTML string.
-   */
-  function renderLocationsTab() {
+  function renderLocationPicker() {
     return `
+      <div class="location-picker-overlay" data-action="close-location-picker">
+        <div class="location-picker" role="dialog" aria-modal="true" aria-label="${escapeHtml(strings.changeLocation || 'Change location')}">
+          <div class="location-picker-header">
+            <h2>${escapeHtml(strings.changeLocation || 'Change location')}</h2>
+            <button class="btn btn-icon" data-action="close-location-picker" title="${escapeHtml(strings.close || 'Close')}" aria-label="${escapeHtml(strings.close || 'Close')}">&#10005;</button>
+          </div>
+          <button class="btn btn-use-location" data-action="use-my-location">
+            <span aria-hidden="true">&#9678;</span> ${escapeHtml(strings.useMyLocation || 'Use my location')}
+          </button>
       <div class="locations-panel">
         <div class="search-box">
           <input
@@ -935,6 +925,34 @@
             </ul>
           `}
         </div>
+      </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Render the multi-day outlook view.
+   * @param {Object} forecast - Forecast data.
+   * @returns {string} HTML string.
+   */
+  function renderOutlookView(forecast) {
+    return `
+      <div class="empty-state">
+        <p>${escapeHtml(strings.outlook)}</p>
+      </div>
+    `;
+  }
+
+  /**
+   * Render the single-day view.
+   * @param {Object} forecast - Forecast data.
+   * @returns {string} HTML string.
+   */
+  function renderDayView(forecast) {
+    return `
+      <div class="empty-state">
+        <p>${escapeHtml(strings.day)}</p>
       </div>
     `;
   }
@@ -1031,7 +1049,7 @@
    * @param {string} source - Source identifier ('home', 'current', 'shared').
    * @returns {string} HTML string.
    */
-  function renderForecastView(location, forecast, source) {
+  function renderForecastView(location, forecast) {
     const displayName = location.admin1
       ? `${location.name}, ${location.admin1}`
       : location.name || `${location.lat.toFixed(2)}, ${location.lon.toFixed(2)}`;
@@ -1065,7 +1083,7 @@
             ${forecast.location?.timezone_abbr ? `
               <span class="forecast-timezone">${escapeHtml(forecast.location.timezone_abbr)}</span>
             ` : ''}
-            <button class="btn btn-icon" data-action="share-location" data-source="${source}" title="${escapeHtml(strings.share || 'Share')}" aria-label="${escapeHtml(strings.share || 'Share')}">
+            <button class="btn btn-icon" data-action="share-location" title="${escapeHtml(strings.share || 'Share')}" aria-label="${escapeHtml(strings.share || 'Share')}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             </button>
             ${canSave ? `
@@ -1425,7 +1443,7 @@
   function attachEventListeners() {
     // Tab navigation.
     app.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+      btn.addEventListener('click', () => switchView(btn.dataset.tab));
     });
 
     // Action buttons.
@@ -1489,17 +1507,34 @@
         }
         break;
 
-      case 'go-to-locations':
-        switchTab('locations');
+      case 'open-location-picker':
+        state.showLocationPicker = true;
+        state.searchResults = [];
+        renderApp();
+        break;
+
+      case 'close-location-picker':
+        // Ignore clicks inside the dialog; only the overlay and the close
+        // button dismiss it.
+        if (btn.classList.contains('location-picker-overlay') && event.target !== btn) {
+          break;
+        }
+        state.showLocationPicker = false;
+        renderApp();
+        break;
+
+      case 'use-my-location':
+        await useCurrentLocation();
         break;
 
       case 'retry':
       case 'retry-location':
         state.error = null;
-        if (state.activeTab === 'home') {
-          loadHomeTab();
-        } else if (state.activeTab === 'current') {
-          loadCurrentTab();
+        if (state.selectedLocation) {
+          delete state.forecastData[forecastKey(state.selectedLocation)];
+          await selectLocation(state.selectedLocation);
+        } else {
+          renderApp();
         }
         break;
 
@@ -1514,8 +1549,8 @@
         break;
 
       case 'save-current-location':
-        if (state.currentLocation && !isLocationSaved(state.currentLocation.lat, state.currentLocation.lon)) {
-          await addLocation(state.currentLocation);
+        if (state.selectedLocation && !isLocationSaved(state.selectedLocation.lat, state.selectedLocation.lon)) {
+          await addLocation(state.selectedLocation);
         }
         break;
 
@@ -1560,19 +1595,8 @@
           if (location) {
             await shareLocation(location, btn);
           }
-        } else if (btn.dataset.source) {
-          const source = btn.dataset.source;
-          let location = null;
-          if (source === 'home') {
-            location = state.homeLocation;
-          } else if (source === 'current') {
-            location = state.currentLocation;
-          } else if (source === 'shared') {
-            location = state.sharedLocation;
-          }
-          if (location) {
-            await shareLocation(location, btn);
-          }
+        } else if (state.selectedLocation) {
+          await shareLocation(state.selectedLocation, btn);
         }
         break;
 
@@ -1729,72 +1753,50 @@
   // ============================================================
 
   /**
-   * Switch to a tab.
-   * @param {string} tab - Tab name.
+   * Switch the active view.
+   * @param {string} view - One of VIEWS.
    */
-  function switchTab(tab) {
-    if (state.activeTab === tab) return;
+  function switchView(view) {
+    if (state.activeView === view || !VIEWS.includes(view)) return;
 
-    state.activeTab = tab;
-    state.error = null;
-    state.searchResults = [];
-
-    // Clear URL parameters and shared location when switching tabs
-    if (window.location.search) {
-      state.sharedLocation = null;
-      history.replaceState(null, '', window.location.pathname);
-    }
-
+    state.activeView = view;
     renderApp();
 
-    if (tab === 'home') {
-      loadHomeTab();
-    } else if (tab === 'current') {
-      loadCurrentTab();
-    }
-  }
-
-  /**
-   * Load the home tab data.
-   */
-  async function loadHomeTab() {
-    if (!state.homeLocation) {
-      renderApp();
-      return;
-    }
-
-    if (!state.forecastData[state.homeLocation.id]) {
-      state.isLoading = true;
-      renderApp();
-
-      try {
-        const forecast = await fetchForecast(state.homeLocation);
-        state.forecastData[state.homeLocation.id] = forecast;
-        state.error = null;
-      } catch (e) {
-        state.error = e.message;
-      }
-
-      state.isLoading = false;
-      renderApp();
+    if ('hours' === view) {
       scrollToCurrentHour();
     }
   }
 
   /**
-   * Load the current location tab data.
+   * Select a location and show it in the active view.
+   *
+   * The single path by which a location becomes the one on screen, whether it
+   * came from the picker, a shared URL, GPS or the home location at launch.
+   *
+   * @param {Object} location - Location object.
    */
-  async function loadCurrentTab() {
-    state.isLoading = true;
+  async function selectLocation(location) {
+    if (!location) return;
+
+    state.selectedLocation = location;
+    state.selectedDayIndex = 0;
+    state.showLocationPicker = false;
+    state.searchResults = [];
     state.error = null;
+
+    const key = forecastKey(location);
+
+    if (state.forecastData[key]) {
+      renderApp();
+      scrollToCurrentHour();
+      return;
+    }
+
+    state.isLoading = true;
     renderApp();
 
     try {
-      const position = await getCurrentPosition();
-      state.currentLocation = await reverseGeocode(position.lat, position.lon);
-
-      const forecast = await fetchForecast(state.currentLocation);
-      state.forecastData['current'] = forecast;
+      state.forecastData[key] = await fetchForecast(location);
     } catch (e) {
       state.error = e.message;
     }
@@ -1805,29 +1807,38 @@
   }
 
   /**
-   * View a saved location's forecast.
-   * @param {number} id - Location ID.
+   * Locate the device and select the place it reports.
    */
-  async function viewLocation(id) {
-    const location = state.savedLocations.find((loc) => loc.id === id);
-    if (!location) return;
-
-    state.homeLocation = location;
-    state.activeTab = 'home';
+  async function useCurrentLocation() {
+    state.showLocationPicker = false;
     state.error = null;
     state.isLoading = true;
     renderApp();
 
     try {
-      const forecast = await fetchForecast(location);
-      state.forecastData[location.id] = forecast;
+      const position = await getCurrentPosition();
+      const location = await reverseGeocode(position.lat, position.lon);
+      state.isLoading = false;
+      await selectLocation(location);
     } catch (e) {
       state.error = e.message;
+      state.isLoading = false;
+      renderApp();
     }
+  }
 
-    state.isLoading = false;
-    renderApp();
-    scrollToCurrentHour();
+  /**
+   * Select a saved location.
+   *
+   * Note this does NOT touch state.homeLocation. It used to, which is why
+   * "Home" showed whichever location was last tapped.
+   *
+   * @param {number} id - Location ID.
+   */
+  async function viewLocation(id) {
+    const location = state.savedLocations.find((loc) => loc.id === id);
+    if (!location) return;
+    await selectLocation(location);
   }
 
   /**
@@ -1883,6 +1894,18 @@
       await ForecastStorage.deleteLocation(id);
       delete state.forecastData[id];
       await loadSavedLocations();
+
+      // Deleting the location on screen leaves nothing selected, so fall
+      // back to home, then to any saved location.
+      if (state.selectedLocation && state.selectedLocation.id === id) {
+        const fallback = state.homeLocation || state.savedLocations[0] || null;
+        state.selectedLocation = null;
+        if (fallback) {
+          await selectLocation(fallback);
+          return;
+        }
+      }
+
       renderApp();
     } catch (e) {
       console.error('Error deleting location:', e);
@@ -2358,22 +2381,11 @@
     const location = parseSharedLocationFromUrl();
     if (!location) return;
 
-    state.sharedLocation = location;
-    state.activeTab = 'home';
-    state.isLoading = true;
-    renderApp();
+    await selectLocation(location);
 
-    try {
-      const forecast = await fetchForecast(location);
-      state.forecastData['shared'] = forecast;
-    } catch (e) {
-      state.error = e.message;
-      addDebug(`Shared location error: ${e.message}`);
+    if (state.error) {
+      addDebug(`Shared location error: ${state.error}`);
     }
-
-    state.isLoading = false;
-    renderApp();
-    scrollToCurrentHour();
   }
 
   async function init() {
@@ -2407,9 +2419,15 @@
       // Render initial UI.
       renderApp();
 
-      // If URL has shared location, load it (switches to home tab).
       if (hasSharedLocation) {
+        // A shared URL wins over the home location.
         await loadSharedLocation();
+      } else if (state.homeLocation) {
+        await selectLocation(state.homeLocation);
+      } else {
+        // Nothing to show yet, so open the picker rather than an empty view.
+        state.showLocationPicker = true;
+        renderApp();
       }
 
       if (DEBUG_MODE) {
