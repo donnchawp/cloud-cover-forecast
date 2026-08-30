@@ -247,6 +247,29 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Day view (2026-08-30)
+
+A single day: prev/next pager, stacked sunrise and sunset hero cards, and the
+ordered light-phase list.
+
+- `renderDayView()`, `renderDayHero()`, `renderPhaseList()`, plus `phaseTimes()`,
+  `shiftTime()` and `relativeTime()`.
+- Nine phases in the reference app's order: First Light, Blue Hour, Golden
+  Hour, Sunrise, Daytime, Golden Hour, Sunset, Blue Hour, Last Light. Rows
+  with no time are dropped rather than rendered blank.
+- The list renders in **logical** order, never sorted on the time string.
+  Dusk phases can fall after local midnight (Irish June nautical dusk is
+  00:02); those rows carry a `+1` marker.
+- `relativeTime()` uses `Intl.RelativeTimeFormat`, so "in 8 hours" pluralises
+  and localises without extra strings.
+- `phaseTimes()` fills golden and blue hour from the old fixed offsets when
+  the computed fields are missing, covering forecasts cached before the solar
+  work landed (they stay serveable for 12 hours).
+- New strings: `firstLight`, `blueHour`, `goldenHour`, `daytime`, `lastLight`.
+
+Against the Alpenglow screenshot for Durrus, 2026-08-31 — five of nine phase
+times exact, four out by one minute.
+
 ### Outlook view (2026-08-30)
 
 Seven day-rows, each with a sunrise and a sunset card carrying a band label,

@@ -1850,3 +1850,130 @@ select:focus-visible,
     transition: stroke-dasharray 0.3s ease;
   }
 }
+
+/* ============================================================
+   DAY VIEW
+   ============================================================ */
+
+.day-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.day-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
+.day-pager-label {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.day-pager button[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.day-hero {
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.day-hero.score-excellent { border-left-color: var(--color-excellent); }
+.day-hero.score-good      { border-left-color: var(--color-good); }
+.day-hero.score-fair      { border-left-color: var(--color-fair); }
+.day-hero.score-poor      { border-left-color: var(--color-poor); }
+
+.day-hero-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.day-hero-band {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.day-hero-meter {
+  height: 22px;
+  margin: var(--spacing-sm) 0;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border-radius: 11px;
+}
+
+.day-hero-meter-fill {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 3ch;
+  padding-right: var(--spacing-xs);
+  border-radius: 11px;
+  background: var(--border-color);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-hero.score-excellent .day-hero-meter-fill { background: var(--color-excellent); }
+.day-hero.score-good      .day-hero-meter-fill { background: var(--color-good); }
+.day-hero.score-fair      .day-hero-meter-fill { background: var(--color-fair); }
+.day-hero.score-poor      .day-hero-meter-fill { background: var(--color-poor); }
+
+.day-hero-time {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-hero-relative {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.phase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.phase-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-card);
+  border-radius: 6px;
+}
+
+.phase-label {
+  font-size: var(--font-size-sm);
+}
+
+.phase-time {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.phase-next-day {
+  margin-left: 4px;
+  padding: 0 4px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  font-size: var(--font-size-xs, 11px);
+}

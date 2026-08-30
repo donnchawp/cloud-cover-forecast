@@ -1082,14 +1082,188 @@
   }
 
   /**
+   * Add a number of minutes to an HH:MM string, wrapping at midnight.
+   * @param {string} timeStr - Time string (HH:MM).
+   * @param {number} minutes - Minutes to add; may be negative.
+   * @returns {string|null} Time string, or null on bad input.
+   */
+  function shiftTime(timeStr, minutes) {
+    if (!timeStr) return null;
+    const [h, m] = timeStr.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return null;
+    const total = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+    return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0');
+  }
+
+  /**
+   * Twilight times for a day, filling in golden and blue hour from the old
+   * fixed offsets when the computed fields are absent.
+   *
+   * Forecasts outlive freshness by twelve hours, so an entry cached before
+   * the solar-elevation fields existed can still be served. These fallbacks
+   * match what getSunlightClass() approximates, so the app stays consistent
+   * with itself for that window rather than dropping the phases entirely.
+   *
+   * @param {Object} day - Daily data.
+   * @returns {Object} Twilight times.
+   */
+  function phaseTimes(day) {
+    const twilight = Object.assign({}, day.twilight || {});
+    const sunrise = twilight.sunrise;
+    const sunset = twilight.sunset;
+
+    if (sunrise) {
+      if (!twilight.blue_hour_dawn_start) twilight.blue_hour_dawn_start = twilight.civil_dawn || shiftTime(sunrise, -60);
+      if (!twilight.blue_hour_dawn_end) twilight.blue_hour_dawn_end = shiftTime(sunrise, -15);
+      if (!twilight.golden_hour_dawn_start) twilight.golden_hour_dawn_start = shiftTime(sunrise, -15);
+      if (!twilight.golden_hour_dawn_end) twilight.golden_hour_dawn_end = shiftTime(sunrise, 60);
+    }
+    if (sunset) {
+      if (!twilight.golden_hour_dusk_start) twilight.golden_hour_dusk_start = shiftTime(sunset, -60);
+      if (!twilight.golden_hour_dusk_end) twilight.golden_hour_dusk_end = shiftTime(sunset, 15);
+      if (!twilight.blue_hour_dusk_start) twilight.blue_hour_dusk_start = shiftTime(sunset, 15);
+      if (!twilight.blue_hour_dusk_end) twilight.blue_hour_dusk_end = twilight.civil_dusk || shiftTime(sunset, 45);
+    }
+
+    return twilight;
+  }
+
+  /**
+   * Human relative time for an event, or '' if it has passed.
+   * @param {number|null} timestamp - Event timestamp.
+   * @returns {string} Relative phrase.
+   */
+  function relativeTime(timestamp) {
+    if (timestamp === null) return '';
+    const diffMinutes = Math.round((timestamp - Date.now()) / 60000);
+    if (diffMinutes <= 0) return '';
+
+    const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+    if (diffMinutes < 60) return relative.format(diffMinutes, 'minute');
+    if (diffMinutes < 1440) return relative.format(Math.round(diffMinutes / 60), 'hour');
+    return relative.format(Math.round(diffMinutes / 1440), 'day');
+  }
+
+  /**
+   * Render one hero card for a sunrise or sunset.
+   * @param {Object} forecast - Forecast data.
+   * @param {Object} day - Daily data.
+   * @param {string} event - 'sunrise' or 'sunset'.
+   * @returns {string} HTML string.
+   */
+  function renderDayHero(forecast, day, event) {
+    const timezone = forecast.location?.timezone;
+    const time = eventTime(day, event, timezone);
+    if (!time) return '';
+
+    const name = 'sunrise' === event ? (strings.sunrise || 'Sunrise') : (strings.sunset || 'Sunset');
+    const score = sunriseSunsetScore(forecast.hourly, day, event);
+    const relative = relativeTime(parseTimeToTimestamp(day.date, time, timezone));
+
+    if (score === null) {
+      return `
+        <div class="day-hero">
+          <h2 class="day-hero-title">${escapeHtml(name)}</h2>
+          <p class="day-hero-time">${escapeHtml(time)}</p>
+          ${relative ? `<p class="day-hero-relative">${escapeHtml(relative)}</p>` : ''}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="day-hero ${getScoreClass(score)}">
+        <h2 class="day-hero-title">${escapeHtml(name)}</h2>
+        <p class="day-hero-band">${escapeHtml(scoreBandLabel(score))}</p>
+        <div class="day-hero-meter" role="img" aria-label="${escapeHtml(scoreBandLabel(score))}, ${score}%">
+          <div class="day-hero-meter-fill" style="width: ${score}%"><span>${score}%</span></div>
+        </div>
+        <p class="day-hero-time">${escapeHtml(time)}</p>
+        ${relative ? `<p class="day-hero-relative">${escapeHtml(relative)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  /**
+   * Render the ordered light-phase list for a day.
+   *
+   * Rendered in chronological order rather than sorted on the time string,
+   * because dusk phases can fall after local midnight — an Irish June has
+   * nautical dusk at 00:02. Those rows are marked so the next-day time does
+   * not read as a mistake.
+   *
+   * @param {Object} day - Daily data.
+   * @returns {string} HTML string.
+   */
+  function renderPhaseList(day) {
+    const t = phaseTimes(day);
+    const phases = [
+      { label: strings.firstLight || 'First Light', start: t.astronomical_dawn },
+      { label: strings.blueHour || 'Blue Hour', start: t.blue_hour_dawn_start, end: t.blue_hour_dawn_end },
+      { label: strings.goldenHour || 'Golden Hour', start: t.golden_hour_dawn_start, end: t.golden_hour_dawn_end },
+      { label: strings.sunrise || 'Sunrise', start: t.sunrise },
+      { label: strings.daytime || 'Daytime', start: t.golden_hour_dawn_end },
+      { label: strings.goldenHour || 'Golden Hour', start: t.golden_hour_dusk_start, end: t.golden_hour_dusk_end },
+      { label: strings.sunset || 'Sunset', start: t.sunset },
+      { label: strings.blueHour || 'Blue Hour', start: t.blue_hour_dusk_start, end: t.blue_hour_dusk_end },
+      { label: strings.lastLight || 'Last Light', start: t.astronomical_dusk },
+    ].filter((phase) => phase.start);
+
+    if (!phases.length) {
+      return '';
+    }
+
+    // Once a phase reads earlier than the one before it, the day has rolled
+    // past midnight and everything after it belongs to the next date.
+    let previous = null;
+    let wrapped = false;
+
+    return `
+      <ul class="phase-list">
+        ${phases.map((phase) => {
+          if (previous !== null && phase.start < previous) {
+            wrapped = true;
+          }
+          previous = phase.start;
+          const time = phase.end ? `${phase.start} \u2013 ${phase.end}` : phase.start;
+          return `
+            <li class="phase-row">
+              <span class="phase-label">${escapeHtml(phase.label)}</span>
+              <span class="phase-time">
+                ${escapeHtml(time)}${wrapped ? `<span class="phase-next-day" title="${escapeHtml(strings.nextDay || 'next day')}">+1</span>` : ''}
+              </span>
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    `;
+  }
+
+  /**
    * Render the single-day view.
    * @param {Object} forecast - Forecast data.
    * @returns {string} HTML string.
    */
   function renderDayView(forecast) {
+    const days = forecast.daily || [];
+    if (!days.length) {
+      return renderError(strings.error);
+    }
+
+    const index = Math.max(0, Math.min(state.selectedDayIndex, days.length - 1));
+    const day = days[index];
+
     return `
-      <div class="empty-state">
-        <p>${escapeHtml(strings.day)}</p>
+      <div class="day-view">
+        <div class="day-pager">
+          <button class="btn btn-icon" data-action="day-prev" ${0 === index ? 'disabled' : ''}
+            aria-label="${escapeHtml(strings.previousDay || 'Previous day')}">&#8249;</button>
+          <span class="day-pager-label">${escapeHtml(dayLabel(day.date, index))}</span>
+          <button class="btn btn-icon" data-action="day-next" ${index === days.length - 1 ? 'disabled' : ''}
+            aria-label="${escapeHtml(strings.nextDay || 'Next day')}">&#8250;</button>
+        </div>
+        ${renderDayHero(forecast, day, 'sunrise')}
+        ${renderDayHero(forecast, day, 'sunset')}
+        ${renderPhaseList(day)}
       </div>
     `;
   }
@@ -1669,6 +1843,22 @@
         state.activeView = 'day';
         renderApp();
         break;
+
+      case 'day-prev':
+        if (state.selectedDayIndex > 0) {
+          state.selectedDayIndex -= 1;
+          renderApp();
+        }
+        break;
+
+      case 'day-next': {
+        const dayCount = (selectedForecast()?.daily || []).length;
+        if (state.selectedDayIndex < dayCount - 1) {
+          state.selectedDayIndex += 1;
+          renderApp();
+        }
+        break;
+      }
 
       case 'retry':
       case 'retry-location':

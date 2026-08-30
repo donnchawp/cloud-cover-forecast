@@ -109,6 +109,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				scoreFair: <?php echo wp_json_encode( __( 'Fair', 'cloud-cover-forecast' ) ); ?>,
 				scorePoor: <?php echo wp_json_encode( __( 'Poor', 'cloud-cover-forecast' ) ); ?>,
 				past: <?php echo wp_json_encode( __( 'already passed', 'cloud-cover-forecast' ) ); ?>,
+				// Light phases
+				firstLight: <?php echo wp_json_encode( __( 'First Light', 'cloud-cover-forecast' ) ); ?>,
+				blueHour: <?php echo wp_json_encode( __( 'Blue Hour', 'cloud-cover-forecast' ) ); ?>,
+				goldenHour: <?php echo wp_json_encode( __( 'Golden Hour', 'cloud-cover-forecast' ) ); ?>,
+				daytime: <?php echo wp_json_encode( __( 'Daytime', 'cloud-cover-forecast' ) ); ?>,
+				lastLight: <?php echo wp_json_encode( __( 'Last Light', 'cloud-cover-forecast' ) ); ?>,
 				loading: <?php echo wp_json_encode( __( 'Loading...', 'cloud-cover-forecast' ) ); ?>,
 				error: <?php echo wp_json_encode( __( 'Error', 'cloud-cover-forecast' ) ); ?>,
 				retry: <?php echo wp_json_encode( __( 'Retry', 'cloud-cover-forecast' ) ); ?>,
