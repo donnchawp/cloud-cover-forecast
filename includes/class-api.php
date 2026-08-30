@@ -532,18 +532,20 @@ class Cloud_Cover_Forecast_API {
 	 * @return array Twilight times array.
 	 */
 	private function calculate_twilight_times( float $lat, float $lon, string $date, string $timezone ): array {
-		$timestamp = strtotime( $date . ' 12:00:00' );
-		if ( false === $timestamp ) {
+		try {
+			$tz         = new DateTimeZone( $timezone );
+			$local_noon = new DateTime( $date . ' 12:00:00', $tz );
+		} catch ( Exception $e ) {
 			return array();
 		}
 
-		// Get sun info for the date.
-		$sun_info = date_sun_info( $timestamp, $lat, $lon );
-
-		$tz = new DateTimeZone( $timezone );
+		// Noon at the location, not on the server. strtotime() would build
+		// noon in the server's timezone, which lands on the wrong day for
+		// locations far enough from it.
+		$timestamp = $local_noon->getTimestamp();
 
 		$format_time = function( $ts ) use ( $tz ) {
-			if ( false === $ts || true === $ts ) {
+			if ( null === $ts ) {
 				return null;
 			}
 			$dt = new DateTime( '@' . $ts );
@@ -551,16 +553,142 @@ class Cloud_Cover_Forecast_API {
 			return $dt->format( 'H:i' );
 		};
 
+		// Every boundary comes from one solver so they all share a single day
+		// anchoring. date_sun_info() anchors to the UTC day instead, which
+		// answers for the previous date once a location reaches UTC+13.
+		$astronomical = $this->solar_event_times( $lat, $lon, $timestamp, -18.0 );
+		$nautical     = $this->solar_event_times( $lat, $lon, $timestamp, -12.0 );
+		$civil        = $this->solar_event_times( $lat, $lon, $timestamp, -6.0 );
+		$horizon      = $this->solar_event_times( $lat, $lon, $timestamp, -0.833 );
+		$blue_edge    = $this->solar_event_times( $lat, $lon, $timestamp, -4.0 );
+		$golden_edge  = $this->solar_event_times( $lat, $lon, $timestamp, 6.0 );
+
 		return array(
-			'astronomical_dawn' => $format_time( $sun_info['astronomical_twilight_begin'] ?? false ),
-			'nautical_dawn'     => $format_time( $sun_info['nautical_twilight_begin'] ?? false ),
-			'civil_dawn'        => $format_time( $sun_info['civil_twilight_begin'] ?? false ),
-			'sunrise'           => $format_time( $sun_info['sunrise'] ?? false ),
-			'sunset'            => $format_time( $sun_info['sunset'] ?? false ),
-			'civil_dusk'        => $format_time( $sun_info['civil_twilight_end'] ?? false ),
-			'nautical_dusk'     => $format_time( $sun_info['nautical_twilight_end'] ?? false ),
-			'astronomical_dusk' => $format_time( $sun_info['astronomical_twilight_end'] ?? false ),
+			'astronomical_dawn' => $format_time( $astronomical['rise'] ),
+			'nautical_dawn'     => $format_time( $nautical['rise'] ),
+			'civil_dawn'        => $format_time( $civil['rise'] ),
+			'sunrise'           => $format_time( $horizon['rise'] ),
+			'sunset'            => $format_time( $horizon['set'] ),
+			'civil_dusk'        => $format_time( $civil['set'] ),
+			'nautical_dusk'     => $format_time( $nautical['set'] ),
+			'astronomical_dusk' => $format_time( $astronomical['set'] ),
+
+			// Photographic light phases, in order through the day.
+			'blue_hour_dawn_start'   => $format_time( $civil['rise'] ),
+			'blue_hour_dawn_end'     => $format_time( $blue_edge['rise'] ),
+			'golden_hour_dawn_start' => $format_time( $blue_edge['rise'] ),
+			'golden_hour_dawn_end'   => $format_time( $golden_edge['rise'] ),
+			'golden_hour_dusk_start' => $format_time( $golden_edge['set'] ),
+			'golden_hour_dusk_end'   => $format_time( $blue_edge['set'] ),
+			'blue_hour_dusk_start'   => $format_time( $blue_edge['set'] ),
+			'blue_hour_dusk_end'     => $format_time( $civil['set'] ),
 		);
+	}
+
+	/**
+	 * Times the sun crosses a given elevation on a date, rising and setting.
+	 *
+	 * date_sun_info() only reports the fixed elevations behind sunrise/sunset
+	 * and the three twilights, so the golden hour boundaries are solved here
+	 * with the standard low-precision solar position formulae. Good to about
+	 * a minute, which is finer than hourly forecast data can justify anyway.
+	 *
+	 * @since 1.1.0
+	 * @param float $lat       Latitude.
+	 * @param float $lon       Longitude.
+	 * @param int   $noon_ts   Timestamp of local noon on the date in question.
+	 * @param float $elevation Target solar elevation, in degrees.
+	 * @return array Rise and set timestamps, each null if the sun never reaches the elevation.
+	 */
+	private function solar_event_times( float $lat, float $lon, int $noon_ts, float $elevation ): array {
+		$none = array(
+			'rise' => null,
+			'set'  => null,
+		);
+
+		// Days since J2000.0.
+		$n = ( ( $noon_ts / 86400 ) + 2440587.5 ) - 2451545.0;
+
+		// Solar mean longitude and mean anomaly, in degrees.
+		$mean_longitude = fmod( 280.460 + ( 0.9856474 * $n ), 360.0 );
+		$mean_anomaly   = fmod( 357.528 + ( 0.9856003 * $n ), 360.0 );
+
+		// Ecliptic longitude, correcting the mean position for orbital eccentricity.
+		$ecliptic_longitude = $mean_longitude
+			+ ( 1.915 * sin( deg2rad( $mean_anomaly ) ) )
+			+ ( 0.020 * sin( deg2rad( 2.0 * $mean_anomaly ) ) );
+
+		$obliquity = 23.439 - ( 0.0000004 * $n );
+
+		$declination = rad2deg( asin(
+			sin( deg2rad( $obliquity ) ) * sin( deg2rad( $ecliptic_longitude ) )
+		) );
+
+		$right_ascension = rad2deg( atan2(
+			cos( deg2rad( $obliquity ) ) * sin( deg2rad( $ecliptic_longitude ) ),
+			cos( deg2rad( $ecliptic_longitude ) )
+		) );
+
+		// Equation of time, in minutes: how far true solar noon drifts from mean.
+		$equation_of_time = 4.0 * $this->normalize_degrees_signed( $mean_longitude - $right_ascension );
+
+		// Hour angle between solar noon and the target elevation.
+		$latitude_rad    = deg2rad( $lat );
+		$declination_rad = deg2rad( $declination );
+		$divisor         = cos( $latitude_rad ) * cos( $declination_rad );
+
+		// Exactly at a pole the divisor vanishes and no crossing is defined.
+		if ( 0.0 === $divisor ) {
+			return $none;
+		}
+
+		$cos_hour_angle = ( sin( deg2rad( $elevation ) )
+				- ( sin( $latitude_rad ) * sin( $declination_rad ) ) ) / $divisor;
+
+		// Outside [-1, 1] the sun stays above this elevation all day, or never
+		// reaches it. Both are ordinary at high latitude: an Irish June has no
+		// astronomical twilight at all.
+		if ( $cos_hour_angle > 1.0 || $cos_hour_angle < -1.0 ) {
+			return $none;
+		}
+
+		$hour_angle = rad2deg( acos( $cos_hour_angle ) );
+
+		// Solar noon as a timestamp, anchored to the UTC day holding local noon.
+		$utc_day_start = intdiv( $noon_ts, 86400 ) * 86400;
+		$solar_noon_ts = $utc_day_start
+			+ (int) round( ( 12.0 - ( $lon / 15.0 ) - ( $equation_of_time / 60.0 ) ) * 3600.0 );
+
+		// The UTC day and the local day diverge at large offsets, so snap to
+		// whichever solar noon actually falls on the requested local date.
+		while ( $solar_noon_ts - $noon_ts > 43200 ) {
+			$solar_noon_ts -= 86400;
+		}
+		while ( $noon_ts - $solar_noon_ts > 43200 ) {
+			$solar_noon_ts += 86400;
+		}
+
+		$offset = (int) round( ( $hour_angle / 15.0 ) * 3600.0 );
+
+		return array(
+			'rise' => $solar_noon_ts - $offset,
+			'set'  => $solar_noon_ts + $offset,
+		);
+	}
+
+	/**
+	 * Wrap an angle into the range -180 to 180 degrees.
+	 *
+	 * @since 1.1.0
+	 * @param float $degrees Angle in degrees.
+	 * @return float Equivalent angle within -180..180.
+	 */
+	private function normalize_degrees_signed( float $degrees ): float {
+		$wrapped = fmod( $degrees + 180.0, 360.0 );
+		if ( $wrapped < 0.0 ) {
+			$wrapped += 360.0;
+		}
+		return $wrapped - 180.0;
 	}
 
 	/**

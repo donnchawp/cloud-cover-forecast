@@ -247,6 +247,39 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Real solar elevation for golden and blue hour (2026-08-30)
+
+Golden hour was a fixed sunrise/sunset +/- 60 minutes and blue hour a fixed
++15 to +45 minutes. Both are wrong away from the equinoxes, increasingly so
+at Irish latitudes through summer.
+
+- `Cloud_Cover_Forecast_API::solar_event_times()` (new, private) solves the
+  times the sun crosses any elevation, from standard low-precision solar
+  position formulae. `normalize_degrees_signed()` supports it.
+- `calculate_twilight_times()` now derives every boundary from that solver
+  and returns eight new fields: `blue_hour_dawn_start`/`_end`,
+  `golden_hour_dawn_start`/`_end`, `golden_hour_dusk_start`/`_end`,
+  `blue_hour_dusk_start`/`_end`. Golden hour spans +6 to -4 degrees, blue
+  hour -4 to -6. Any field is null where the sun never reaches that
+  elevation, which is ordinary at high latitude.
+- Two bugs fixed along the way. Local noon was built with `strtotime()` in
+  the *server's* timezone, landing on the wrong day for distant locations.
+  And `date_sun_info()`, previously the source of the twilight fields,
+  anchors to the UTC day, so it answered for the previous local date at
+  UTC+13 and beyond; it is no longer used here.
+- Verified against Alpenglow for Durrus on 2026-08-31: ten of twelve
+  boundaries exact, two out by a minute. Chronological ordering holds across
+  3,650 location-days spanning ten locations and every day of 2026.
+
+**Note:** 181 of those location-days have a dusk phase falling after local
+midnight (an Irish June nautical dusk is 00:02). Times are formatted `H:i`,
+so consumers must render the phase list in logical order rather than sorting
+on the string.
+
+**Deploying:** forecasts now outlive freshness by 12 hours, so entries cached
+before this change can be served without the new fields for half a day. Clear
+the cache from the plugin settings page after deploying.
+
 ### Extract PWA scoring into its own module (2026-08-30)
 
 Groundwork for an Alpenglow-style sunrise/sunset outlook. No behaviour change.
