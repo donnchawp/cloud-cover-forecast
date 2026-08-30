@@ -1,0 +1,12 @@
+# Files excluded from the built plugin. Used by `wp dist-archive` and by
+# WordPress.org's SVN deploy actions; harmless if you package by hand.
+/.git
+/.github
+/.claude
+/.interface-design
+/tests
+/.distignore
+/.gitignore
+/CLAUDE.md
+/reference.md
+/README.md

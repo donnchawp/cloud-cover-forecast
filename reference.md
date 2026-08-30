@@ -247,6 +247,28 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Test suite (2026-08-30)
+
+The plugin had no tests. `tests/` adds a small suite with no dependencies
+beyond node and php, run with `tests/run.sh` (69 assertions).
+
+| File | Covers |
+|------|--------|
+| `harness.js` | DOM stubs enough to run the real `forecast-app.js` under node |
+| `shell.test.js` | App shell, view tabs, location switcher, picker, delete fallback |
+| `outlook.test.js` | Outlook rows and cards, score rings, past events |
+| `day.test.js` | Day pager, heroes, phase order and times, stale-cache fallback |
+| `midnight.test.js` | Irish June: no astronomical dawn, dusk after midnight |
+| `shared-link.test.js` | `?lat=&lon=` deep links |
+| `scoring.test.js` | Colour score ordering and missing-data handling |
+| `solar.test.php` | Solar times vs Alpenglow, plus a worldwide year-long sweep |
+
+`.distignore` keeps `tests/` and the working docs out of a built plugin.
+
+**These check markup and logic, never pixels.** No CSS is rendered anywhere in
+the suite. `tests/README.md` records the rest of the caveats, including the one
+guarantee that is structural rather than tested.
+
 ### Day view (2026-08-30)
 
 A single day: prev/next pager, stacked sunrise and sunset hero cards, and the
