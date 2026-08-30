@@ -205,6 +205,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		};
 	</script>
 
+	<!-- Scoring and Light Phases (must load before the app) -->
+	<script src="<?php echo esc_url( CLOUD_COVER_FORECAST_PLUGIN_URL . 'assets/js/forecast-scoring.js?v=' . CLOUD_COVER_FORECAST_VERSION ); ?>"></script>
+
 	<!-- Storage Layer -->
 	<script src="<?php echo esc_url( CLOUD_COVER_FORECAST_PLUGIN_URL . 'assets/js/forecast-storage.js?v=' . CLOUD_COVER_FORECAST_VERSION ); ?>"></script>
 

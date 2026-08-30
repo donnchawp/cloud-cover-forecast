@@ -67,6 +67,7 @@ This document serves as the source of truth for the Cloud Cover Forecast WordPre
 | File | Description |
 |------|-------------|
 | `forecast-app.js` | **PWA main application logic.** Handles location management (saved locations, current location), tab navigation, forecast fetching and display, settings management (font size, preferences), and share functionality. |
+| `forecast-scoring.js` | **PWA scoring and light phases.** Pure functions with no DOM or app-state access: time parsing, sunlight/golden/blue-hour classification, and photography scores. Must load before `forecast-app.js`, which consumes it via `window.ForecastScoring`. |
 | `forecast-storage.js` | **PWA storage utilities.** Manages IndexedDB and localStorage for offline data persistence. Handles saved locations, cached forecasts, and user preferences. |
 | `public-block.js` | **Frontend public block script.** Handles user interactions for the public lookup block: location search submission, geocoding API calls, forecast fetching, result display, and error handling with rate limit feedback. |
 
@@ -245,6 +246,19 @@ reset them and let the site exceed a provider's limits.
 ## Changelog
 
 This section should be updated when committing changes to track modifications.
+
+### Extract PWA scoring into its own module (2026-08-30)
+
+Groundwork for an Alpenglow-style sunrise/sunset outlook. No behaviour change.
+
+- New `assets/js/forecast-scoring.js` holds the pure functions moved out of
+  `forecast-app.js`: `parseTimeToTimestamp`, `getSunlightFallback`,
+  `getSunlightClass`, `calculatePhotoScore`, `calculateWindowScore`,
+  `getScoreClass`, `getScoreLabel`. Bodies are byte-identical to the originals.
+- `forecast-app.js` drops 220 lines and reaches them via `window.ForecastScoring`.
+- Dropped `getStarRating()`, which had no callers anywhere in the plugin.
+- `templates/pwa-app.php` loads the new script before the app; the service
+  worker precaches it and its `CACHE_VERSION` moves to `v21`.
 
 ### Rate limits, caching, theming and accessibility (2026-08-12)
 

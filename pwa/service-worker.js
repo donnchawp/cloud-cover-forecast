@@ -3,7 +3,7 @@
  * Provides offline support and caching for the forecast app.
  */
 
-const CACHE_VERSION = 'v20';
+const CACHE_VERSION = 'v21';
 const STATIC_CACHE = `ccf-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `ccf-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `ccf-api-${CACHE_VERSION}`;
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
   '/wp-content/plugins/cloud-cover-forecast/assets/css/forecast-app.css',
   '/wp-content/plugins/cloud-cover-forecast/assets/js/forecast-app.js',
   '/wp-content/plugins/cloud-cover-forecast/assets/js/forecast-storage.js',
+  '/wp-content/plugins/cloud-cover-forecast/assets/js/forecast-scoring.js',
 ];
 
 // Install event - cache static assets.
