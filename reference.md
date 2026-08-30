@@ -247,6 +247,37 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Sunrise/sunset colour score (2026-08-30)
+
+`forecast-scoring.js` gains `sunriseSunsetScore( hourly, dayData, event )`,
+scoring a sunrise or sunset 0-100 for colour, plus `scoreLightHour()` and
+`findHourIndex()` behind it.
+
+- Samples the hour holding the event and the hour after it. The hour further
+  from midday is the "glow hour", where high cloud counts 1.5x because cirrus
+  stays lit after the sun is down.
+- High cloud is the main positive (peaks 40-70%), mid cloud secondary
+  (peaks 30-50%), and **low cloud gates rather than subtracts**: it scales the
+  whole cloud bonus toward zero, reaching zero at 70% cover. The sun lights
+  high cloud along a path skimming the horizon, so cloud on that horizon stops
+  the light before it arrives.
+- `findHourIndex()` matches Open-Meteo's local time strings directly instead
+  of parsing them to a `Date`, which would interpret them in the viewer's
+  timezone rather than the location's.
+
+**The weights are not calibrated.** They are plausible meteorology, not a
+model fitted to observations, and will disagree with dedicated apps. Behaviour
+across representative skies (mean of the two sampled hours):
+
+| Sky | Score | Band |
+|-----|-------|------|
+| Cloudless blue | 40 | fair |
+| Good cirrus deck, clear horizon | 78 | good |
+| Cirrus + mid cloud, clear horizon | 85 | excellent |
+| Same cirrus, 40% low cloud | 53 | fair |
+| Same cirrus, 65% low cloud | 33 | poor |
+| Full low stratus with rain | 5 | poor |
+
 ### Real solar elevation for golden and blue hour (2026-08-30)
 
 Golden hour was a fixed sunrise/sunset +/- 60 minutes and blue hour a fixed
