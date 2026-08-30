@@ -247,6 +247,20 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Outlook view (2026-08-30)
+
+Seven day-rows, each with a sunrise and a sunset card carrying a band label,
+a score ring and the time. Tapping a card opens that day in the Day view.
+
+- `renderOutlookView()`, `renderOutlookCard()`, `renderScoreRing()`, plus
+  helpers `scoreBandLabel()`, `eventTime()` and `dayLabel()`.
+- Events already past render a clock and no score, matching the reference app.
+- Rings are SVG with `r="15.915"`, so the circumference is 100 and
+  `stroke-dasharray` takes the score directly. The value is drawn as `<text>`
+  inside the ring and each card carries an `aria-label`, so the number is
+  never only graphical.
+- New strings: `scoreExcellent`, `scoreGood`, `scoreFair`, `scorePoor`, `past`.
+
 ### PWA navigation: view tabs instead of location tabs (2026-08-30)
 
 Tabs used to select a *location* (Home / Current / Locations). They now select

@@ -20,7 +20,10 @@
     parseTimeToTimestamp,
     getSunlightClass,
     calculatePhotoScore,
+    calculateWindowScore,
     getScoreClass,
+    getScoreLabel,
+    sunriseSunsetScore,
   } = ForecastScoring;
 
   // ============================================================
@@ -932,14 +935,148 @@
   }
 
   /**
+   * Translated label for a score band.
+   * @param {number} score - Score from 0-100.
+   * @returns {string} Label.
+   */
+  function scoreBandLabel(score) {
+    const band = getScoreLabel(score);
+    const labels = {
+      excellent: strings.scoreExcellent || 'Excellent',
+      good: strings.scoreGood || 'Good',
+      fair: strings.scoreFair || 'Fair',
+      poor: strings.scorePoor || 'Poor',
+    };
+    return labels[band] || band;
+  }
+
+  /**
+   * Time of a sunrise or sunset on a given day, as HH:MM.
+   * @param {Object} day - Daily data.
+   * @param {string} event - 'sunrise' or 'sunset'.
+   * @param {string} timezone - Timezone identifier.
+   * @returns {string} Time, or '' when unavailable.
+   */
+  function eventTime(day, event, timezone) {
+    const twilight = day.twilight || {};
+    if (twilight[event]) return twilight[event];
+    return day[event] ? formatDateTime(day[event], 'time', timezone) : '';
+  }
+
+  /**
+   * Short label for a day: Today, Tomorrow, or the weekday.
+   * @param {string} dateStr - Date string (YYYY-MM-DD).
+   * @param {number} index - Index into forecast.daily.
+   * @returns {string} Label.
+   */
+  function dayLabel(dateStr, index) {
+    if (0 === index) return strings.today || 'Today';
+    if (1 === index) return strings.tomorrow || 'Tomorrow';
+    // Noon avoids the date shifting a day under the browser's timezone.
+    return new Date(`${dateStr}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short' });
+  }
+
+  /**
+   * Render a score as a ring. The value is drawn as text inside it so it is
+   * readable rather than purely graphical.
+   *
+   * @param {number} score - Score from 0-100.
+   * @returns {string} SVG markup.
+   */
+  function renderScoreRing(score) {
+    // r chosen so the circumference is 100 and stroke-dasharray takes the
+    // score directly.
+    return `
+      <svg class="score-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+        <circle class="score-ring-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+        <circle class="score-ring-value" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"
+          stroke-dasharray="${score} 100" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+        <text class="score-ring-text" x="18" y="18" text-anchor="middle" dominant-baseline="central">${score}%</text>
+      </svg>
+    `;
+  }
+
+  /**
+   * Render one sunrise or sunset card in the outlook.
+   *
+   * @param {Object} forecast - Forecast data.
+   * @param {Object} day - Daily data.
+   * @param {number} dayIndex - Index into forecast.daily.
+   * @param {string} event - 'sunrise' or 'sunset'.
+   * @returns {string} HTML string.
+   */
+  function renderOutlookCard(forecast, day, dayIndex, event) {
+    const timezone = forecast.location?.timezone;
+    const time = eventTime(day, event, timezone);
+
+    if (!time) {
+      // No event at all: normal inside the polar circles.
+      return '<div class="outlook-card is-empty" aria-hidden="true">&mdash;</div>';
+    }
+
+    const eventTs = parseTimeToTimestamp(day.date, time, timezone);
+    const isPast = eventTs !== null && eventTs < Date.now();
+    const eventName = 'sunrise' === event ? (strings.sunrise || 'Sunrise') : (strings.sunset || 'Sunset');
+
+    if (isPast) {
+      return `
+        <div class="outlook-card is-past">
+          <span class="outlook-card-icon" aria-hidden="true">&#128339;</span>
+          <span class="outlook-card-time">${escapeHtml(time)}</span>
+          <span class="visually-hidden">${escapeHtml(eventName)} ${escapeHtml(time)}, ${escapeHtml(strings.past || 'already passed')}</span>
+        </div>
+      `;
+    }
+
+    const score = sunriseSunsetScore(forecast.hourly, day, event);
+    if (score === null) {
+      return `
+        <div class="outlook-card is-empty">
+          <span class="outlook-card-time">${escapeHtml(time)}</span>
+        </div>
+      `;
+    }
+
+    const label = scoreBandLabel(score);
+    const aria = `${eventName} ${dayLabel(day.date, dayIndex)} ${time}, ${label}, ${score}%`;
+
+    return `
+      <button class="outlook-card ${getScoreClass(score)}" data-action="open-day"
+        data-day="${dayIndex}" data-event="${event}" aria-label="${escapeHtml(aria)}">
+        <span class="outlook-card-band">${escapeHtml(label)}</span>
+        ${renderScoreRing(score)}
+        <span class="outlook-card-time">${escapeHtml(time)}</span>
+      </button>
+    `;
+  }
+
+  /**
    * Render the multi-day outlook view.
    * @param {Object} forecast - Forecast data.
    * @returns {string} HTML string.
    */
   function renderOutlookView(forecast) {
+    const days = forecast.daily || [];
+    if (!days.length) {
+      return renderError(strings.error);
+    }
+
     return `
-      <div class="empty-state">
-        <p>${escapeHtml(strings.outlook)}</p>
+      <div class="outlook-view">
+        <div class="outlook-legend" aria-hidden="true">
+          <span class="outlook-legend-day"></span>
+          <span class="outlook-legend-icon">&#127749;</span>
+          <span class="outlook-legend-icon">&#127751;</span>
+        </div>
+        <ul class="outlook-list">
+          ${days.map((day, index) => `
+            <li class="outlook-row">
+              <span class="outlook-day">${escapeHtml(dayLabel(day.date, index))}</span>
+              ${renderOutlookCard(forecast, day, index, 'sunrise')}
+              ${renderOutlookCard(forecast, day, index, 'sunset')}
+            </li>
+          `).join('')}
+        </ul>
       </div>
     `;
   }
@@ -1525,6 +1662,12 @@
 
       case 'use-my-location':
         await useCurrentLocation();
+        break;
+
+      case 'open-day':
+        state.selectedDayIndex = parseInt(btn.dataset.day, 10) || 0;
+        state.activeView = 'day';
+        renderApp();
         break;
 
       case 'retry':

@@ -1738,3 +1738,115 @@ select:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   OUTLOOK VIEW
+   ============================================================ */
+
+.outlook-view {
+  padding: var(--spacing-md);
+}
+
+.outlook-legend,
+.outlook-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 1fr;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.outlook-legend {
+  padding-bottom: var(--spacing-xs);
+}
+
+.outlook-legend-icon {
+  text-align: center;
+  font-size: var(--font-size-lg);
+}
+
+.outlook-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.outlook-day {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.outlook-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 96px;
+  padding: var(--spacing-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.outlook-card.is-past,
+.outlook-card.is-empty {
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.outlook-card-band {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.outlook-card-time {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.outlook-card-icon {
+  font-size: var(--font-size-lg);
+}
+
+/* Score ring. r is 15.915 so the circumference is 100 and stroke-dasharray
+   takes the score directly. */
+.score-ring {
+  width: 46px;
+  height: 46px;
+}
+
+.score-ring-track {
+  stroke: var(--border-color);
+}
+
+.score-ring-text {
+  fill: var(--text-primary);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.outlook-card.score-excellent .score-ring-value { stroke: var(--color-excellent); }
+.outlook-card.score-good .score-ring-value      { stroke: var(--color-good); }
+.outlook-card.score-fair .score-ring-value      { stroke: var(--color-fair); }
+.outlook-card.score-poor .score-ring-value      { stroke: var(--color-poor); }
+
+.outlook-card.score-excellent .outlook-card-band { color: var(--color-excellent); }
+.outlook-card.score-good .outlook-card-band      { color: var(--color-good); }
+.outlook-card.score-fair .outlook-card-band      { color: var(--color-fair); }
+.outlook-card.score-poor .outlook-card-band      { color: var(--color-poor); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .score-ring-value {
+    transition: stroke-dasharray 0.3s ease;
+  }
+}

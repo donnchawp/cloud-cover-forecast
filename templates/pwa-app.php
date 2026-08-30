@@ -103,6 +103,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 				day: <?php echo wp_json_encode( __( 'Day', 'cloud-cover-forecast' ) ); ?>,
 				changeLocation: <?php echo wp_json_encode( __( 'Change location', 'cloud-cover-forecast' ) ); ?>,
 				useMyLocation: <?php echo wp_json_encode( __( 'Use my location', 'cloud-cover-forecast' ) ); ?>,
+				// Score bands
+				scoreExcellent: <?php echo wp_json_encode( __( 'Excellent', 'cloud-cover-forecast' ) ); ?>,
+				scoreGood: <?php echo wp_json_encode( __( 'Good', 'cloud-cover-forecast' ) ); ?>,
+				scoreFair: <?php echo wp_json_encode( __( 'Fair', 'cloud-cover-forecast' ) ); ?>,
+				scorePoor: <?php echo wp_json_encode( __( 'Poor', 'cloud-cover-forecast' ) ); ?>,
+				past: <?php echo wp_json_encode( __( 'already passed', 'cloud-cover-forecast' ) ); ?>,
 				loading: <?php echo wp_json_encode( __( 'Loading...', 'cloud-cover-forecast' ) ); ?>,
 				error: <?php echo wp_json_encode( __( 'Error', 'cloud-cover-forecast' ) ); ?>,
 				retry: <?php echo wp_json_encode( __( 'Retry', 'cloud-cover-forecast' ) ); ?>,
