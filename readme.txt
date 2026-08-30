@@ -4,7 +4,7 @@ Tags: weather, cloud cover, forecast, photography, astronomy
 Requires at least: 5.0
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,16 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 5. Mobile-responsive display
 
 == Changelog ==
+
+= 1.1.0 =
+* New: Outlook view in the PWA - a seven-day list scoring every sunrise and sunset for colour
+* New: Day view in the PWA - sunrise and sunset quality plus the full run of light phases
+* New: Golden hour and blue hour are now calculated from the sun's actual elevation
+* Improved: PWA tabs now switch between views of one location; the location is chosen from the header
+* Improved: "Use my location" moved into the location picker alongside saved locations
+* Fixed: Golden hour was a fixed hour either side of sunrise and sunset, which is wrong away from the equinoxes and badly wrong at northern latitudes in summer
+* Fixed: Tapping a saved location overwrote the home location
+* Fixed: Twilight times were calculated for the wrong day for locations far from the server's timezone, and a day out entirely from UTC+13
 
 = 1.0.1 =
 * New: Progressive Web App (PWA) with installable forecast application

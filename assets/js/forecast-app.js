@@ -14,6 +14,21 @@
   const { CCF_CONFIG, ForecastStorage, ForecastScoring } = global;
   const { ajaxUrl, strings } = CCF_CONFIG;
 
+  // A page cached before forecast-scoring.js existed will not have loaded it.
+  // Say so, rather than throwing on the destructure below and leaving the
+  // loading spinner up for ever.
+  if (!ForecastScoring) {
+    const container = document.getElementById('app');
+    if (container) {
+      container.innerHTML = '<div class="empty-state">'
+        + '<h2>' + (strings.error || 'Error') + '</h2>'
+        + '<p>' + (strings.retry || 'Retry') + '</p>'
+        + '<button class="btn btn-primary" onclick="location.reload(true)">'
+        + (strings.retry || 'Retry') + '</button></div>';
+    }
+    return;
+  }
+
   // Scoring, light-phase classification and time parsing live in
   // forecast-scoring.js, which must load before this file.
   const {

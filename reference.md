@@ -247,6 +247,17 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Version 1.1.0 and cache busting (2026-08-30)
+
+- `CLOUD_COVER_FORECAST_VERSION` bumped to 1.1.0, with the plugin header and
+  `readme.txt` stable tag to match. Asset URLs carry `?v=` this constant, so
+  without the bump the browser's own HTTP cache could serve the old JS and CSS
+  no matter what the service worker did.
+- `forecast-app.js` now checks `ForecastScoring` is present before using it. A
+  page cached before `forecast-scoring.js` existed does not load it, and the
+  destructure would otherwise throw and leave the loading spinner up for ever.
+  Covered by `tests/stale-shell.test.js`.
+
 ### Test suite (2026-08-30)
 
 The plugin had no tests. `tests/` adds a small suite with no dependencies

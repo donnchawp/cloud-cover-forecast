@@ -19,6 +19,7 @@ Or one at a time: `node tests/day.test.js`, `php tests/solar.test.php`.
 | `midnight.test.js` | An Irish June: no astronomical dawn, dusk after local midnight |
 | `shared-link.test.js` | `?lat=&lon=` deep links selecting a location |
 | `scoring.test.js` | Sunrise/sunset colour score ordering and missing-data handling |
+| `stale-shell.test.js` | A page cached before `forecast-scoring.js` existed fails visibly |
 | `solar.test.php` | Solar phase times vs Alpenglow, plus a worldwide year-long sweep |
 
 `harness.js` stubs just enough DOM to run the real `forecast-app.js` under
