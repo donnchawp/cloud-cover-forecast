@@ -67,7 +67,7 @@ This document serves as the source of truth for the Cloud Cover Forecast WordPre
 | File | Description |
 |------|-------------|
 | `forecast-app.js` | **PWA main application logic.** Handles location management (saved locations, current location), tab navigation, forecast fetching and display, settings management (font size, preferences), and share functionality. |
-| `forecast-scoring.js` | **PWA scoring and light phases.** Pure functions with no DOM or app-state access: time parsing, sunlight/golden/blue-hour classification, and photography scores. Must load before `forecast-app.js`, which consumes it via `window.ForecastScoring`. |
+| `forecast-scoring.js` | **PWA scoring and light phases.** Pure functions with no DOM or app-state access: time parsing, sunlight/golden/blue-hour classification, and photography scores. Exports `sunriseSunsetRange()` (returns `{low, high, sources}` scored against both forecast sources), `bandScore()` (the single place the "label the low score" rule lives) and `MET_NO_SAMPLE_OFFSETS`. Must load before `forecast-app.js`, which consumes it via `window.ForecastScoring`. |
 | `forecast-storage.js` | **PWA storage utilities.** Manages IndexedDB and localStorage for offline data persistence. Handles saved locations, cached forecasts, and user preferences. |
 | `public-block.js` | **Frontend public block script.** Handles user interactions for the public lookup block: location search submission, geocoding API calls, forecast fetching, result display, and error handling with rate limit feedback. |
 
@@ -160,9 +160,15 @@ Cloud_Cover_Forecast_Plugin (main orchestrator)
 ### PWA Forecast Request
 1. User opens PWA at configurable endpoint (default: `/forecast-app/`)
 2. User searches location → geocoding API called
-3. Location selected → extended forecast API called
-4. Forecast stored in IndexedDB for offline access
-5. Service worker caches responses
+3. Location selected → extended forecast API called (`fetch_extended_forecast()`)
+4. Met.no `locationforecast/2.0/complete` fetched and its cloud readings attached
+   to the hours around each sun event (`attach_met_no_readings()`). Open-Meteo
+   values are never modified; the second source is stored alongside them as
+   `hourly[].met_no`, with `met_no_available` at the top level. This is *not*
+   `merge_cloud_cover_rows()`, which overwrites with `max()` and still serves
+   only the shortcode and blocks
+5. Forecast stored in IndexedDB for offline access
+6. Service worker caches responses
 
 ### Admin Settings
 1. Admin visits Settings → Cloud Cover
@@ -227,6 +233,14 @@ reset them and let the site exceed a provider's limits.
 | `CACHE_VERSION_OPTION` | `cloud_cover_forecast_cache_version` | Cache version for busting |
 | `RATE_LIMIT_PREFIX` | `cloud_cover_forecast_rate_limit_` | IP rate limit transient prefix |
 
+### Class Constants (in `Cloud_Cover_Forecast_API`)
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MET_NO_WINDOW_BEFORE` | `1` | Hours before a sun event that carry a Met.no reading |
+| `MET_NO_WINDOW_AFTER` | `2` | Hours after a sun event that carry a Met.no reading. Deliberately wider than the two hours `sunriseSunsetRange()` samples, so a change to the JS window does not silently strand hours; `tests/range.test.js` asserts the two agree |
+| `MET_NO_MAX_OFFSET` | `10800` | Furthest (seconds) a Met.no sample may sit from the hour it is matched to. Met.no drops to 6-hourly after ~2.6 days, so days 3-7 match the nearest sample |
+
 ### Default Settings
 
 | Setting | Default | Description |
@@ -246,6 +260,49 @@ reset them and let the site exceed a provider's limits.
 ## Changelog
 
 This section should be updated when committing changes to track modifications.
+
+### Dual-source confidence for the PWA score (2026-09-01, v1.2.0)
+
+`fetch_extended_forecast()` -- the PWA's data path -- was single-source
+Open-Meteo, while the README advertised dual-source as a headline feature. The
+Met.no merge lived in `fetch_weather_data()` and reached only the shortcode and
+blocks.
+
+A probe across 20 Irish locations and 101 sunrise/sunset hours found the two
+sources disagree enough to flip the band label in **43% of cases**, with a
+systematic bias rather than noise: Open-Meteo reads low cloud 16 points cloudier
+(mean 69.9 vs 53.4). Low cloud is the gate in `scoreLightHour()`, so the PWA was
+systematically pessimistic by construction.
+
+Rather than adjudicate between two sources neither of which is known to be more
+accurate, the score became a range. New in `class-api.php`:
+`attach_met_no_readings()` and `met_no_hour_indices()`, plus the three
+`MET_NO_*` constants. Payload gains `hourly[].met_no` and `met_no_available`,
+both additive so payloads cached before this change still render.
+
+`sunriseSunsetScore()` became `sunriseSunsetRange()`, returning
+`{low, high, sources}`; `bandScore()` was added to isolate the "label the low"
+rule to one function. The Outlook ring gained a faded tail and a dashed
+single-source track; the day hero meter gained a matching pale fill; a "Cloud by
+source" table was added under each hero. The dead `calculateWindowScore` import
+was removed from `forecast-app.js`.
+
+Two traps worth remembering. Open-Meteo is fetched with `timezone=auto`, so its
+stamps are offset-less local wall clock while Met.no is keyed in UTC --
+converting with `strtotime()`/`gmdate()` is wrong by the server's own offset,
+and a negative control confirms the naive form passes a GMT test while failing
+an IST one. And averaging must be per source, not per hour: a control
+implementing the per-hour alternative reported 27-85 on a fixture where the
+correct code reports 56-56.
+
+New tests: `tests/dual-source.test.php`, `tests/range.test.js`. `tests/harness.js`
+now drops the module cache so one test file can install more than once.
+
+Deferred, deliberately: band thresholds stay at 80/60/40, and the double penalty
+on low cloud in `scoreLightHour()` is untouched. Because Open-Meteo is almost
+always the pessimistic end and the band word follows the low score, this feature
+does not on its own make the app read less gloomy -- it makes it honest, and it
+starts recording the per-source data that calibration will need.
 
 ### Fix dark mode when it is chosen rather than inherited (2026-08-31)
 

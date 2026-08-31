@@ -4,7 +4,7 @@ Tags: weather, cloud cover, forecast, photography, astronomy
 Requires at least: 5.0
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,12 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 5. Mobile-responsive display
 
 == Changelog ==
+
+= 1.2.0 =
+* Added: The PWA now scores each sunrise and sunset against two forecast sources, Open-Meteo and Met.no, and shows the span between them. The ring fills solidly to the lower score and continues as a faded arc to the higher one, so the width of that arc is how much the sources disagree
+* Added: A "Cloud by source" table in the day view showing what each source read at the event hour
+* Added: Cards drawn from a single source show a dashed ring track, so a bare number is never ambiguous between "the sources agree" and "there was only one source"
+* Changed: The PWA data path was single-source Open-Meteo despite dual-source being advertised as a headline feature. It now fetches both
 
 = 1.1.2 =
 * Fixed: Choosing dark mode while the device was set to light left most text dark on a dark background, and the browser status bar kept the light colour

@@ -42,6 +42,25 @@ right, only that the two stay in step. Nothing here renders CSS. The
 bottom tab bar, the safe-area inset, the picker overlay, the score rings and
 dark mode are all unverified by this suite; only a browser will tell you.
 
+**The range visuals are markup only.** `outlook.test.js` and `day.test.js`
+assert that a `score-ring-tail` circle exists, that a single-source track
+carries `is-single-source`, and that the day hero gets a
+`day-hero-meter-tail`. Whether the tail is actually *visible* — whether
+`stroke-dashoffset="-37"` puts it where it should be, whether 35% opacity has
+enough contrast in dark mode, whether `37–75` fits inside a 46px ring at 8px —
+is a browser question this suite cannot reach.
+
+**No test checks that a CSS custom property exists.** `--radius-md` has been
+referenced at `forecast-app.css:1564` and never defined for the whole life of
+the file, and the suite is green. A typo in a token name fails silently and
+always will.
+
+**A file can print "0 failed" and still be broken.** `scoring.test.js` threw
+partway through after `sunriseSunsetScore` was renamed, having already printed
+`16 passed, 0 failed` for the assertions it reached. Only `run.sh` checking the
+exit code caught it. Never read the summary line alone — the runner's final
+`ALL TESTS PASSED` is the one that counts.
+
 **`solar.test.php` compares against one screenshot.** Twelve boundaries for one
 place on one date. It would not catch an error that happens to be right for
 Durrus in August. The year-long sweep checks ordering and day-anchoring
