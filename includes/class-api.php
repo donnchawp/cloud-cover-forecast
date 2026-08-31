@@ -19,6 +19,41 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Cloud_Cover_Forecast_API {
 
 	/**
+	 * Hours before a sun event that carry a Met.no reading.
+	 *
+	 * Deliberately wider than the two hours sunriseSunsetRange() samples in
+	 * assets/js/forecast-scoring.js, so a small change to the JS sampling
+	 * window does not silently strand hours without a reading. See
+	 * MET_NO_SAMPLE_OFFSETS there; tests/range.test.js asserts they agree.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	private const MET_NO_WINDOW_BEFORE = 1;
+
+	/**
+	 * Hours after a sun event that carry a Met.no reading.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	private const MET_NO_WINDOW_AFTER = 2;
+
+	/**
+	 * Furthest a Met.no sample may sit from the hour it is matched to.
+	 *
+	 * Met.no drops to 6-hourly resolution after about 2.6 days, so days 3-7
+	 * match the nearest sample rather than an exact hour. Measured cost of a
+	 * 3h offset is about 5 points of extra apparent disagreement, against
+	 * 23.6 points of weather change alone -- errors add in quadrature, so the
+	 * comparison still predominantly measures source disagreement.
+	 *
+	 * @since 1.2.0
+	 * @var int
+	 */
+	private const MET_NO_MAX_OFFSET = 10800;
+
+	/**
 	 * Plugin instance
 	 *
 	 * @since 1.0.0
@@ -498,6 +533,16 @@ class Cloud_Cover_Forecast_API {
 		}
 		unset( $day );
 
+		// Attach the second source's cloud readings around each sun event.
+		// Met.no keeps its own transient and rate-limit bucket, so an outage
+		// here never invalidates a good Open-Meteo forecast.
+		$met_no_available = false;
+		$metno            = $this->fetch_met_no_complete( $lat, $lon );
+		if ( ! is_wp_error( $metno ) && ! empty( $metno['hourly'] ) ) {
+			$hourly_data      = $this->attach_met_no_readings( $hourly_data, $daily_data, $timezone, $metno['hourly'] );
+			$met_no_available = true;
+		}
+
 		// Fetch moon data for the forecast period.
 		$moon_data = array();
 		foreach ( $daily_data as $day ) {
@@ -517,6 +562,7 @@ class Cloud_Cover_Forecast_API {
 			'hourly'        => $hourly_data,
 			'daily'         => $daily_data,
 			'moon'          => $moon_data,
+			'met_no_available' => $met_no_available,
 			'generated_at'  => gmdate( 'c' ),
 		);
 	}
@@ -1057,6 +1103,136 @@ class Cloud_Cover_Forecast_API {
 		set_transient( $cache_key, $moon_data, 24 * HOUR_IN_SECONDS );
 
 		return $moon_data;
+	}
+
+	/**
+	 * Indices of the hours that should carry a Met.no reading.
+	 *
+	 * Mirrors findHourIndex() in assets/js/forecast-scoring.js: a string
+	 * prefix match of "{date}T{HH}" against the local wall-clock stamp. No
+	 * arithmetic, no rounding, so the two languages cannot disagree on a
+	 * given input.
+	 *
+	 * @since 1.2.0
+	 * @param array $hourly Hourly rows with local wall-clock 'time' values.
+	 * @param array $daily  Daily rows carrying 'date' and 'twilight'.
+	 * @return array Sorted integer indices into $hourly.
+	 */
+	private function met_no_hour_indices( array $hourly, array $daily ): array {
+		$count   = count( $hourly );
+		$indices = array();
+
+		foreach ( $daily as $day ) {
+			$date = isset( $day['date'] ) ? $day['date'] : null;
+			if ( ! $date ) {
+				continue;
+			}
+
+			foreach ( array( 'sunrise', 'sunset' ) as $event ) {
+				$time = isset( $day['twilight'][ $event ] ) ? $day['twilight'][ $event ] : null;
+				if ( ! $time ) {
+					continue;
+				}
+
+				$prefix = $date . 'T' . substr( $time, 0, 2 );
+				for ( $i = 0; $i < $count; $i++ ) {
+					if ( ! isset( $hourly[ $i ]['time'] ) || 0 !== strpos( $hourly[ $i ]['time'], $prefix ) ) {
+						continue;
+					}
+
+					for ( $offset = -self::MET_NO_WINDOW_BEFORE; $offset <= self::MET_NO_WINDOW_AFTER; $offset++ ) {
+						$j = $i + $offset;
+						if ( $j >= 0 && $j < $count ) {
+							$indices[ $j ] = true;
+						}
+					}
+					break;
+				}
+			}
+		}
+
+		ksort( $indices );
+		return array_keys( $indices );
+	}
+
+	/**
+	 * Attach Met.no cloud readings to the hours around each sun event.
+	 *
+	 * Open-Meteo values are never modified. The reading is attached alongside
+	 * them so the PWA can score both sources and show the span between them.
+	 *
+	 * This is deliberately not merge_cloud_cover_rows(), which overwrites
+	 * values with max() and would destroy the readings a range needs.
+	 *
+	 * @since 1.2.0
+	 * @param array  $hourly       Hourly rows with local wall-clock 'time' values.
+	 * @param array  $daily        Daily rows carrying 'date' and 'twilight'.
+	 * @param string $timezone     IANA timezone the wall-clock stamps are in.
+	 * @param array  $metno_hourly Map from fetch_met_no_complete()['hourly'].
+	 * @return array $hourly with 'met_no' keys added to selected rows.
+	 */
+	private function attach_met_no_readings( array $hourly, array $daily, string $timezone, array $metno_hourly ): array {
+		if ( empty( $metno_hourly ) ) {
+			return $hourly;
+		}
+
+		try {
+			$tz = new DateTimeZone( $timezone );
+		} catch ( Exception $e ) {
+			return $hourly;
+		}
+
+		// Ascending, so an equidistant tie resolves to the earlier sample.
+		$samples = array_values( $metno_hourly );
+		usort(
+			$samples,
+			static function ( $a, $b ) {
+				return $a['ts'] <=> $b['ts'];
+			}
+		);
+
+		foreach ( $this->met_no_hour_indices( $hourly, $daily ) as $i ) {
+			$stamp = isset( $hourly[ $i ]['time'] ) ? $hourly[ $i ]['time'] : null;
+			if ( ! $stamp ) {
+				continue;
+			}
+
+			// The stamp carries no offset, so the zone must be supplied.
+			// Doing this with strtotime() or gmdate() uses the server's own
+			// timezone and is wrong by exactly that offset.
+			try {
+				$target = ( new DateTimeImmutable( $stamp, $tz ) )->getTimestamp();
+			} catch ( Exception $e ) {
+				continue;
+			}
+
+			$best       = null;
+			$best_delta = null;
+			foreach ( $samples as $sample ) {
+				$delta = abs( $sample['ts'] - $target );
+				if ( $delta > self::MET_NO_MAX_OFFSET ) {
+					continue;
+				}
+				if ( null === $best_delta || $delta < $best_delta ) {
+					$best       = $sample;
+					$best_delta = $delta;
+				}
+			}
+
+			if ( null === $best ) {
+				continue;
+			}
+
+			$hourly[ $i ]['met_no'] = array(
+				'total'        => $best['total'],
+				'low'          => $best['low'],
+				'mid'          => $best['mid'],
+				'high'         => $best['high'],
+				'offset_hours' => intdiv( $best_delta, HOUR_IN_SECONDS ),
+			);
+		}
+
+		return $hourly;
 	}
 
 	/**
