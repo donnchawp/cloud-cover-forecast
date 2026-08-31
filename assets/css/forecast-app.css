@@ -1840,6 +1840,39 @@ select:focus-visible,
 .outlook-card.score-fair .score-ring-value      { stroke: var(--color-fair); }
 .outlook-card.score-poor .score-ring-value      { stroke: var(--color-poor); }
 
+/* The faded tail spans the low score to the high score. Same band colour as
+   the solid arc, so a range never introduces a second hue. */
+.outlook-card.score-excellent .score-ring-tail { stroke: var(--color-excellent); }
+.outlook-card.score-good .score-ring-tail      { stroke: var(--color-good); }
+.outlook-card.score-fair .score-ring-tail      { stroke: var(--color-fair); }
+.outlook-card.score-poor .score-ring-tail      { stroke: var(--color-poor); }
+
+.score-ring-tail {
+  stroke-opacity: 0.35;
+}
+
+/* A dashed track means only one source was available for this card, whether
+   because Met.no was unreachable or because it had no sample within three
+   hours of this event. */
+.score-ring-track.is-single-source {
+  stroke-dasharray: 2 2;
+}
+
+/* "37-75" is five glyphs where "100%" is four, against an inner diameter of
+   about 28.8 units in the 36-unit viewBox. */
+.score-ring.has-range .score-ring-text {
+  font-size: 8px;
+}
+
+.outlook-notice {
+  margin: 0 0 var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .outlook-card.score-excellent .outlook-card-band { color: var(--color-excellent); }
 .outlook-card.score-good .outlook-card-band      { color: var(--color-good); }
 .outlook-card.score-fair .outlook-card-band      { color: var(--color-fair); }
@@ -1928,6 +1961,61 @@ select:focus-visible,
 .day-hero.score-good      .day-hero-meter-fill { background: var(--color-good); }
 .day-hero.score-fair      .day-hero-meter-fill { background: var(--color-fair); }
 .day-hero.score-poor      .day-hero-meter-fill { background: var(--color-poor); }
+
+/* The tail runs from zero to the high score behind the solid fill, so the
+   solid portion reads as the score and the pale remainder as the upside the
+   second source sees. */
+.day-hero-meter {
+  position: relative;
+}
+
+.day-hero-meter-tail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  opacity: 0.35;
+  border-radius: inherit;
+}
+
+.day-hero.score-excellent .day-hero-meter-tail { background: var(--color-excellent); }
+.day-hero.score-good      .day-hero-meter-tail { background: var(--color-good); }
+.day-hero.score-fair      .day-hero-meter-tail { background: var(--color-fair); }
+.day-hero.score-poor      .day-hero-meter-tail { background: var(--color-poor); }
+
+.day-hero-meter-fill {
+  position: relative;
+}
+
+.cloud-by-source {
+  margin: var(--spacing-md) 0;
+}
+
+.cloud-by-source-title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cloud-by-source-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.cloud-by-source-table th,
+.cloud-by-source-table td {
+  padding: var(--spacing-xs);
+  text-align: right;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cloud-by-source-table th[scope="row"] {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
 
 .day-hero-time {
   font-size: var(--font-size-lg);

@@ -62,10 +62,10 @@ for (let h = 17; h <= 23; h++) {
   hourly.push(Object.assign({ time: '2026-08-31T' + String(h).padStart(2, '0') + ':00' }, sky(5, 35, 60)));
 }
 const day = { date: '2026-08-31', twilight: { sunrise: '06:49', sunset: '20:27' } };
-assert('scores a sunset from the hours present', null !== S.sunriseSunsetScore(hourly, day, 'sunset'));
-assert('returns null when the event hour is absent', null === S.sunriseSunsetScore(hourly, day, 'sunrise'));
-assert('returns null without daily data', null === S.sunriseSunsetScore(hourly, null, 'sunset'));
-assert('returns null with no hourly data', null === S.sunriseSunsetScore([], day, 'sunset'));
-assert('returns null without twilight times', null === S.sunriseSunsetScore(hourly, { date: '2026-08-31' }, 'sunset'));
+assert('scores a sunset from the hours present', null !== S.sunriseSunsetRange(hourly, day, 'sunset'));
+assert('returns null when the event hour is absent', null === S.sunriseSunsetRange(hourly, day, 'sunrise'));
+assert('returns null without daily data', null === S.sunriseSunsetRange(hourly, null, 'sunset'));
+assert('returns null with no hourly data', null === S.sunriseSunsetRange([], day, 'sunset'));
+assert('returns null without twilight times', null === S.sunriseSunsetRange(hourly, { date: '2026-08-31' }, 'sunset'));
 
 console.log('\n' + passed + ' passed, ' + failed + ' failed');

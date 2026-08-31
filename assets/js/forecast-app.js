@@ -986,6 +986,23 @@
    * @param {number} score - Score from 0-100.
    * @returns {string} Label.
    */
+  /**
+   * Fill a translated string's positional placeholders.
+   *
+   * Translators reorder arguments, so the pattern uses %1$s / %2$s rather
+   * than bare %s.
+   *
+   * @param {string} pattern - Pattern containing %1$s style placeholders.
+   * @param {...*} args - Values, in order.
+   * @returns {string} The filled string.
+   */
+  function formatString(pattern, ...args) {
+    return String(pattern).replace(/%(\d+)\$s/g, (match, n) => {
+      const value = args[Number(n) - 1];
+      return undefined === value ? match : String(value);
+    });
+  }
+
   function scoreBandLabel(score) {
     const band = getScoreLabel(score);
     const labels = {
@@ -1024,21 +1041,30 @@
   }
 
   /**
-   * Render a score as a ring. The value is drawn as text inside it so it is
-   * readable rather than purely graphical.
+   * Render a score range as a ring.
    *
-   * @param {number} score - Score from 0-100.
+   * The solid arc always starts at zero and runs to the low score, so
+   * fullness still reads as "how good" — a tight range high up the scale
+   * still draws a nearly full ring. The faded tail extends to the high
+   * score, so its length reads as "how unsure". When the sources agree
+   * there is no tail and the result is identical to a point score.
+   *
+   * @param {Object} range - A sunriseSunsetRange() result.
    * @returns {string} SVG markup.
    */
-  function renderScoreRing(score) {
+  function renderScoreRing(range) {
+    const { low, high, sources } = range;
+    const isRange = high > low;
     // r chosen so the circumference is 100 and stroke-dasharray takes the
     // score directly.
     return `
-      <svg class="score-ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
-        <circle class="score-ring-track" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+      <svg class="score-ring${isRange ? ' has-range' : ''}" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+        <circle class="score-ring-track${1 === sources ? ' is-single-source' : ''}" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+        ${isRange ? `<circle class="score-ring-tail" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"
+          stroke-dasharray="${high - low} 100" stroke-dashoffset="-${low}" transform="rotate(-90 18 18)"></circle>` : ''}
         <circle class="score-ring-value" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"
-          stroke-dasharray="${score} 100" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
-        <text class="score-ring-text" x="18" y="18" text-anchor="middle" dominant-baseline="central">${score}%</text>
+          stroke-dasharray="${low} 100" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+        <text class="score-ring-text" x="18" y="18" text-anchor="middle" dominant-baseline="central">${isRange ? `${low}&#8211;${high}` : `${low}%`}</text>
       </svg>
     `;
   }
@@ -1075,8 +1101,8 @@
       `;
     }
 
-    const score = sunriseSunsetScore(forecast.hourly, day, event);
-    if (score === null) {
+    const range = sunriseSunsetRange(forecast.hourly, day, event);
+    if (null === range) {
       return `
         <div class="outlook-card is-empty">
           <span class="outlook-card-time">${escapeHtml(time)}</span>
@@ -1084,14 +1110,24 @@
       `;
     }
 
-    const label = scoreBandLabel(score);
-    const aria = `${eventName} ${dayLabel(day.date, dayIndex)} ${time}, ${label}, ${score}%`;
+    const band = bandScore(range);
+    const label = scoreBandLabel(band);
+    // Agreement and single-source both draw a bare number. The dashed track
+    // separates them visually; only these words separate them for a screen
+    // reader, which never sees the ring.
+    const value = range.high > range.low
+      ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
+      : `${band} percent`;
+    const sourceNote = 2 === range.sources
+      ? (strings.twoSources || 'two sources')
+      : (strings.oneSource || 'one source');
+    const aria = `${eventName} ${dayLabel(day.date, dayIndex)} ${time}, ${label}, ${value}, ${sourceNote}`;
 
     return `
-      <button class="outlook-card ${getScoreClass(score)}" data-action="open-day"
+      <button class="outlook-card ${getScoreClass(band)}" data-action="open-day"
         data-day="${dayIndex}" data-event="${event}" aria-label="${escapeHtml(aria)}">
         <span class="outlook-card-band">${escapeHtml(label)}</span>
-        ${renderScoreRing(score)}
+        ${renderScoreRing(range)}
         <span class="outlook-card-time">${escapeHtml(time)}</span>
       </button>
     `;
@@ -1110,6 +1146,7 @@
 
     return `
       <div class="outlook-view">
+        ${false === forecast.met_no_available ? `<p class="outlook-notice">${escapeHtml(strings.secondSourceUnavailable || 'Second forecast source unavailable')}</p>` : ''}
         <div class="outlook-legend" aria-hidden="true">
           <span class="outlook-legend-day"></span>
           <span class="outlook-legend-icon">&#127749;</span>
@@ -1204,10 +1241,10 @@
     if (!time) return '';
 
     const name = 'sunrise' === event ? (strings.sunrise || 'Sunrise') : (strings.sunset || 'Sunset');
-    const score = sunriseSunsetScore(forecast.hourly, day, event);
+    const range = sunriseSunsetRange(forecast.hourly, day, event);
     const relative = relativeTime(parseTimeToTimestamp(day.date, time, timezone));
 
-    if (score === null) {
+    if (null === range) {
       return `
         <div class="day-hero">
           <h2 class="day-hero-title">${escapeHtml(name)}</h2>
@@ -1217,16 +1254,86 @@
       `;
     }
 
+    const band = bandScore(range);
+    const label = scoreBandLabel(band);
+    const isRange = range.high > range.low;
+    // The tail runs zero to high behind the solid zero-to-low fill. Visually
+    // the same as a low-to-high span, without positioning a floated segment
+    // inside a flow layout.
+    const text = isRange ? `${range.low}&#8211;${range.high}` : `${band}%`;
+    const value = isRange
+      ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
+      : `${band} percent`;
+    const sourceNote = 2 === range.sources
+      ? (strings.twoSources || 'two sources')
+      : (strings.oneSource || 'one source');
+
     return `
-      <div class="day-hero ${getScoreClass(score)}">
+      <div class="day-hero ${getScoreClass(band)}">
         <h2 class="day-hero-title">${escapeHtml(name)}</h2>
-        <p class="day-hero-band">${escapeHtml(scoreBandLabel(score))}</p>
-        <div class="day-hero-meter" role="img" aria-label="${escapeHtml(scoreBandLabel(score))}, ${score}%">
-          <div class="day-hero-meter-fill" style="width: ${score}%"><span>${score}%</span></div>
+        <p class="day-hero-band">${escapeHtml(label)}</p>
+        <div class="day-hero-meter" role="img" aria-label="${escapeHtml(`${label}, ${value}, ${sourceNote}`)}">
+          ${isRange ? `<div class="day-hero-meter-tail" style="width: ${range.high}%"></div>` : ''}
+          <div class="day-hero-meter-fill" style="width: ${range.low}%"><span>${text}</span></div>
         </div>
         <p class="day-hero-time">${escapeHtml(time)}</p>
         ${relative ? `<p class="day-hero-relative">${escapeHtml(relative)}</p>` : ''}
       </div>
+      ${renderCloudBySource(forecast, day, event)}
+    `;
+  }
+
+  /**
+   * What each source read at the event hour.
+   *
+   * The heading is "Cloud by source" rather than "Sources disagree": the
+   * latter is wrong on the days they agree, and knowing that both sources
+   * see a clear horizon is worth as much as knowing they differ.
+   *
+   * @param {Object} forecast - Forecast data.
+   * @param {Object} day - Daily data.
+   * @param {string} event - 'sunrise' or 'sunset'.
+   * @returns {string} HTML string, empty when there is no second reading.
+   */
+  function renderCloudBySource(forecast, day, event) {
+    const time = (day.twilight || {})[event];
+    if (!time) return '';
+
+    const index = findHourIndex(forecast.hourly || [], day.date, time);
+    if (index < 0) return '';
+
+    const hour = forecast.hourly[index];
+    const met = hour && hour.met_no;
+    if (!met) return '';
+
+    const rows = [
+      [strings.low || 'Low', hour.cloud_low, met.low],
+      [strings.mid || 'Mid', hour.cloud_mid, met.mid],
+      [strings.high || 'High', hour.cloud_high, met.high],
+    ];
+
+    return `
+      <section class="cloud-by-source">
+        <h3 class="cloud-by-source-title">${escapeHtml(strings.cloudBySource || 'Cloud by source')}</h3>
+        <table class="cloud-by-source-table">
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col">${escapeHtml(strings.sourceOpenMeteo || 'Open-Meteo')}</th>
+              <th scope="col">${escapeHtml(strings.sourceMetNo || 'Met.no')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(([label, open, metValue]) => `
+              <tr>
+                <th scope="row">${escapeHtml(label)}</th>
+                <td>${null == open ? '&mdash;' : `${open}%`}</td>
+                <td>${null == metValue ? '&mdash;' : `${metValue}%`}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </section>
     `;
   }
 
