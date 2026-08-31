@@ -9,6 +9,12 @@ tests/run.sh
 
 Or one at a time: `node tests/day.test.js`, `php tests/solar.test.php`.
 
+The JS tests run twice, under `TZ=UTC` and `TZ=Pacific/Auckland`. That is not
+belt-and-braces: the wall-clock conversion was once wrong by exactly the
+viewer's own UTC offset, which is zero on UTC. It looked perfect in a default
+container and was an hour out in Ireland every summer. Any new test touching
+times must pass under both.
+
 ## What is covered
 
 | File | Covers |
@@ -20,6 +26,7 @@ Or one at a time: `node tests/day.test.js`, `php tests/solar.test.php`.
 | `shared-link.test.js` | `?lat=&lon=` deep links selecting a location |
 | `scoring.test.js` | Sunrise/sunset colour score ordering and missing-data handling |
 | `stale-shell.test.js` | A page cached before `forecast-scoring.js` existed fails visibly |
+| `timezone.test.js` | Wall-clock conversion, DST boundaries, current-hour matching |
 | `solar.test.php` | Solar phase times vs Alpenglow, plus a worldwide year-long sweep |
 
 `harness.js` stubs just enough DOM to run the real `forecast-app.js` under

@@ -247,6 +247,38 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Fix timezone conversion throughout the PWA (2026-08-31)
+
+Every wall-clock time in the PWA was converted wrongly, by exactly the
+*viewer's* UTC offset. Sunrise at 06:49 showed as "in 22 minutes" at 05:28.
+
+`parseTimeToTimestamp()` built a `Date` from an offset-less string (parsed as
+browser-local), then derived a correction from two `toLocaleString()`
+round-trips. The result was `W - B - T` where the answer is `W - T`, leaving it
+wrong by the browser's own offset `B` — zero on UTC, an hour in Ireland during
+summer time, ten hours from Sydney.
+
+`new Date(hour.time)` had the same flaw: Open-Meteo returns local stamps with
+no offset, so they were read as the viewer's local time. `getSunlightClass()`
+compared two differently-skewed values, so the golden and blue hour shading in
+the hourly grid was shifted too. That bug predates the Alpenglow work.
+
+- `timezoneOffset()` (new) measures a zone's offset via
+  `Intl.DateTimeFormat.formatToParts`, independent of the browser's zone.
+- `parseTimeToTimestamp()` rewritten on top of it, settling in two passes so
+  DST changes resolve correctly.
+- `parseHourTimestamp()` (new) converts Open-Meteo's hourly stamps.
+- `nowInTimezone()` (new) returns the current date and hour at a location as
+  strings, compared directly against the API's stamps. Replaces a
+  `toLocaleString()` -> `new Date()` -> `toISOString()` chain that reapplied
+  the viewer's offset a second time.
+- Grid day boundaries now read `hour.time.split('T')[0]` rather than
+  converting; the string already carries the location's date.
+
+`tests/timezone.test.js` covers six zones including a +5:45 offset and both
+sides of a DST change, and `tests/run.sh` now runs every JS test under
+`TZ=UTC` and `TZ=Pacific/Auckland`.
+
 ### Version 1.1.0 and cache busting (2026-08-30)
 
 - `CLOUD_COVER_FORECAST_VERSION` bumped to 1.1.0, with the plugin header and

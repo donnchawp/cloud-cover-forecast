@@ -14,31 +14,108 @@
   'use strict';
 
   /**
-   * Parse a time string to timestamp for a given date.
+   * The UTC offset of a timezone at a given instant, in milliseconds.
+   * @param {number} utcMs - Instant to measure at.
+   * @param {string} timezone - Timezone identifier.
+   * @returns {number} Offset in milliseconds.
+   */
+  function timezoneOffset(utcMs, timezone) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(new Date(utcMs));
+
+    const field = {};
+    for (const part of parts) {
+      field[part.type] = part.value;
+    }
+
+    // Hour comes back as 24 rather than 00 for midnight in some engines.
+    const asUtc = Date.UTC(
+      Number(field.year), Number(field.month) - 1, Number(field.day),
+      Number(field.hour) % 24, Number(field.minute), Number(field.second)
+    );
+    return asUtc - utcMs;
+  }
+
+  /**
+   * Convert a wall-clock date and time in some timezone to a timestamp.
+   *
+   * Must not depend on the timezone the browser happens to be in. Reading a
+   * location's forecast from another country is the normal case, not the edge
+   * case, and the old implementation was wrong by exactly the viewer's own UTC
+   * offset — invisible in Britain and Ireland during winter, an hour out all
+   * summer, and ten hours out from Sydney.
+   *
    * @param {string} dateStr - Date string (YYYY-MM-DD).
    * @param {string} timeStr - Time string (HH:MM).
    * @param {string} timezone - Optional timezone identifier.
    * @returns {number|null} Timestamp or null if invalid.
    */
   function parseTimeToTimestamp(dateStr, timeStr, timezone) {
-    if (!timeStr) return null;
-    // If timezone provided, create date in that timezone
-    if (timezone) {
-      // Parse the time components
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      // Create a date string and use the timezone to get correct UTC time
-      const localDateStr = `${dateStr}T${timeStr}:00`;
-      // Create date object and get its representation in the target timezone
-      // We need to find what UTC time corresponds to this local time in the given timezone
-      const tempDate = new Date(localDateStr);
-      const utcDate = new Date(tempDate.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const tzDate = new Date(tempDate.toLocaleString('en-US', { timeZone: timezone }));
-      const offset = utcDate.getTime() - tzDate.getTime();
-      const ts = tempDate.getTime() + offset;
-      return isNaN(ts) ? null : ts;
+    if (!dateStr || !timeStr) return null;
+
+    // The wall-clock reading, taken as though it were UTC.
+    const wall = Date.parse(`${dateStr}T${timeStr}:00Z`);
+    if (isNaN(wall)) return null;
+
+    if (!timezone) {
+      const local = new Date(`${dateStr}T${timeStr}`).getTime();
+      return isNaN(local) ? null : local;
     }
-    const ts = new Date(`${dateStr}T${timeStr}`).getTime();
-    return isNaN(ts) ? null : ts;
+
+    // Subtract the zone's offset to get the real instant. Measuring the offset
+    // needs an instant to measure at, so start from the wall reading and
+    // settle: one pass is enough except across a DST change, where the second
+    // corrects it.
+    let utc = wall - timezoneOffset(wall, timezone);
+    utc = wall - timezoneOffset(utc, timezone);
+    return isNaN(utc) ? null : utc;
+  }
+
+  /**
+   * The current date and hour at a location, as strings.
+   *
+   * Returned as strings so they compare directly against Open-Meteo's local
+   * stamps, with no Date round-trip to reintroduce the viewer's offset.
+   *
+   * @param {string} timezone - Timezone identifier.
+   * @returns {Object} { date: 'YYYY-MM-DD', hour: 'HH' }.
+   */
+  function nowInTimezone(timezone) {
+    const options = { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit' };
+    if (timezone) {
+      options.timeZone = timezone;
+    }
+
+    const field = {};
+    for (const part of new Intl.DateTimeFormat('en-CA', options).formatToParts(new Date())) {
+      field[part.type] = part.value;
+    }
+
+    return {
+      date: `${field.year}-${field.month}-${field.day}`,
+      // Midnight comes back as 24 rather than 00 in some engines.
+      hour: String(Number(field.hour) % 24).padStart(2, '0'),
+    };
+  }
+
+  /**
+   * Convert one of Open-Meteo's hourly stamps to a timestamp.
+   *
+   * They arrive as 'YYYY-MM-DDTHH:MM' with no offset, in the location's own
+   * timezone, so new Date() would read them as the viewer's local time.
+   *
+   * @param {string} isoLocal - Local time string from the API.
+   * @param {string} timezone - Timezone identifier.
+   * @returns {number|null} Timestamp or null if invalid.
+   */
+  function parseHourTimestamp(isoLocal, timezone) {
+    if (typeof isoLocal !== 'string') return null;
+    const [datePart, timePart] = isoLocal.split('T');
+    if (!datePart || !timePart) return null;
+    return parseTimeToTimestamp(datePart, timePart.slice(0, 5), timezone);
   }
 
   /**
@@ -214,7 +291,7 @@
 
     for (let i = startIndex; i < endIndex; i++) {
       const hour = hourly[i];
-      const hourDate = new Date(hour.time);
+      const hourDate = new Date(parseHourTimestamp(hour.time, timezone));
       const sunlightClass = getSunlightClass(hour, hourDate, dayData, timezone);
       totalScore += calculatePhotoScore(hour, sunlightClass);
       count++;
@@ -370,8 +447,13 @@
   const ForecastScoring = {
     // Time and light phases.
     parseTimeToTimestamp,
+    parseHourTimestamp,
+    timezoneOffset,
     getSunlightFallback,
     getSunlightClass,
+
+    nowInTimezone,
+    findHourIndex,
 
     // Scores.
     calculatePhotoScore,

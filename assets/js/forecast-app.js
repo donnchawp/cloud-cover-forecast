@@ -33,6 +33,9 @@
   // forecast-scoring.js, which must load before this file.
   const {
     parseTimeToTimestamp,
+    parseHourTimestamp,
+    nowInTimezone,
+    findHourIndex,
     getSunlightClass,
     calculatePhotoScore,
     calculateWindowScore,
@@ -1514,28 +1517,13 @@
     if (hourly.length === 0) return '';
 
     const timezone = forecast.location?.timezone;
-    const now = new Date();
 
-    // Get current hour in the location's timezone
-    const nowInTz = timezone
-      ? new Date(now.toLocaleString('en-US', { timeZone: timezone }))
-      : now;
-    const currentHour = nowInTz.getHours();
-    const todayStr = nowInTz.toISOString().split('T')[0];
-
-    // Find current hour index for auto-scroll.
-    let currentHourIndex = -1;
-    hourly.forEach((hour, index) => {
-      // Parse hour time in location timezone
-      const hourDate = new Date(hour.time);
-      const hourInTz = timezone
-        ? new Date(hourDate.toLocaleString('en-US', { timeZone: timezone }))
-        : hourDate;
-      const hourDateStr = hourInTz.toISOString().split('T')[0];
-      if (hourDateStr === todayStr && hourInTz.getHours() === currentHour) {
-        currentHourIndex = index;
-      }
-    });
+    // Match the current hour by comparing strings against the API's own local
+    // stamps. Building a Date from toLocaleString() and reading it back with
+    // toISOString() re-applies the viewer's offset, which put this an hour out
+    // for anyone not on UTC.
+    const now = nowInTimezone(timezone);
+    const currentHourIndex = findHourIndex(hourly, now.date, now.hour + ':00');
 
     return `
       <div class="forecast-grid-container" id="forecast-grid">
@@ -1600,11 +1588,8 @@
     return `
       <div class="grid-data" id="grid-data">
         ${hourly.map((hour, index) => {
-          const hourDate = new Date(hour.time);
-          // Get date string in location timezone
-          const dateStr = timezone
-            ? hourDate.toLocaleDateString('en-CA', { timeZone: timezone })
-            : hourDate.toISOString().split('T')[0];
+          // hour.time already carries the location's own date; no conversion.
+          const dateStr = hour.time.split('T')[0];
           const isNewDay = dateStr !== lastDate;
           lastDate = dateStr;
           const isCurrent = index === currentHourIndex;
@@ -1632,7 +1617,7 @@
    * @returns {string} HTML string.
    */
   function renderHourColumn(hour, index, isNewDay, isCurrent, isPast, moon, dayData, timezone, dateStr) {
-    const hourDate = new Date(hour.time);
+    const hourDate = new Date(parseHourTimestamp(hour.time, timezone));
     const timeStr = formatDateTime(hour.time, 'hour', timezone);
     const dayLabel = isNewDay ? formatDateTime(hour.time, 'day', timezone) : '';
     const wind = getWindDirection(hour.wind_direction);

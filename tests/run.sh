@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Run every test. No dependencies beyond node and php.
+#
+# The JS tests run under two timezones. A whole class of bug here is invisible
+# on UTC — the old wall-clock conversion was wrong by exactly the viewer's own
+# offset, so it looked perfect in a default CI container and was an hour out
+# in Ireland all summer.
 set -u
 cd "$(dirname "$0")/.."
 
 status=0
+
 echo "=== syntax ==="
 for f in assets/js/forecast-app.js assets/js/forecast-scoring.js pwa/service-worker.js; do
   node --check "$f" || status=1
@@ -13,10 +19,14 @@ for f in includes/*.php templates/*.php cloud-cover-forecast.php; do
 done
 echo "ok"
 
-for f in tests/*.test.js; do
+for tz in UTC Pacific/Auckland; do
   echo
-  echo "=== $f ==="
-  node "$f" || status=1
+  echo "############ TZ=$tz ############"
+  for f in tests/*.test.js; do
+    echo
+    echo "=== $f ==="
+    TZ="$tz" node "$f" || status=1
+  done
 done
 
 echo
