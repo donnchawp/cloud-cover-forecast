@@ -38,10 +38,10 @@
     findHourIndex,
     getSunlightClass,
     calculatePhotoScore,
-    calculateWindowScore,
     getScoreClass,
     getScoreLabel,
-    sunriseSunsetScore,
+    sunriseSunsetRange,
+    bandScore,
   } = ForecastScoring;
 
   // ============================================================
