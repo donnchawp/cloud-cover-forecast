@@ -4,7 +4,7 @@ Tags: weather, cloud cover, forecast, photography, astronomy
 Requires at least: 5.0
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ This ensures photographers and astronomy enthusiasts get the most accurate astro
 5. Mobile-responsive display
 
 == Changelog ==
+
+= 1.1.2 =
+* Fixed: Choosing dark mode while the device was set to light left most text dark on a dark background, and the browser status bar kept the light colour
 
 = 1.1.1 =
 * Fixed: All times in the PWA were out by the viewer's own UTC offset - an hour in Ireland during summer time. Sunrise showed as "in 22 minutes" when it was 81 minutes away, and the golden and blue hour shading in the hourly grid was shifted by the same amount

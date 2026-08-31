@@ -29,9 +29,11 @@ for tz in UTC Pacific/Auckland; do
   done
 done
 
-echo
-echo "=== tests/solar.test.php ==="
-php tests/solar.test.php 2>/dev/null || status=1
+for f in tests/*.test.php; do
+  echo
+  echo "=== $f ==="
+  php "$f" 2>/dev/null || status=1
+done
 
 echo
 if [ "$status" -eq 0 ]; then echo "ALL TESTS PASSED"; else echo "FAILURES"; fi

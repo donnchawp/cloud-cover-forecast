@@ -247,6 +247,29 @@ reset them and let the site exceed a provider's limits.
 
 This section should be updated when committing changes to track modifications.
 
+### Fix dark mode when it is chosen rather than inherited (2026-08-31)
+
+Choosing dark while the device was set to light left most text dark on a dark
+background. Anything with an explicit `color` was fine, which is why the score
+bands and times still read while the headings, day label and phase labels did
+not.
+
+`forecast-app.css` sets `body { color: var(--text-primary) }`, but the critical
+CSS inlined in `pwa-app.php` sits *after* the stylesheet link and also sets
+`body { color }`. Equal specificity, so the later one wins — and it only
+handled `@media (prefers-color-scheme: dark)`, never the `.dark-mode` and
+`.light-mode` classes `applyTheme()` puts on `<html>`. On a light system those
+media rules never matched, so `body` kept the light text colour while the app
+painted dark backgrounds.
+
+- Critical CSS gains `.dark-mode body` and `.light-mode body` rules.
+- `applyThemeColor()` (new) points both `theme-color` meta tags at the chosen
+  colour, so an explicit choice reaches the browser status bar. They are
+  qualified by `prefers-color-scheme`, so on their own they ignored the toggle.
+- `tests/theme.test.php` checks the inline values against the stylesheet's
+  tokens, since the two now have to be kept in step by hand.
+  `tests/theme-color.test.js` covers the meta tags across the toggle cycle.
+
 ### Fix timezone conversion throughout the PWA (2026-08-31)
 
 Every wall-clock time in the PWA was converted wrongly, by exactly the

@@ -27,6 +27,8 @@ times must pass under both.
 | `scoring.test.js` | Sunrise/sunset colour score ordering and missing-data handling |
 | `stale-shell.test.js` | A page cached before `forecast-scoring.js` existed fails visibly |
 | `timezone.test.js` | Wall-clock conversion, DST boundaries, current-hour matching |
+| `theme-color.test.js` | Browser theme-color follows an explicit theme choice |
+| `theme.test.php` | Critical CSS covers all three theme states and matches the tokens |
 | `solar.test.php` | Solar phase times vs Alpenglow, plus a worldwide year-long sweep |
 
 `harness.js` stubs just enough DOM to run the real `forecast-app.js` under
@@ -34,7 +36,9 @@ node and read back what it rendered.
 
 ## What these tests are not
 
-**They check markup and logic, never pixels.** Nothing here renders CSS. The
+**They check markup and logic, never pixels.** `theme.test.php` compares
+colour *values* between two files; it cannot tell you whether the result looks
+right, only that the two stay in step. Nothing here renders CSS. The
 bottom tab bar, the safe-area inset, the picker overlay, the score rings and
 dark mode are all unverified by this suite; only a browser will tell you.
 

@@ -54,10 +54,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 			background: #f5f5f5;
 			color: #111827;
 		}
+		/* Follow the system when the app is set to "auto"... */
 		@media (prefers-color-scheme: dark) {
 			body { background: #0f172a; color: #f8fafc; }
 			.app-loading-spinner { border-color: #334155; border-top-color: #4ade80; }
 		}
+		/* ...and obey an explicit choice regardless of the system.
+		   applyTheme() puts these on <html>. This block is inlined AFTER the
+		   stylesheet link, so it wins over `body { color: var(--text-primary) }`
+		   in forecast-app.css on equal specificity. Without the class rules,
+		   choosing dark on a light system left dark text on a dark background
+		   for every element that inherits its colour. Keep these values in step
+		   with the tokens in forecast-app.css; tests/theme.test.php checks. */
+		.dark-mode body { background: #0f172a; color: #f8fafc; }
+		.dark-mode .app-loading-spinner { border-color: #334155; border-top-color: #4ade80; }
+		.light-mode body { background: #f5f5f5; color: #111827; }
+		.light-mode .app-loading-spinner { border-color: #e5e7eb; border-top-color: #16a34a; }
 		#app { display: flex; flex-direction: column; height: 100%; }
 		.app-loading {
 			display: flex;

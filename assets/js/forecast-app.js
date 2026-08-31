@@ -416,6 +416,35 @@
       html.classList.add('dark-mode');
     }
     // 'auto' uses prefers-color-scheme media query (no class needed)
+
+    applyThemeColor();
+  }
+
+  // Must match --bg-primary in forecast-app.css and the critical CSS in
+  // pwa-app.php. tests/theme.test.php checks those two against each other.
+  const THEME_COLOR = { light: '#f5f5f5', dark: '#0f172a' };
+
+  /**
+   * Keep the browser's theme-color in step with an explicit theme choice.
+   *
+   * The two meta tags are qualified by prefers-color-scheme, so on their own
+   * they follow the system and ignore the toggle — choosing dark on a light
+   * phone left the status bar light. Pointing both at the chosen colour makes
+   * whichever one matches give the right answer.
+   */
+  function applyThemeColor() {
+    const light = document.querySelector('meta[name="theme-color"][media*="light"]');
+    const dark = document.querySelector('meta[name="theme-color"][media*="dark"]');
+    if (!light || !dark) return;
+
+    if (state.theme === 'dark' || state.theme === 'light') {
+      light.setAttribute('content', THEME_COLOR[state.theme]);
+      dark.setAttribute('content', THEME_COLOR[state.theme]);
+      return;
+    }
+
+    light.setAttribute('content', THEME_COLOR.light);
+    dark.setAttribute('content', THEME_COLOR.dark);
   }
 
   /**
