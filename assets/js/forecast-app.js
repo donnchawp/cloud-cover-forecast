@@ -1015,6 +1015,40 @@
   }
 
   /**
+   * Everything the views need to present a score range.
+   *
+   * Both renderers derived these independently, including the translated
+   * fallbacks, so the accessible phrasing and the en-dash display rule each
+   * lived in two places and could drift. bandScore() centralises which end of
+   * the range is banded on; this centralises how the range is spoken and
+   * written.
+   *
+   * @param {Object} range - A sunriseSunsetRange() result.
+   * @returns {Object} {band, label, isRange, text, value, sourceNote}.
+   */
+  function describeRange(range) {
+    const band = bandScore(range);
+    const isRange = range.high > range.low;
+    return {
+      band,
+      label: scoreBandLabel(band),
+      isRange,
+      // Display form: an en-dash span, or a plain percentage when the
+      // sources agree.
+      text: isRange ? `${range.low}&#8211;${range.high}` : `${band}%`,
+      // Spoken form. Agreement and single-source both draw a bare number;
+      // the dashed track separates them visually, and sourceNote is the only
+      // thing that separates them for a screen reader.
+      value: isRange
+        ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
+        : `${band} percent`,
+      sourceNote: 2 === range.sources
+        ? (strings.twoSources || 'two sources')
+        : (strings.oneSource || 'one source'),
+    };
+  }
+
+  /**
    * Time of a sunrise or sunset on a given day, as HH:MM.
    * @param {Object} day - Daily data.
    * @param {string} event - 'sunrise' or 'sunset'.
@@ -1110,17 +1144,7 @@
       `;
     }
 
-    const band = bandScore(range);
-    const label = scoreBandLabel(band);
-    // Agreement and single-source both draw a bare number. The dashed track
-    // separates them visually; only these words separate them for a screen
-    // reader, which never sees the ring.
-    const value = range.high > range.low
-      ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
-      : `${band} percent`;
-    const sourceNote = 2 === range.sources
-      ? (strings.twoSources || 'two sources')
-      : (strings.oneSource || 'one source');
+    const { band, label, value, sourceNote } = describeRange(range);
     const aria = `${eventName} ${dayLabel(day.date, dayIndex)} ${time}, ${label}, ${value}, ${sourceNote}`;
 
     return `
@@ -1254,20 +1278,11 @@
       `;
     }
 
-    const band = bandScore(range);
-    const label = scoreBandLabel(band);
-    const isRange = range.high > range.low;
+    const { band, label, isRange, text, value, sourceNote } = describeRange(range);
+
     // The tail runs zero to high behind the solid zero-to-low fill. Visually
     // the same as a low-to-high span, without positioning a floated segment
     // inside a flow layout.
-    const text = isRange ? `${range.low}&#8211;${range.high}` : `${band}%`;
-    const value = isRange
-      ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
-      : `${band} percent`;
-    const sourceNote = 2 === range.sources
-      ? (strings.twoSources || 'two sources')
-      : (strings.oneSource || 'one source');
-
     return `
       <div class="day-hero ${getScoreClass(band)}">
         <h2 class="day-hero-title">${escapeHtml(name)}</h2>
