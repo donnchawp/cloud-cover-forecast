@@ -1200,9 +1200,8 @@ class Cloud_Cover_Forecast_API {
 			// The stamp carries no offset, so the zone must be supplied.
 			// Doing this with strtotime() or gmdate() uses the server's own
 			// timezone and is wrong by exactly that offset.
-			try {
-				$target = ( new DateTimeImmutable( $stamp, $tz ) )->getTimestamp();
-			} catch ( Exception $e ) {
+			$target = $this->to_timestamp_in_timezone( $stamp, $tz );
+			if ( null === $target ) {
 				continue;
 			}
 
