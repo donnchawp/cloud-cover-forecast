@@ -74,7 +74,7 @@ function buildForecast(options = {}) {
         time: date + 'T' + String(h).padStart(2, '0') + ':00',
         cloud_low: sky.low, cloud_mid: sky.mid, cloud_high: sky.high,
         cloud_total: Math.max(sky.low, sky.mid, sky.high),
-        rain_chance: 0, visibility: 20000, wind_speed: 8,
+        rain_chance: options.rainChance || 0, visibility: 20000, wind_speed: 8,
         temperature: 14, is_day: (h > 6 && h < 20) ? 1 : 0,
       });
       if (options.metNoSkies && options.metNoSkies[d]) {

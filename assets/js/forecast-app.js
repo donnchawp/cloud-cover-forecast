@@ -1274,7 +1274,8 @@
         <p class="day-hero-band">${escapeHtml(label)}</p>
         <div class="day-hero-meter" role="img" aria-label="${escapeHtml(`${label}, ${value}, ${sourceNote}`)}">
           ${isRange ? `<div class="day-hero-meter-tail" style="width: ${range.high}%"></div>` : ''}
-          <div class="day-hero-meter-fill" style="width: ${range.low}%"><span>${text}</span></div>
+          <div class="day-hero-meter-fill" style="width: ${range.low}%"></div>
+          <span class="day-hero-meter-label">${text}</span>
         </div>
         <p class="day-hero-time">${escapeHtml(time)}</p>
         ${relative ? `<p class="day-hero-relative">${escapeHtml(relative)}</p>` : ''}

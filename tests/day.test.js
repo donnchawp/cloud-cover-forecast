@@ -75,7 +75,12 @@ function runDualSourceChecks(t) {
     t.section('Day hero, sources disagree:');
     t.assert('draws a tail fill', ranged.rendered.includes('day-hero-meter-tail'));
     t.assert('the meter label is a range',
-      /day-hero-meter-fill[^>]*><span>\d+&#8211;\d+<\/span>/.test(ranged.rendered));
+      /<span class="day-hero-meter-label">\d+&#8211;\d+<\/span>/.test(ranged.rendered));
+    // The label used to live inside the fill with min-width:3ch. "7%" fitted
+    // and "7-47" did not, so a low score clipped its own number against the
+    // meter's overflow:hidden. The fill must stay empty.
+    t.assert('the fill carries no text of its own',
+      /<div class="day-hero-meter-fill"[^>]*><\/div>/.test(ranged.rendered));
     t.assert('the aria label names two sources', ranged.rendered.includes('two sources'));
 
     t.section('Cloud by source panel:');
@@ -109,6 +114,29 @@ function runDualSourceChecks(t) {
     t.assert('draws no tail fill', !solo.rendered.includes('day-hero-meter-tail'));
     t.assert('shows no comparison panel', !solo.rendered.includes('cloud-by-source'));
     t.assert('the aria label says one source', solo.rendered.includes('one source'));
+
+    // Durrus, 2026-09-01 sunset, as both APIs actually reported it: 84 points
+    // of disagreement on the gating layer, which drives the score near zero
+    // and opens a very wide range. This is what clipped the label.
+    const extreme = install({
+      forecast: buildForecast({
+        skies: fill({ low: 94, mid: 100, high: 100 }),
+        metNoSkies: fill({ low: 10, mid: 100, high: 98 }),
+        rainChance: 90,
+      }),
+    });
+    await tick();
+    extreme.tabs.outlook();
+    extreme.click({ action: 'open-day', day: '0', event: 'sunset' });
+
+    t.section('Day hero, sources disagree hugely (real Durrus data):');
+    const low = Number((extreme.rendered.match(/day-hero-meter-fill" style="width: (\d+)%/) || [])[1]);
+    const labelled = (extreme.rendered.match(/day-hero-meter-label">([^<]+)</) || [])[1];
+    console.log('    fill width ' + low + '%, label "' + labelled + '"');
+    t.assert('the bar is far too narrow to hold its own label (' + low + '%)', low < 15);
+    t.assert('the label still renders in full', /^\d+&#8211;\d+$/.test(labelled || ''));
+    t.assert('and sits outside the fill, which stays empty',
+      /<div class="day-hero-meter-fill"[^>]*><\/div>/.test(extreme.rendered));
 
     console.log('\n' + t.passed + ' passed, ' + t.failed + ' failed');
   })();
