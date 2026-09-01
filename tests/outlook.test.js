@@ -106,6 +106,32 @@ function runDualSourceChecks(t) {
     t.assert('the notice explains why',
       solo.rendered.includes('Second forecast source unavailable'));
 
+    // Open-Meteo sees 85% low cloud, so the horizon gate is shut and Met.no's
+    // high cloud cannot move the score however much it disagrees. The card
+    // must not read as corroborated.
+    const closed = install({
+      forecast: buildForecast({
+        skies: fill({ low: 85, mid: 100, high: 100 }),
+        metNoSkies: fill({ low: 5, mid: 100, high: 2 }),
+      }),
+    });
+    await tick();
+    closed.tabs.outlook();
+
+    t.section('Outlook, horizon gate shut:');
+    t.assert('the track is marked horizon-closed', closed.rendered.includes('is-horizon-closed'));
+    t.assert('and not marked single-source, which it is not',
+      !closed.rendered.includes('is-single-source'));
+    t.assert('draws no tail arc, because the range has no width',
+      !closed.rendered.includes('score-ring-tail'));
+    // The aria label is an attribute, so it ends at a quote, not a tag. An
+    // earlier version of this assertion matched against '<' and could never
+    // fail. "two sources" alone is the claim that must not stand here.
+    t.assert('the aria label never leaves "two sources" unqualified',
+      !/two sources(?!,\s*horizon closed)/.test(closed.rendered));
+    t.assert('it says the horizon was closed',
+      closed.rendered.includes('two sources, horizon closed'));
+
     // A payload cached before this feature: no met_no keys, no flag at all.
     const legacyForecast = buildForecast({ skies: fill(OPEN_METEO_SKY) });
     delete legacyForecast.met_no_available;

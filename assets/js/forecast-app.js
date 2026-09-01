@@ -1042,8 +1042,13 @@
       value: isRange
         ? formatString(strings.scoreRange || '%1$s to %2$s percent', range.low, range.high)
         : `${band} percent`,
+      // A shut horizon gate means the second source was consulted and could
+      // not act, so the bare "two sources" would promise a corroboration the
+      // number does not have.
       sourceNote: 2 === range.sources
-        ? (strings.twoSources || 'two sources')
+        ? (range.horizonClosed
+          ? (strings.twoSourcesHorizonClosed || 'two sources, horizon closed')
+          : (strings.twoSources || 'two sources'))
         : (strings.oneSource || 'one source'),
     };
   }
@@ -1087,13 +1092,20 @@
    * @returns {string} SVG markup.
    */
   function renderScoreRing(range) {
-    const { low, high, sources } = range;
+    const { low, high, sources, horizonClosed } = range;
     const isRange = high > low;
+    // Three track states, not two. Plain means the comparison ran; dashed
+    // means there was no second source; horizon-closed means there was one
+    // and the gate stopped it acting. The last two both say "this number is
+    // not corroborated", so they share a dash family and differ in rhythm.
+    const trackState = 1 === sources
+      ? ' is-single-source'
+      : (horizonClosed ? ' is-horizon-closed' : '');
     // r chosen so the circumference is 100 and stroke-dasharray takes the
     // score directly.
     return `
       <svg class="score-ring${isRange ? ' has-range' : ''}" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
-        <circle class="score-ring-track${1 === sources ? ' is-single-source' : ''}" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
+        <circle class="score-ring-track${trackState}" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"></circle>
         ${isRange ? `<circle class="score-ring-tail" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"
           stroke-dasharray="${high - low} 100" stroke-dashoffset="-${low}" transform="rotate(-90 18 18)"></circle>` : ''}
         <circle class="score-ring-value" cx="18" cy="18" r="15.915" fill="none" stroke-width="3"
@@ -1295,7 +1307,7 @@
         <p class="day-hero-time">${escapeHtml(time)}</p>
         ${relative ? `<p class="day-hero-relative">${escapeHtml(relative)}</p>` : ''}
       </div>
-      ${renderCloudBySource(forecast, day, event)}
+      ${renderCloudBySource(forecast, day, event, range.horizonClosed)}
     `;
   }
 
@@ -1311,7 +1323,7 @@
    * @param {string} event - 'sunrise' or 'sunset'.
    * @returns {string} HTML string, empty when there is no second reading.
    */
-  function renderCloudBySource(forecast, day, event) {
+  function renderCloudBySource(forecast, day, event, horizonClosed) {
     const time = (day.twilight || {})[event];
     if (!time) return '';
 
@@ -1353,7 +1365,9 @@
             `).join('')}
           </tbody>
         </table>
-        <p class="cloud-by-source-note">${escapeHtml(strings.bandsDiffer || 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.')}</p>
+        <p class="cloud-by-source-note">${escapeHtml(horizonClosed
+          ? (strings.horizonClosed || 'Low cloud closed the horizon here, so the high row could not change the score. The two numbers match because the comparison had nothing to act on, not because the sources agree.')
+          : (strings.bandsDiffer || 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.'))}</p>
       </section>
     `;
   }

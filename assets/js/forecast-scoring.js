@@ -474,6 +474,7 @@
     let metTotal = 0;
     let count = 0;
     let metCount = 0;
+    let shutCount = 0;
 
     for (const offset of MET_NO_SAMPLE_OFFSETS) {
       const i = eventIndex + offset;
@@ -484,6 +485,11 @@
 
       openTotal += scoreLightHour(hour, isGlow);
       count++;
+
+      // clarity is max(0, 1 - cloudLow / HORIZON_BLOCKED_AT), so at or above
+      // the threshold the canvas term is multiplied by zero and Met.no's high
+      // cloud provably cannot move this hour's score.
+      if ((hour.cloud_low || 0) >= HORIZON_BLOCKED_AT) shutCount++;
 
       const met = hour.met_no;
       if (!met || met.high == null) continue;
@@ -502,11 +508,22 @@
     // compare a two-hour mean against a one-hour mean, which is not a
     // comparison.
     if (metCount !== count) {
-      return { low: open, high: open, sources: 1 };
+      // Already signalled by sources:1. Flagging the gate here too would put
+      // two marks on one card for one fact.
+      return { low: open, high: open, sources: 1, horizonClosed: false };
     }
 
     const met = Math.round(metTotal / metCount);
-    return { low: Math.min(open, met), high: Math.max(open, met), sources: 2 };
+    // Every sampled hour shut, so the second source was consulted and could
+    // not act. The views need this to tell "the sources agree" apart from
+    // "the comparison had nothing to act on" -- a collapsed range alone says
+    // the first and means the second.
+    return {
+      low: Math.min(open, met),
+      high: Math.max(open, met),
+      sources: 2,
+      horizonClosed: shutCount === count,
+    };
   }
 
   /**

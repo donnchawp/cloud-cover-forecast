@@ -1,84 +1,81 @@
 # Known issues
 
-Real defects found and deliberately not fixed yet, with the evidence that
-found them. Each needs a design decision, not just a patch.
+Defects found by work on this repo, with the evidence that found them, and
+what was decided about each. Entries stay here once resolved so the reasoning
+survives; the status line says where each one stands.
 
 ---
 
-## 1. The dual-source range collapses exactly when the sources disagree most
+## 1. The dual-source range collapses when the horizon gate shuts
 
-**Status:** open. Found 2026-09-01 while looking at Ahakista in the PWA.
-**Path:** `assets/js/forecast-scoring.js`, `sunriseSunsetRange()` and
-`scoreLightHour()`.
+**Status:** understood and signalled, not "fixed" — because there is nothing
+sound to fix in the score. Recorded 2026-09-01, corrected the same day.
 
-`sunriseSunsetRange()` substitutes only Met.no's `cloud_high` into the score.
-That is correct as far as it goes — the providers band the sky differently
-(Open-Meteo low is 0–3 km, Met.no 0–2 km), so their low and mid figures are not
-the same measurement and cannot be dropped into a formula tuned on Open-Meteo's.
-`tests/range.test.js` has a test named *"Met.no low and mid cloud are
-deliberately ignored"* guarding that.
-
-The problem is what `scoreLightHour()` then does with high cloud:
-
-```js
-const canvas  = min(MAX_CANVAS, interpolate(cloudHigh, ...) * (glow ? 1.5 : 1)
-                                + interpolate(cloudMid, ...));
-const clarity = Math.max(0, 1 - (cloudLow / HORIZON_BLOCKED_AT));  // 70
-let   score   = 40 + (canvas * clarity);
-```
-
-High cloud only reaches the score through `canvas * clarity`. Once **Open-Meteo's**
-low cloud reaches `HORIZON_BLOCKED_AT` (70), `clarity` is 0 and high cloud
-contributes nothing at all. Both sources then return an identical score, the
-range collapses to a point, and the card renders as a single confident number
-with no tail.
-
-Measured, holding mid at 100 and sweeping high cloud from 0 to 100:
+`scoreLightHour()` computes `clarity = max(0, 1 - cloudLow / 70)` and reaches
+high cloud only through `canvas * clarity`. Once Open-Meteo's low cloud hits 70
+the canvas term is multiplied by zero, so substituting Met.no's high cloud
+provably cannot change the score. Both sources land on the same number and the
+range collapses to a point:
 
 | Open-Meteo low | score at high=0 | at high=100 | spread |
 |---|---|---|---|
-| 0% | 40 | 58 | 18 |
 | 40% | 34 | 42 | 8 |
-| 55% | 32 | 36 | 4 |
 | 65% | 30 | 32 | 2 |
-| **69%** | 30 | 30 | **0** |
+| **70%** | 30 | 30 | **0** |
 | **82%** | 28 | 28 | **0** |
 
-### Why this matters
+### This was a known consequence, not an oversight
 
-The observed case: Ahakista sunset, 2026-09-01. Open-Meteo read low cloud at
-**82%**, Met.no at **10%** — a 72-point disagreement on the layer that gates the
-whole score. The card rendered "Poor, 9%" with no range at all, because the only
-layer being compared had already been multiplied by zero.
+An earlier revision of this file presented the collapse as an undiscovered
+defect. It was not. `docs/superpowers/specs/2026-09-01-dual-source-confidence-design.md`
+has a section headed *"Consequence: the range is usually narrow"* that names
+this exact mechanism, measures it (mean range width 1.1, median 0), and
+concludes: *"This is the honest width. The wide ranges the first implementation
+produced were mostly a unit mismatch."*
 
-That is the feature's own reason for existing. From `reference.md`:
+### Why substituting Met.no's low cloud would be a regression
 
-> Open-Meteo reads low cloud 16 points cloudier (mean 69.9 vs 53.4). Low cloud
-> is the gate in `scoreLightHour()`, so the PWA was systematically pessimistic
-> by construction.
+The gate models cloud blocking light along a path that skims the horizon.
+Open-Meteo's low band is 0–3 km; Met.no's is 0–2 km. A deck at 2–3 km blocks
+low-angle light and is exactly what Met.no's band excludes, so for a *horizon*
+gate the wider band is the more appropriate measurement. Met.no's low
+under-measures the thing the gate cares about and its low+mid (0–5 km)
+over-measures it. The design doc's probe agrees: Open-Meteo read higher in 18 of
+20 locations, which is what band geometry alone predicts. The two sources agree
+on total cloud to 10.1 points while differing 51.9 on low — they agree how much
+cloud there is and disagree about where it sits.
 
-Open-Meteo's **mean** low-cloud reading across that probe was 69.9%, sitting
-right on the 70 gate. So the collapse is not an edge case: it happens on roughly
-half of all events, and specifically on the pessimistic ones the range was built
-to put a question mark against.
+So the observed Ahakista case (Open-Meteo low 82%, Met.no low 10%) is consistent
+with a deck at 2–3 km that both models see and file differently. Feeding Met.no's
+low into the gate would reintroduce precisely the unit mismatch the design doc's
+"Correction" section removed.
 
-### What a fix has to decide
+### What was actually wrong, and what was done
 
-Not "compare low cloud too" — that is the substitution the band mismatch already
-rules out. The real question is what the range should express when the two
-sources disagree about whether the horizon is open at all. Sketches, none chosen:
+The defect was in the presentation, not the arithmetic. A collapsed range means
+"the two sources agree". Under a shut gate it also means "the second source
+could not act" — a different claim, drawn identically. The card read as
+corroborated when it was merely unexamined.
 
-- Gate on a **range of clarity** rather than Open-Meteo's single figure, deriving
-  each source's gate from its own low reading and accepting that the two gates
-  are measured over different altitudes — an approximation, but a declared one.
-- Keep the score single-source and surface low-cloud disagreement as a separate
-  explicit signal, rather than trying to push it through the score.
-- Recalibrate `HORIZON_BLOCKED_AT` per source.
+`sunriseSunsetRange()` now returns `horizonClosed`, true when two sources were
+found and every sampled hour sat at or above the gate. It drives three things:
 
-Whatever is chosen needs a note in the UI: a collapsed range currently means
-"the sources agree", and under this bug it can also mean "we could not tell".
+- the Outlook ring track gets `is-horizon-closed`, a finer dash in the same
+  family as the single-source dash, since both mean "not corroborated";
+- the day view's "Cloud by source" note explains that the high row could not
+  change the score;
+- the accessible label says "two sources, horizon closed" rather than the bare
+  "two sources".
 
----
+No score changed. `tests/range.test.js` covers the flag, including the exact
+threshold boundary, and asserts the flag is never set on a range with width.
+
+### Still open
+
+Whether the range is worth its complexity at all. The design doc measured
+"band differs across range: 0%" after the correction — the range essentially
+never changes the word shown to the reader. That is a product question, not a
+bug.
 
 ## 2. The shortcode path presents a band mismatch as forecast disagreement
 
@@ -112,5 +109,7 @@ screen reader gets it and a sighted viewer does not, which is the wrong way
 round from the usual gap.
 
 The ring track's contrast was fixed on 2026-09-01
-(`--ring-track-single`, `tests/theme.test.php`); this is the remaining half of
-the same signal.
+(`--ring-track-uncorroborated`, `tests/theme.test.php`), and the ring gained a
+third state for a shut horizon gate. The day hero still has neither signal:
+it draws a tail or it does not, and every other distinction is in the
+`aria-label` only.

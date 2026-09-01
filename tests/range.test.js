@@ -122,6 +122,53 @@ const open = S.sunriseSunsetRange(
 assert('the same disagreement opens a range at 20% low cloud', open.high > open.low);
 console.log(`    gate shut: ${shut.low}-${shut.high}   gate open: ${open.low}-${open.high}`);
 
+console.log('\nThe shut gate is reported, not just suffered:');
+// A collapsed range means "the two sources agree". Under a shut gate it also
+// means "the second source could not act", which is a different claim: the
+// numbers match because Met.no's high cloud was multiplied by zero, not
+// because Met.no corroborated anything. The views cannot tell those apart
+// without being told.
+assert('a shut gate is flagged', true === shut.horizonClosed);
+assert('an open gate is not', false === open.horizonClosed);
+assert('nor is a plain agreement with the gate open', false === agreed.horizonClosed);
+
+// One source is already signalled by sources:1 and drawn as a dashed track.
+// Flagging it here too would put two marks on one card for one fact.
+assert('a single source is not flagged', false === soloRange.horizonClosed);
+
+// The flag claims the comparison was inert. If it is ever set on a range with
+// width, that claim is false and the note the day view prints is a lie.
+assert('the flag is never set on a range that has width',
+  !shut.horizonClosed || shut.low === shut.high);
+
+// clarity is max(0, 1 - cloudLow / 70), so at exactly 70 it is zero and the
+// gate is already shut. Nothing else in this file sits on the boundary, so
+// >= vs > in the check was previously untestable.
+const onBoundary = S.sunriseSunsetRange(
+  buildHours({ low: 70, mid: 100, high: 100 }, bothHours(MET_NO)), day, 'sunset');
+assert('exactly at the threshold the gate is already shut', true === onBoundary.horizonClosed);
+assert('and the range really does have no width there',
+  onBoundary.high === onBoundary.low);
+const justUnder = S.sunriseSunsetRange(
+  buildHours({ low: 69, mid: 100, high: 100 }, bothHours(MET_NO)), day, 'sunset');
+assert('one point under, it is not', false === justUnder.horizonClosed);
+
+// Both sampled hours must be shut. If either one is open, Met.no's high cloud
+// can still move that hour's score, so the comparison did run.
+const halfShut = [];
+for (let h = 0; h < 24; h++) {
+  const low = 21 === h ? 73 : 20;
+  halfShut.push({
+    time: `${DATE}T${String(h).padStart(2, '0')}:00`,
+    cloud_low: low, cloud_mid: 100, cloud_high: 100,
+    cloud_total: 100, rain_chance: 0, visibility: 20000,
+    met_no: Object.assign({}, MET_NO),
+  });
+}
+const halfShutRange = S.sunriseSunsetRange(halfShut, day, 'sunset');
+assert('one open hour out of two is not a shut gate', false === halfShutRange.horizonClosed);
+assert('and that open hour still opens a range', halfShutRange.high > halfShutRange.low);
+
 console.log('\nMissing data:');
 assert('no twilight time returns null',
   null === S.sunriseSunsetRange(buildHours(OPEN_METEO), { date: DATE, twilight: {} }, 'sunset'));
