@@ -199,6 +199,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 				fontSize: <?php echo wp_json_encode( __( 'Font size', 'cloud-cover-forecast' ) ); ?>,
 				// Photo score label
 				photoScore: <?php echo wp_json_encode( __( 'Photo', 'cloud-cover-forecast' ) ); ?>,
+				// Dual-source confidence
+				cloudBySource: <?php echo wp_json_encode( __( 'Cloud by source', 'cloud-cover-forecast' ) ); ?>,
+				sourceOpenMeteo: <?php echo wp_json_encode( __( 'Open-Meteo', 'cloud-cover-forecast' ) ); ?>,
+				sourceMetNo: <?php echo wp_json_encode( __( 'Met.no', 'cloud-cover-forecast' ) ); ?>,
+				bandsDiffer: <?php echo wp_json_encode( __( 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.', 'cloud-cover-forecast' ) ); ?>,
+				secondSourceUnavailable: <?php echo wp_json_encode( __( 'Second forecast source unavailable', 'cloud-cover-forecast' ) ); ?>,
+				oneSource: <?php echo wp_json_encode( __( 'one source', 'cloud-cover-forecast' ) ); ?>,
+				twoSources: <?php echo wp_json_encode( __( 'two sources', 'cloud-cover-forecast' ) ); ?>,
+				/* translators: 1: low score, 2: high score. */
+				scoreRange: <?php echo wp_json_encode( __( '%1$s to %2$s percent', 'cloud-cover-forecast' ) ); ?>,
 				// Jump button labels
 				jumpToNow: <?php echo wp_json_encode( __( 'Jump to now', 'cloud-cover-forecast' ) ); ?>,
 				previousDay: <?php echo wp_json_encode( __( 'Previous day', 'cloud-cover-forecast' ) ); ?>,

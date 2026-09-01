@@ -408,17 +408,55 @@
   }
 
   /**
-   * Score a sunrise or sunset for colour.
+   * Offsets from the event hour that the score samples.
    *
-   * Samples the hour holding the event and the hour after it, treating the
-   * one furthest from midday as the glow hour.
-   *
-   * @param {Array} hourly - Array of hourly data.
-   * @param {Object} dayData - Daily data, including twilight times.
-   * @param {string} event - 'sunrise' or 'sunset'.
-   * @returns {number|null} Score from 0-100, or null when data is missing.
+   * PHP attaches Met.no readings to eventIndex-1 .. eventIndex+2 (see
+   * MET_NO_WINDOW_BEFORE in includes/class-api.php). Widening this past that
+   * window strands hours without a reading and silently degrades every card
+   * to single-source, so tests/range.test.js asserts the two agree.
    */
-  function sunriseSunsetScore(hourly, dayData, event) {
+  const MET_NO_SAMPLE_OFFSETS = [0, 1];
+
+  /**
+   * Score a sunrise or sunset against both forecast sources.
+   *
+   * Only Met.no's HIGH cloud is overlaid on the Open-Meteo hour; everything
+   * else, low cloud included, stays Open-Meteo's. This is not laziness, it is
+   * the only comparison the two providers' variables actually support.
+   *
+   * The layer bands are defined differently:
+   *
+   *              Open-Meteo      Met.no
+   *   low        0-3 km          0-2 km
+   *   mid        3-8 km          2-5 km
+   *   high       above 8 km      above 5 km
+   *
+   * So Open-Meteo's "low" includes the 2-3 km deck that Met.no files under
+   * medium, and it must read higher for that reason alone. Measured across 20
+   * Irish locations it read higher in 18 of them. Substituting Met.no's low
+   * into a gate tuned on Open-Meteo's low does not measure a second opinion,
+   * it measures a narrower question, and it reads optimistic every time.
+   *
+   * High cloud survives the same test. Met.no's band is a strict superset of
+   * Open-Meteo's, so Met.no should read higher; across the same 20 locations
+   * it read higher in 2 and lower in 15. Band geometry cannot produce that,
+   * so the high-cloud disagreement is real -- and since the band difference
+   * biases Met.no upward, the true disagreement is at least this large.
+   *
+   * Visibility and rain chance stay Open-Meteo's too, so the range moves with
+   * one variable only.
+   *
+   * Averaging is per source, not per hour. Each source gets its own mean
+   * across the sampled hours and the range is min/max of those two means.
+   * Taking min/max hour by hour would mix sources and invent a range wider
+   * than either source supports.
+   *
+   * @param {Array}  hourly  Hourly rows.
+   * @param {Object} dayData Daily row with date and twilight.
+   * @param {string} event   'sunrise' or 'sunset'.
+   * @returns {Object|null} {low, high, sources} or null when there is no event.
+   */
+  function sunriseSunsetRange(hourly, dayData, event) {
     if (!Array.isArray(hourly) || !hourly.length || !dayData) return null;
 
     const twilight = dayData.twilight || {};
@@ -428,20 +466,61 @@
     const eventIndex = findHourIndex(hourly, dayData.date, timeStr);
     if (eventIndex < 0) return null;
 
-    // The event hour and the one after it. The glow hour is whichever sits
-    // further from midday: after sunset, before sunrise.
-    const indices = [eventIndex, eventIndex + 1];
+    // The glow hour is whichever sits further from midday: after sunset,
+    // before sunrise.
     const glowIndex = 'sunset' === event ? eventIndex + 1 : eventIndex;
 
-    let total = 0;
+    let openTotal = 0;
+    let metTotal = 0;
     let count = 0;
-    for (const i of indices) {
+    let metCount = 0;
+
+    for (const offset of MET_NO_SAMPLE_OFFSETS) {
+      const i = eventIndex + offset;
       if (i < 0 || i >= hourly.length) continue;
-      total += scoreLightHour(hourly[i], i === glowIndex);
+
+      const hour = hourly[i];
+      const isGlow = i === glowIndex;
+
+      openTotal += scoreLightHour(hour, isGlow);
       count++;
+
+      const met = hour.met_no;
+      if (!met || met.high == null) continue;
+
+      metTotal += scoreLightHour(Object.assign({}, hour, {
+        cloud_high: met.high,
+      }), isGlow);
+      metCount++;
     }
 
-    return count > 0 ? Math.round(total / count) : null;
+    if (!count) return null;
+
+    const open = Math.round(openTotal / count);
+
+    // A range needs Met.no for every sampled hour. Partial coverage would
+    // compare a two-hour mean against a one-hour mean, which is not a
+    // comparison.
+    if (metCount !== count) {
+      return { low: open, high: open, sources: 1 };
+    }
+
+    const met = Math.round(metTotal / metCount);
+    return { low: Math.min(open, met), high: Math.max(open, met), sources: 2 };
+  }
+
+  /**
+   * The score a range is labelled and coloured by.
+   *
+   * The low end, so the band word always describes the number the solid arc
+   * draws and the two can never contradict. This is the only place that rule
+   * lives; changing it here changes every view at once.
+   *
+   * @param {Object|null} range - A sunriseSunsetRange() result.
+   * @returns {number|null} The score to band on.
+   */
+  function bandScore(range) {
+    return range ? range.low : null;
   }
 
   const ForecastScoring = {
@@ -457,7 +536,8 @@
 
     // Scores.
     calculatePhotoScore,
-    sunriseSunsetScore,
+    sunriseSunsetRange,
+    bandScore,
     scoreLightHour,
     calculateWindowScore,
     getScoreClass,

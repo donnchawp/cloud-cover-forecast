@@ -74,9 +74,13 @@ function buildForecast(options = {}) {
         time: date + 'T' + String(h).padStart(2, '0') + ':00',
         cloud_low: sky.low, cloud_mid: sky.mid, cloud_high: sky.high,
         cloud_total: Math.max(sky.low, sky.mid, sky.high),
-        rain_chance: 0, visibility: 20000, wind_speed: 8,
+        rain_chance: options.rainChance || 0, visibility: 20000, wind_speed: 8,
         temperature: 14, is_day: (h > 6 && h < 20) ? 1 : 0,
       });
+      if (options.metNoSkies && options.metNoSkies[d]) {
+        const m = options.metNoSkies[d];
+        hourly[hourly.length - 1].met_no = { low: m.low, mid: m.mid, high: m.high };
+      }
     }
     daily.push({
       date,
@@ -89,6 +93,7 @@ function buildForecast(options = {}) {
   return {
     location: { lat: 51.6236, lon: -9.5236, timezone, timezone_abbr: 'IST' },
     hourly, daily, moon: {},
+    met_no_available: options.metNoAvailable !== false,
   };
 }
 
@@ -105,6 +110,12 @@ const STRINGS = {
   searchLocation: 'Search', loading: 'Loading...', share: 'Share',
   export: 'Export', import: 'Import', noLocations: 'No saved locations',
   setAsHome: 'Set as Home', delete: 'Delete', edit: 'Edit',
+  cloudBySource: 'Cloud by source', sourceOpenMeteo: 'Open-Meteo', sourceMetNo: 'Met.no',
+  secondSourceUnavailable: 'Second forecast source unavailable',
+  oneSource: 'one source', twoSources: 'two sources',
+  scoreRange: '%1$s to %2$s percent',
+  low: 'Low', mid: 'Mid', high: 'High',
+  bandsDiffer: 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.',
 };
 
 /**
@@ -178,6 +189,14 @@ function install(options = {}) {
     ajaxUrl: '/ajax', pluginUrl: '/plugin/',
     strings: Object.assign({}, STRINGS, options.strings || {}),
   };
+
+  // Drop the module cache so a test file can install more than once. Without
+  // this the second install() sets fresh globals but never re-runs the app's
+  // IIFE, so it keeps rendering into the *first* install's element and every
+  // assertion silently reads stale markup.
+  for (const file of ['forecast-scoring.js', 'forecast-app.js']) {
+    delete require.cache[require.resolve(path.join(ASSETS, file))];
+  }
 
   require(path.join(ASSETS, 'forecast-scoring.js'));
   require(path.join(ASSETS, 'forecast-app.js'));

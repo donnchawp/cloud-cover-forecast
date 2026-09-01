@@ -1840,6 +1840,39 @@ select:focus-visible,
 .outlook-card.score-fair .score-ring-value      { stroke: var(--color-fair); }
 .outlook-card.score-poor .score-ring-value      { stroke: var(--color-poor); }
 
+/* The faded tail spans the low score to the high score. Same band colour as
+   the solid arc, so a range never introduces a second hue. */
+.outlook-card.score-excellent .score-ring-tail { stroke: var(--color-excellent); }
+.outlook-card.score-good .score-ring-tail      { stroke: var(--color-good); }
+.outlook-card.score-fair .score-ring-tail      { stroke: var(--color-fair); }
+.outlook-card.score-poor .score-ring-tail      { stroke: var(--color-poor); }
+
+.score-ring-tail {
+  stroke-opacity: 0.35;
+}
+
+/* A dashed track means only one source was available for this card, whether
+   because Met.no was unreachable or because it had no sample within three
+   hours of this event. */
+.score-ring-track.is-single-source {
+  stroke-dasharray: 2 2;
+}
+
+/* "37-75" is five glyphs where "100%" is four, against an inner diameter of
+   about 28.8 units in the 36-unit viewBox. */
+.score-ring.has-range .score-ring-text {
+  font-size: 8px;
+}
+
+.outlook-notice {
+  margin: 0 0 var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .outlook-card.score-excellent .outlook-card-band { color: var(--color-excellent); }
 .outlook-card.score-good .outlook-card-band      { color: var(--color-good); }
 .outlook-card.score-fair .outlook-card-band      { color: var(--color-fair); }
@@ -1910,24 +1943,107 @@ select:focus-visible,
   border-radius: 11px;
 }
 
+/* Purely graphical. The value used to live inside this element with a
+   min-width of 3ch, which meant a low score could not hold its own label:
+   "7%" fitted, "7-47" did not, and the meter's overflow:hidden clipped it.
+   The label now sits in .day-hero-meter-label, so the bar is free to be as
+   short as the score actually is. */
 .day-hero-meter-fill {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
   height: 100%;
-  min-width: 3ch;
-  padding-right: var(--spacing-xs);
   border-radius: 11px;
   background: var(--border-color);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 .day-hero.score-excellent .day-hero-meter-fill { background: var(--color-excellent); }
 .day-hero.score-good      .day-hero-meter-fill { background: var(--color-good); }
 .day-hero.score-fair      .day-hero-meter-fill { background: var(--color-fair); }
 .day-hero.score-poor      .day-hero-meter-fill { background: var(--color-poor); }
+
+/* The tail runs from zero to the high score behind the solid fill, so the
+   solid portion reads as the score and the pale remainder as the upside the
+   second source sees. */
+.day-hero-meter {
+  position: relative;
+}
+
+.day-hero-meter-tail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  opacity: 0.35;
+  border-radius: inherit;
+}
+
+.day-hero.score-excellent .day-hero-meter-tail { background: var(--color-excellent); }
+.day-hero.score-good      .day-hero-meter-tail { background: var(--color-good); }
+.day-hero.score-fair      .day-hero-meter-tail { background: var(--color-fair); }
+.day-hero.score-poor      .day-hero-meter-tail { background: var(--color-poor); }
+
+.day-hero-meter-fill {
+  position: relative;
+}
+
+/* Pinned to the right of the track rather than to the end of the fill, so it
+   is legible at every score. At a high score it sits over the solid fill, at a
+   low one over the pale track; both carry --text-primary well. */
+.day-hero-meter-label {
+  position: absolute;
+  top: 0;
+  right: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  height: 100%;
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cloud-by-source {
+  margin: var(--spacing-md) 0;
+}
+
+.cloud-by-source-title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.cloud-by-source-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.cloud-by-source-table th,
+.cloud-by-source-table td {
+  padding: var(--spacing-xs);
+  text-align: right;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cloud-by-source-table th[scope="row"] {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* The altitude band each figure covers. Shown because the two providers do
+   not use the same bands, so the low and mid rows are not like-for-like. */
+.cloud-by-source-band {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}
+
+.cloud-by-source-note {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
 
 .day-hero-time {
   font-size: var(--font-size-lg);
