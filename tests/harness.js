@@ -113,6 +113,8 @@ const STRINGS = {
   cloudBySource: 'Cloud by source', sourceOpenMeteo: 'Open-Meteo', sourceMetNo: 'Met.no',
   secondSourceUnavailable: 'Second forecast source unavailable',
   oneSource: 'one source', twoSources: 'two sources',
+  twoSourcesHorizonClosed: 'two sources, horizon closed',
+  horizonClosed: 'Low cloud closed the horizon here, so the high row could not change the score. The two numbers match because the comparison had nothing to act on, not because the sources agree.',
   scoreRange: '%1$s to %2$s percent',
   low: 'Low', mid: 'Mid', high: 'High',
   bandsDiffer: 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.',

@@ -260,6 +260,36 @@ reset them and let the site exceed a provider's limits.
 
 ## Changelog
 
+### Signal a shut horizon gate (2026-09-01)
+
+A collapsed score range meant "the two sources agree". When Open-Meteo's low
+cloud sits at or above `HORIZON_BLOCKED_AT` (70) it also meant "the second
+source was consulted and could not act" -- `clarity` is zero, so Met.no's high
+cloud is multiplied out and cannot move the score. The two were drawn
+identically, so an unexamined number read as a corroborated one.
+
+`sunriseSunsetRange()` now returns `horizonClosed` alongside `{low, high,
+sources}`: true only when two sources were found and every sampled hour sat at
+or above the gate. Additive, so cached payloads still render. No score changed.
+
+It drives three signals: the Outlook ring track gains `is-horizon-closed` (a
+1/3 dash against the single-source 2/2, sharing `--ring-track-uncorroborated`
+because both states mean "not corroborated"); the day view's "Cloud by source"
+note explains that the high row could not change the score; and the accessible
+label reads "two sources, horizon closed". New strings `twoSourcesHorizonClosed`
+and `horizonClosed` in `templates/pwa-app.php`.
+
+`--ring-track-single` was renamed `--ring-track-uncorroborated`, now that two
+states share it. `tests/theme.test.php` checks both rules use the token and
+that their dash rhythms differ. `tests/range.test.js` covers the flag including
+the exact 70 boundary -- an off-by-one there (`>` for `>=`) passed the first
+draft of the suite and now fails it.
+
+The underlying collapse is not a bug and was not changed: see
+`docs/known-issues.md` entry 1 for why feeding Met.no's 0-2 km low cloud into a
+gate calibrated on Open-Meteo's 0-3 km band would reintroduce the unit mismatch
+the design doc's "Correction" section removed.
+
 ### Ring track contrast, and a defect log (2026-09-01)
 
 The dashed ring track that marks a single-source Outlook card inherited

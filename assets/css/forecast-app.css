@@ -44,7 +44,7 @@
   /* Border colors */
   --border-color: #d1d5db;
   --border-color-strong: #9ca3af;
-  --ring-track-single: #6b7280;
+  --ring-track-uncorroborated: #6b7280;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -101,7 +101,7 @@
     /* Border colors */
     --border-color: #475569;
     --border-color-strong: #64748b;
-    --ring-track-single: #94a3b8;
+    --ring-track-uncorroborated: #94a3b8;
   }
 }
 
@@ -128,7 +128,7 @@
 
   --border-color: #475569;
   --border-color-strong: #64748b;
-  --ring-track-single: #94a3b8;
+  --ring-track-uncorroborated: #94a3b8;
 }
 
 /* Manual light mode class override */
@@ -154,7 +154,7 @@
 
   --border-color: #d1d5db;
   --border-color-strong: #9ca3af;
-  --ring-track-single: #6b7280;
+  --ring-track-uncorroborated: #6b7280;
 }
 
 /* ============================================================
@@ -1867,8 +1867,20 @@ select:focus-visible,
    a stroke nobody can see, and the state read as simply missing.
    tests/theme.test.php now asserts the ratio. */
 .score-ring-track.is-single-source {
-  stroke: var(--ring-track-single);
+  stroke: var(--ring-track-uncorroborated);
   stroke-dasharray: 2 2;
+}
+
+/* Two sources were consulted and the horizon gate stopped the second one
+   acting: at or above HORIZON_BLOCKED_AT low cloud the canvas term is
+   multiplied by zero, so Met.no's high cloud cannot move the score. The
+   number is therefore no better corroborated than a single-source one, which
+   is why this shares the dash family and the token. A finer rhythm keeps the
+   two distinguishable on inspection without inventing a second visual
+   language for the same message. */
+.score-ring-track.is-horizon-closed {
+  stroke: var(--ring-track-uncorroborated);
+  stroke-dasharray: 1 3;
 }
 
 /* "37-75" is five glyphs where "100%" is four, against an inner diameter of

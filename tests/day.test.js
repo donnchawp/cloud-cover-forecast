@@ -114,6 +114,24 @@ function runDualSourceChecks(t) {
     t.assert('renders the app-wide placeholder, not a stray em-dash',
       nulled.rendered.includes('>-<span') && !nulled.rendered.includes('&mdash;<span'));
 
+    // The gate shut: the table must not let the matching numbers read as
+    // agreement, because Met.no's high cloud was multiplied by zero.
+    const closed = install({
+      forecast: buildForecast({
+        skies: fill({ low: 85, mid: 100, high: 100 }),
+        metNoSkies: fill({ low: 5, mid: 100, high: 2 }),
+      }),
+    });
+    await tick();
+    closed.tabs.outlook();
+    closed.click({ action: 'open-day', day: '0', event: 'sunset' });
+
+    t.section('Cloud by source, horizon gate shut:');
+    t.assert('says the high row could not move the score',
+      closed.rendered.includes('could not change the score'));
+    t.assert('and drops the ordinary bands note, which would be misleading here',
+      !closed.rendered.includes('so only the high row is compared'));
+
     const agreed = install({
       forecast: buildForecast({ skies: fill(OPEN_METEO_SKY), metNoSkies: fill(OPEN_METEO_SKY) }),
     });

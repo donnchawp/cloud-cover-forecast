@@ -120,15 +120,25 @@ function ccf_contrast( $a, $b ) {
 }
 
 echo "\nThe single-source ring track is actually visible:\n";
+foreach ( array( 'is-single-source', 'is-horizon-closed' ) as $state ) {
+	$assert(
+		sprintf( '.%s uses the token, not --border-color', $state ),
+		(bool) preg_match(
+			'/\.score-ring-track\.' . preg_quote( $state, '/' ) . '\s*\{[^}]*stroke:\s*var\(\s*--ring-track-uncorroborated\s*\)/s',
+			$stylesheet
+		)
+	);
+}
+// Both states say "not corroborated". They must stay tellable apart, or the
+// second one is just the first one drawn badly.
+preg_match( '/\.score-ring-track\.is-single-source\s*\{[^}]*stroke-dasharray:\s*([^;]+);/s', $stylesheet, $one );
+preg_match( '/\.score-ring-track\.is-horizon-closed\s*\{[^}]*stroke-dasharray:\s*([^;]+);/s', $stylesheet, $two );
 $assert(
-	'the rule uses its own token, not --border-color',
-	(bool) preg_match(
-		'/\.score-ring-track\.is-single-source\s*\{[^}]*stroke:\s*var\(\s*--ring-track-single\s*\)/s',
-		$stylesheet
-	)
+	'the two dash rhythms differ',
+	isset( $one[1], $two[1] ) && trim( $one[1] ) !== trim( $two[1] )
 );
 foreach ( array( '.dark-mode', '.light-mode' ) as $mode ) {
-	$track = $token( $mode, '--ring-track-single' );
+	$track = $token( $mode, '--ring-track-uncorroborated' );
 	$card  = $token( $mode, '--bg-card' );
 	$ratio = ( null === $track || null === $card ) ? null : ccf_contrast( $track, $card );
 	$assert(
@@ -145,10 +155,10 @@ foreach ( array( '.dark-mode', '.light-mode' ) as $mode ) {
 // The system-preference block is a fourth copy of the same tokens. If it
 // drifts from .dark-mode, a viewer on "auto" gets a different ring.
 if ( preg_match( '/@media \(prefers-color-scheme: dark\) \{\s*:root \{(.*?)\n\s*\}/s', $stylesheet, $auto ) ) {
-	preg_match( '/--ring-track-single:\s*([^;]+);/', $auto[1], $v );
+	preg_match( '/--ring-track-uncorroborated:\s*([^;]+);/', $auto[1], $v );
 	$assert(
 		'the auto-dark block carries the same value as .dark-mode',
-		isset( $v[1] ) && strtolower( trim( $v[1] ) ) === $token( '.dark-mode', '--ring-track-single' )
+		isset( $v[1] ) && strtolower( trim( $v[1] ) ) === $token( '.dark-mode', '--ring-track-uncorroborated' )
 	);
 } else {
 	$assert( 'the auto-dark token block was found', false );
