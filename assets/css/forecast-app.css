@@ -2030,6 +2030,21 @@ select:focus-visible,
   color: var(--text-secondary);
 }
 
+/* The altitude band each figure covers. Shown because the two providers do
+   not use the same bands, so the low and mid rows are not like-for-like. */
+.cloud-by-source-band {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 400;
+}
+
+.cloud-by-source-note {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+}
+
 .day-hero-time {
   font-size: var(--font-size-lg);
   font-weight: 600;

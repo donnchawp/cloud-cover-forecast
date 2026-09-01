@@ -60,8 +60,10 @@ setTimeout(() => {
 function runDualSourceChecks(t) {
   const { install, buildForecast } = require('./harness.js');
   const tick = () => new Promise((r) => setTimeout(r, 50));
-  const OPEN_METEO_SKY = { low: 40, mid: 91, high: 59 };
-  const MET_NO_SKY = { low: 8, mid: 70, high: 61 };
+  // Kilkenny, 2026-09-01 sunset, real API values. Low cloud is 1% so the
+  // horizon gate is open and the high-cloud disagreement can move the score.
+  const OPEN_METEO_SKY = { low: 1, mid: 100, high: 100 };
+  const MET_NO_SKY = { low: 5, mid: 100, high: 2 };
   const fill = (sky) => new Array(7).fill(sky);
 
   (async () => {
@@ -87,8 +89,12 @@ function runDualSourceChecks(t) {
     t.assert('the panel is rendered', ranged.rendered.includes('cloud-by-source'));
     t.assert('it names both sources',
       ranged.rendered.includes('Open-Meteo') && ranged.rendered.includes('Met.no'));
-    t.assert('it shows the Open-Meteo low cloud reading', ranged.rendered.includes('>40%<'));
-    t.assert('it shows the Met.no low cloud reading', ranged.rendered.includes('>8%<'));
+    t.assert('it shows the Open-Meteo low cloud reading', ranged.rendered.includes('>1%<span'));
+    t.assert('it shows the Met.no low cloud reading', ranged.rendered.includes('>5%<span'));
+    t.assert('each figure is labelled with the band it covers',
+      ranged.rendered.includes('0&#8211;3 km') && ranged.rendered.includes('0&#8211;2 km'));
+    t.assert('and the table says why only high cloud is compared',
+      ranged.rendered.includes('divide the sky at different altitudes'));
     t.assert('the heading does not assert disagreement',
       ranged.rendered.includes('Cloud by source') && !ranged.rendered.includes('Sources disagree'));
 
@@ -120,9 +126,9 @@ function runDualSourceChecks(t) {
     // and opens a very wide range. This is what clipped the label.
     const extreme = install({
       forecast: buildForecast({
-        skies: fill({ low: 94, mid: 100, high: 100 }),
-        metNoSkies: fill({ low: 10, mid: 100, high: 98 }),
-        rainChance: 90,
+        skies: fill({ low: 1, mid: 100, high: 100 }),
+        metNoSkies: fill({ low: 5, mid: 100, high: 2 }),
+        rainChance: 95,
       }),
     });
     await tick();
@@ -133,10 +139,16 @@ function runDualSourceChecks(t) {
     const low = Number((extreme.rendered.match(/day-hero-meter-fill" style="width: (\d+)%/) || [])[1]);
     const labelled = (extreme.rendered.match(/day-hero-meter-label">([^<]+)</) || [])[1];
     console.log('    fill width ' + low + '%, label "' + labelled + '"');
-    t.assert('the bar is far too narrow to hold its own label (' + low + '%)', low < 15);
-    t.assert('the label still renders in full', /^\d+&#8211;\d+$/.test(labelled || ''));
-    t.assert('and sits outside the fill, which stays empty',
+    // The guarantee is structural, not a width threshold: the fill holds no
+    // text at all, so it cannot clip text however narrow it gets. A width
+    // threshold would be the weaker test anyway -- since only high cloud now
+    // feeds the range, and heavy low cloud shuts the horizon gate and
+    // collapses the range to a point, a very low score and a wide range are
+    // close to mutually exclusive. See tests/range.test.js.
+    t.assert('the fill holds no text and so can never clip it',
       /<div class="day-hero-meter-fill"[^>]*><\/div>/.test(extreme.rendered));
+    t.assert('the label renders in full as a sibling', /^\d+&#8211;\d+$/.test(labelled || ''));
+    t.assert('the bar is narrower than the label needs (' + low + '%)', low < 40);
 
     console.log('\n' + t.passed + ' passed, ' + t.failed + ' failed');
   })();

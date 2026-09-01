@@ -203,6 +203,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				cloudBySource: <?php echo wp_json_encode( __( 'Cloud by source', 'cloud-cover-forecast' ) ); ?>,
 				sourceOpenMeteo: <?php echo wp_json_encode( __( 'Open-Meteo', 'cloud-cover-forecast' ) ); ?>,
 				sourceMetNo: <?php echo wp_json_encode( __( 'Met.no', 'cloud-cover-forecast' ) ); ?>,
+				bandsDiffer: <?php echo wp_json_encode( __( 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.', 'cloud-cover-forecast' ) ); ?>,
 				secondSourceUnavailable: <?php echo wp_json_encode( __( 'Second forecast source unavailable', 'cloud-cover-forecast' ) ); ?>,
 				oneSource: <?php echo wp_json_encode( __( 'one source', 'cloud-cover-forecast' ) ); ?>,
 				twoSources: <?php echo wp_json_encode( __( 'two sources', 'cloud-cover-forecast' ) ); ?>,

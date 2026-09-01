@@ -118,6 +118,7 @@ const STRINGS = {
   oneSource: 'one source', twoSources: 'two sources',
   scoreRange: '%1$s to %2$s percent',
   low: 'Low', mid: 'Mid', high: 'High',
+  bandsDiffer: 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.',
 };
 
 /**

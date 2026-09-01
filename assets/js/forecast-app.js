@@ -1307,10 +1307,14 @@
     const met = hour && hour.met_no;
     if (!met) return '';
 
+    // Bands are labelled because they are not the same bands. Open-Meteo's
+    // low is 0-3 km against Met.no's 0-2 km, so the low and mid rows are not
+    // like-for-like and must not be read as disagreement. Only the high row
+    // feeds the score range.
     const rows = [
-      [strings.low || 'Low', hour.cloud_low, met.low],
-      [strings.mid || 'Mid', hour.cloud_mid, met.mid],
-      [strings.high || 'High', hour.cloud_high, met.high],
+      [strings.low || 'Low', '0&#8211;3 km', '0&#8211;2 km', hour.cloud_low, met.low],
+      [strings.mid || 'Mid', '3&#8211;8 km', '2&#8211;5 km', hour.cloud_mid, met.mid],
+      [strings.high || 'High', '8 km+', '5 km+', hour.cloud_high, met.high],
     ];
 
     return `
@@ -1325,15 +1329,16 @@
             </tr>
           </thead>
           <tbody>
-            ${rows.map(([label, open, metValue]) => `
+            ${rows.map(([label, openBand, metBand, open, metValue]) => `
               <tr>
                 <th scope="row">${escapeHtml(label)}</th>
-                <td>${null == open ? '&mdash;' : `${open}%`}</td>
-                <td>${null == metValue ? '&mdash;' : `${metValue}%`}</td>
+                <td>${null == open ? '&mdash;' : `${open}%`}<span class="cloud-by-source-band">${openBand}</span></td>
+                <td>${null == metValue ? '&mdash;' : `${metValue}%`}<span class="cloud-by-source-band">${metBand}</span></td>
               </tr>
             `).join('')}
           </tbody>
         </table>
+        <p class="cloud-by-source-note">${escapeHtml(strings.bandsDiffer || 'The two sources divide the sky at different altitudes, so only the high row is compared in the score.')}</p>
       </section>
     `;
   }

@@ -46,8 +46,10 @@ setTimeout(() => {
 function runDualSourceChecks(t) {
   const { install, buildForecast } = require('./harness.js');
   const tick = () => new Promise((r) => setTimeout(r, 50));
-  const OPEN_METEO_SKY = { low: 40, mid: 91, high: 59 };
-  const MET_NO_SKY = { low: 8, mid: 70, high: 61 };
+  // Kilkenny, 2026-09-01 sunset, real API values. Low cloud is 1% so the
+  // horizon gate is open and the high-cloud disagreement can move the score.
+  const OPEN_METEO_SKY = { low: 1, mid: 100, high: 100 };
+  const MET_NO_SKY = { low: 5, mid: 100, high: 2 };
   const fill = (sky) => new Array(7).fill(sky);
 
   (async () => {

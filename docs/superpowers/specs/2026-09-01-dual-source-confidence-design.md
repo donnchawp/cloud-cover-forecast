@@ -43,6 +43,63 @@ showing the disagreement rather than silently merging it away.
 into the PWA unchanged would have picked Open-Meteo's 40% low cloud again and
 changed nothing, and it would destroy the Open-Meteo values a range needs.
 
+## Correction, 2026-09-01: the layers are not comparable
+
+The probe above compared `cloud_low` against `cloud_area_fraction_low` as
+though they were the same measurement. They are not, and this invalidates the
+original design.
+
+| Layer | Open-Meteo | Met.no |
+|-------|-----------|--------|
+| low   | 0-3 km    | 0-2 km |
+| mid   | 3-8 km    | 2-5 km |
+| high  | above 8 km | above 5 km |
+
+Open-Meteo's low band includes the 2-3 km deck that Met.no files under medium,
+so it must read higher for definitional reasons alone. Across 20 Irish
+locations at sunset it read higher in **18 of 20**. `scoreLightHour()` gates on
+`cloud_low` and was tuned against Open-Meteo's definition, so substituting
+Met.no's number does not measure a second opinion -- it measures a narrower
+question, and reads optimistic every time.
+
+High cloud survives the same test. Met.no's band is a strict superset of
+Open-Meteo's, so Met.no should read *higher*; it read higher in 2 and lower in
+15. Band geometry cannot produce that, so the high-cloud disagreement is real,
+and the band difference biases Met.no upward, meaning the true disagreement is
+at least as large as measured.
+
+Decisive supporting evidence: the two sources agree on **total** cloud to 10.1
+points mean absolute difference, while differing by 51.9 on low and 46.9 on
+high. They agree about how much cloud there is and disagree about where it is.
+
+**Revised decision 6a: only Met.no's high cloud feeds the second score.** Low
+and mid stay Open-Meteo's. The "Cloud by source" table labels each figure with
+the band it covers and carries a note saying only the high row is compared.
+
+### Consequence: the range is usually narrow
+
+Rescoring the same 20 locations with the corrected comparison:
+
+| | before (unsound) | after |
+|---|---|---|
+| mean range width | 18.5 | 1.1 |
+| median | 20 | 0 |
+| max | 35 | 8 |
+| band differs across range | 40% | 0% |
+
+Two things suppress it, both properties of `scoreLightHour()` rather than of
+the comparison:
+
+1. `clarity = max(0, 1 - cloudLow / HORIZON_BLOCKED_AT)` with
+   `HORIZON_BLOCKED_AT = 70`. At 70% low cloud or more the canvas term is
+   multiplied by zero and high cloud cannot move the score at all. On an
+   overcast night the range is always a point.
+2. `HIGH_CLOUD_CURVE` is flat at 30 between 40% and 70% high cloud, so even a
+   50-point cirrus disagreement often moves the score under 10 points.
+
+This is the honest width. The wide ranges the first implementation produced
+were mostly a unit mismatch.
+
 ## Goal
 
 Make the score honest about forecast uncertainty by scoring both sources and
