@@ -79,10 +79,7 @@ function buildForecast(options = {}) {
       });
       if (options.metNoSkies && options.metNoSkies[d]) {
         const m = options.metNoSkies[d];
-        hourly[hourly.length - 1].met_no = {
-          low: m.low, mid: m.mid, high: m.high,
-          total: Math.max(m.low, m.mid, m.high), offset_hours: 0,
-        };
+        hourly[hourly.length - 1].met_no = { low: m.low, mid: m.mid, high: m.high };
       }
     }
     daily.push({

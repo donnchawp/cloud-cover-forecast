@@ -1222,12 +1222,13 @@ class Cloud_Cover_Forecast_API {
 				continue;
 			}
 
+			// Only these three are read. 'low' and 'mid' feed the day view's
+			// comparison table; 'high' is the only layer the score compares,
+			// because the providers' bands are not the same measurement.
 			$hourly[ $i ]['met_no'] = array(
-				'total'        => $best['total'],
-				'low'          => $best['low'],
-				'mid'          => $best['mid'],
-				'high'         => $best['high'],
-				'offset_hours' => intdiv( $best_delta, HOUR_IN_SECONDS ),
+				'low'  => $best['low'],
+				'mid'  => $best['mid'],
+				'high' => $best['high'],
 			);
 		}
 

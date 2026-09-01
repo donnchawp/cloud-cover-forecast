@@ -164,7 +164,8 @@ Cloud_Cover_Forecast_Plugin (main orchestrator)
 4. Met.no `locationforecast/2.0/complete` fetched and its cloud readings attached
    to the hours around each sun event (`attach_met_no_readings()`). Open-Meteo
    values are never modified; the second source is stored alongside them as
-   `hourly[].met_no`, with `met_no_available` at the top level. This is *not*
+   `hourly[].met_no` (`low`, `mid`, `high`), with `met_no_available` at the top
+   level. This is *not*
    `merge_cloud_cover_rows()`, which overwrites with `max()` and still serves
    only the shortcode and blocks
 5. Forecast stored in IndexedDB for offline access
@@ -277,8 +278,12 @@ systematically pessimistic by construction.
 Rather than adjudicate between two sources neither of which is known to be more
 accurate, the score became a range. New in `class-api.php`:
 `attach_met_no_readings()` and `met_no_hour_indices()`, plus the three
-`MET_NO_*` constants. Payload gains `hourly[].met_no` and `met_no_available`,
-both additive so payloads cached before this change still render.
+`MET_NO_*` constants. Payload gains `hourly[].met_no` (`low`, `mid`, `high`)
+and `met_no_available`, both additive so payloads cached before this change
+still render. A cleanup pass dropped two further keys that were written and
+never read: `met_no.total` had no reader anywhere in `assets/`, and
+`met_no.offset_hours` was read only by the tests asserting it. Both were
+persisted in the cached transient and shipped to the browser on every load.
 
 `sunriseSunsetScore()` became `sunriseSunsetRange()`, returning
 `{low, high, sources}`; `bandScore()` was added to isolate the "label the low"

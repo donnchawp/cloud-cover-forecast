@@ -41,7 +41,7 @@ function buildHours(sky, metByHour = {}) {
       cloud_low: sky.low, cloud_mid: sky.mid, cloud_high: sky.high,
       cloud_total: 100, rain_chance: 0, visibility: 20000,
     };
-    if (metByHour[h]) hour.met_no = Object.assign({ offset_hours: 0 }, metByHour[h]);
+    if (metByHour[h]) hour.met_no = Object.assign({}, metByHour[h]);
     hours.push(hour);
   }
   return hours;

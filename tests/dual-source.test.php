@@ -99,10 +99,6 @@ $gmt = $attach->invoke( $api, ccf_hours( '2026-10-26' ), $gmt_day, 'Europe/Dubli
 $assert( 'IST 20:00 local matches the 19:00 UTC sample', 8 === $ist[20]['met_no']['low'] );
 // 20:00 local on 26 Oct is 20:00 UTC (GMT, +0).
 $assert( 'GMT 20:00 local matches the 20:00 UTC sample', 8 === $gmt[20]['met_no']['low'] );
-$assert(
-	'both matched exactly, offset 0',
-	0 === $ist[20]['met_no']['offset_hours'] && 0 === $gmt[20]['met_no']['offset_hours']
-);
 
 // --- Nearest sample within three hours ------------------------------------
 echo "\nNearest-sample selection:\n";
@@ -117,7 +113,6 @@ $exactly_3h = $attach->invoke(
 	ccf_metno( array( strtotime( '2026-07-01T17:00:00Z' ) => array( 8, 70, 61 ) ) )
 );
 $assert( 'a sample exactly 3h away is accepted', isset( $exactly_3h[21]['met_no'] ) );
-$assert( 'and reports offset_hours 3', 3 === $exactly_3h[21]['met_no']['offset_hours'] );
 
 $past_3h = $attach->invoke(
 	$api,
