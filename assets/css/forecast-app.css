@@ -44,6 +44,7 @@
   /* Border colors */
   --border-color: #d1d5db;
   --border-color-strong: #9ca3af;
+  --ring-track-single: #6b7280;
 
   /* Spacing */
   --spacing-xs: 4px;
@@ -100,6 +101,7 @@
     /* Border colors */
     --border-color: #475569;
     --border-color-strong: #64748b;
+    --ring-track-single: #94a3b8;
   }
 }
 
@@ -126,6 +128,7 @@
 
   --border-color: #475569;
   --border-color-strong: #64748b;
+  --ring-track-single: #94a3b8;
 }
 
 /* Manual light mode class override */
@@ -151,6 +154,7 @@
 
   --border-color: #d1d5db;
   --border-color-strong: #9ca3af;
+  --ring-track-single: #6b7280;
 }
 
 /* ============================================================
@@ -1853,8 +1857,17 @@ select:focus-visible,
 
 /* A dashed track means only one source was available for this card, whether
    because Met.no was unreachable or because it had no sample within three
-   hours of this event. */
+   hours of this event.
+
+   The plain track is decorative -- it only shows how far the ring goes -- so
+   it stays at --border-color and its low contrast is deliberate. This one
+   carries information, so it gets its own token at better than 3:1 against
+   --bg-card in both themes (WCAG 1.4.11). Inheriting --border-color put it at
+   1.93:1 in dark and 1.47:1 in light: a 2/2 dash on a stroke nobody can see is
+   a stroke nobody can see, and the state read as simply missing.
+   tests/theme.test.php now asserts the ratio. */
 .score-ring-track.is-single-source {
+  stroke: var(--ring-track-single);
   stroke-dasharray: 2 2;
 }
 
