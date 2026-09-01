@@ -260,6 +260,27 @@ reset them and let the site exceed a provider's limits.
 
 ## Changelog
 
+### Ring track contrast, and a defect log (2026-09-01)
+
+The dashed ring track that marks a single-source Outlook card inherited
+`--border-color`, giving it 1.93:1 contrast against the card in dark mode and
+1.47:1 in light -- below WCAG 1.4.11's 3:1 for non-text content that carries
+meaning, and in practice invisible, so the state read as simply missing. It now
+uses its own `--ring-track-single` token (`#94a3b8` dark, `#6b7280` light;
+5.71:1 and 4.83:1). The plain `.score-ring-track` is left alone on purpose --
+it only shows how far the ring goes and carries no information.
+
+`tests/theme.test.php` gained a contrast check that computes the WCAG ratio
+from the tokens rather than comparing strings, so any future value that fails
+3:1 fails the suite. Verified against both regressions: dropping the token from
+the rule, and setting the token back to the old colour.
+
+New `docs/known-issues.md` records three defects found by this work and not
+fixed: the dual-source range collapsing whenever Open-Meteo's low cloud shuts
+the horizon gate (which is roughly half of all events, and the half the feature
+exists for), the shortcode path still presenting the low/mid band mismatch as
+forecast disagreement, and the day hero having no visual single-source signal.
+
 This section should be updated when committing changes to track modifications.
 
 ### Dual-source confidence for the PWA score (2026-09-01, v1.2.0)

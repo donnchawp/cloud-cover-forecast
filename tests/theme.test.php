@@ -87,5 +87,72 @@ if ( null !== $media ) {
 	);
 }
 
+// --- Contrast of the informational ring track ------------------------------
+// The dashed track is the only thing telling a sighted viewer a card was
+// scored from one source. It shipped inheriting --border-color, which is
+// 1.93:1 against the card in dark and 1.47:1 in light -- invisible, so the
+// state read as simply absent. WCAG 1.4.11 wants 3:1 for non-text content
+// that carries meaning. The plain .score-ring-track is exempt on purpose: it
+// only shows how far the ring goes and says nothing.
+
+/** WCAG relative luminance of a #rrggbb string. */
+function ccf_luminance( $hex ) {
+	$hex = ltrim( trim( $hex ), '#' );
+	if ( 6 !== strlen( $hex ) ) {
+		return null;
+	}
+	$channels = array();
+	foreach ( array( 0, 2, 4 ) as $offset ) {
+		$c = hexdec( substr( $hex, $offset, 2 ) ) / 255;
+		$channels[] = $c <= 0.04045 ? $c / 12.92 : pow( ( $c + 0.055 ) / 1.055, 2.4 );
+	}
+	return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+}
+
+/** WCAG contrast ratio between two #rrggbb strings. */
+function ccf_contrast( $a, $b ) {
+	$la = ccf_luminance( $a );
+	$lb = ccf_luminance( $b );
+	if ( null === $la || null === $lb ) {
+		return null;
+	}
+	return ( max( $la, $lb ) + 0.05 ) / ( min( $la, $lb ) + 0.05 );
+}
+
+echo "\nThe single-source ring track is actually visible:\n";
+$assert(
+	'the rule uses its own token, not --border-color',
+	(bool) preg_match(
+		'/\.score-ring-track\.is-single-source\s*\{[^}]*stroke:\s*var\(\s*--ring-track-single\s*\)/s',
+		$stylesheet
+	)
+);
+foreach ( array( '.dark-mode', '.light-mode' ) as $mode ) {
+	$track = $token( $mode, '--ring-track-single' );
+	$card  = $token( $mode, '--bg-card' );
+	$ratio = ( null === $track || null === $card ) ? null : ccf_contrast( $track, $card );
+	$assert(
+		sprintf(
+			'%s: %s on %s is %s (need 3.0:1)',
+			$mode,
+			$track ?? 'missing',
+			$card ?? 'missing',
+			null === $ratio ? 'unmeasurable' : sprintf( '%.2f:1', $ratio )
+		),
+		null !== $ratio && $ratio >= 3.0
+	);
+}
+// The system-preference block is a fourth copy of the same tokens. If it
+// drifts from .dark-mode, a viewer on "auto" gets a different ring.
+if ( preg_match( '/@media \(prefers-color-scheme: dark\) \{\s*:root \{(.*?)\n\s*\}/s', $stylesheet, $auto ) ) {
+	preg_match( '/--ring-track-single:\s*([^;]+);/', $auto[1], $v );
+	$assert(
+		'the auto-dark block carries the same value as .dark-mode',
+		isset( $v[1] ) && strtolower( trim( $v[1] ) ) === $token( '.dark-mode', '--ring-track-single' )
+	);
+} else {
+	$assert( 'the auto-dark token block was found', false );
+}
+
 echo "\n$passed passed, $failed failed\n";
 exit( $failed > 0 ? 1 : 0 );
