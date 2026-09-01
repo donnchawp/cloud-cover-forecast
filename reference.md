@@ -303,6 +303,19 @@ correct code reports 56-56.
 New tests: `tests/dual-source.test.php`, `tests/range.test.js`. `tests/harness.js`
 now drops the module cache so one test file can install more than once.
 
+Cleanup pass over the branch (`docs/superpowers/plans/2026-09-01-dual-source-cleanup.md`):
+`attach_met_no_readings()` now uses the existing `to_timestamp_in_timezone()`
+helper rather than a second inline parse; the "Cloud by source" table renders a
+missing reading through `formatValue()` like the rest of the app, with a
+null-layer test that the earlier fixtures never exercised; `describeRange()` in
+`forecast-app.js` centralises the band, label, display text, aria phrasing and
+source note that `renderOutlookCard()` and `renderDayHero()` each derived
+separately. The PHP/JS sampling-window guard moved from `tests/range.test.js`,
+where `-1` and `2` were hand-copied literals, to `tests/dual-source.test.php`,
+which reads `MET_NO_WINDOW_BEFORE`/`AFTER` by reflection and
+`MET_NO_SAMPLE_OFFSETS` from the JS source -- so it now fails if either side
+moves, not just the JS one. `MET_NO_SAMPLE_OFFSETS` is no longer exported.
+
 Deferred, deliberately: band thresholds stay at 80/60/40, and the double penalty
 on low cloud in `scoreLightHour()` is untouched. Because Open-Meteo is almost
 always the pessimistic end and the band word follows the low score, this feature
