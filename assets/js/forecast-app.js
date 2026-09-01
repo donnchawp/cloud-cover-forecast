@@ -1332,8 +1332,8 @@
             ${rows.map(([label, openBand, metBand, open, metValue]) => `
               <tr>
                 <th scope="row">${escapeHtml(label)}</th>
-                <td>${null == open ? '&mdash;' : `${open}%`}<span class="cloud-by-source-band">${openBand}</span></td>
-                <td>${null == metValue ? '&mdash;' : `${metValue}%`}<span class="cloud-by-source-band">${metBand}</span></td>
+                <td>${formatValue(open, '%')}<span class="cloud-by-source-band">${openBand}</span></td>
+                <td>${formatValue(metValue, '%')}<span class="cloud-by-source-band">${metBand}</span></td>
               </tr>
             `).join('')}
           </tbody>

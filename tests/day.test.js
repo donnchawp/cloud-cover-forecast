@@ -98,6 +98,22 @@ function runDualSourceChecks(t) {
     t.assert('the heading does not assert disagreement',
       ranged.rendered.includes('Cloud by source') && !ranged.rendered.includes('Sources disagree'));
 
+    // A missing Met.no layer must render the same placeholder the rest of
+    // the app uses. Nothing caught the em-dash because no test had a null.
+    const nulled = install({
+      forecast: buildForecast({
+        skies: fill(OPEN_METEO_SKY),
+        metNoSkies: fill({ low: null, mid: 100, high: 2 }),
+      }),
+    });
+    await tick();
+    nulled.tabs.outlook();
+    nulled.click({ action: 'open-day', day: '0', event: 'sunset' });
+
+    t.section('Cloud by source, a layer missing:');
+    t.assert('renders the app-wide placeholder, not a stray em-dash',
+      nulled.rendered.includes('>-<span') && !nulled.rendered.includes('&mdash;<span'));
+
     const agreed = install({
       forecast: buildForecast({ skies: fill(OPEN_METEO_SKY), metNoSkies: fill(OPEN_METEO_SKY) }),
     });
