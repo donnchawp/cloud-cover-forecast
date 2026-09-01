@@ -129,11 +129,4 @@ assert('an empty hourly array returns null',
   null === S.sunriseSunsetRange([], day, 'sunset'));
 assert('bandScore of null is null', null === S.bandScore(null));
 
-console.log('\nPHP/JS window coupling:');
-// includes/class-api.php populates eventIndex-1 .. eventIndex+2. If the JS
-// sampling window is widened past that, the extra hours silently carry no
-// met_no key and every card degrades to single-source without an error.
-assert('every sampled offset falls inside the PHP window',
-  Math.min(...S.MET_NO_SAMPLE_OFFSETS) >= -1 && Math.max(...S.MET_NO_SAMPLE_OFFSETS) <= 2);
-
 console.log(`\n${passed} passed, ${failed} failed`);

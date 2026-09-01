@@ -538,7 +538,6 @@
     calculatePhotoScore,
     sunriseSunsetRange,
     bandScore,
-    MET_NO_SAMPLE_OFFSETS,
     scoreLightHour,
     calculateWindowScore,
     getScoreClass,

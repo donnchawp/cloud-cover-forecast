@@ -181,5 +181,23 @@ $no_event = $indices->invoke(
 );
 $assert( 'a polar day with no sunset yields no hours', array() === $no_event );
 
+// --- The JS sampling window must sit inside the PHP one -------------------
+// Read from both sides so it bites both ways: widening the JS array fails,
+// and so does narrowing either PHP constant. The old assertion lived in
+// tests/range.test.js and compared the JS constant against -1 and 2 typed as
+// literals, which caught only the first of those.
+echo "\nPHP/JS window coupling:\n";
+$scoring = file_get_contents( dirname( __DIR__ ) . '/assets/js/forecast-scoring.js' );
+preg_match( '/MET_NO_SAMPLE_OFFSETS\s*=\s*\[([^\]]*)\]/', $scoring, $m );
+$offsets = array_map( 'intval', array_filter( array_map( 'trim', explode( ',', $m[1] ?? '' ) ), 'strlen' ) );
+$before  = $reflection->getConstant( 'MET_NO_WINDOW_BEFORE' );
+$after   = $reflection->getConstant( 'MET_NO_WINDOW_AFTER' );
+
+$assert( 'the JS sampling offsets were found', ! empty( $offsets ) );
+$assert(
+	'every JS sampled offset falls inside the PHP window',
+	! empty( $offsets ) && min( $offsets ) >= -$before && max( $offsets ) <= $after
+);
+
 echo "\n$passed passed, $failed failed\n";
 exit( $failed > 0 ? 1 : 0 );

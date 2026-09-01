@@ -24,7 +24,8 @@ class Cloud_Cover_Forecast_API {
 	 * Deliberately wider than the two hours sunriseSunsetRange() samples in
 	 * assets/js/forecast-scoring.js, so a small change to the JS sampling
 	 * window does not silently strand hours without a reading. See
-	 * MET_NO_SAMPLE_OFFSETS there; tests/range.test.js asserts they agree.
+	 * MET_NO_SAMPLE_OFFSETS there; tests/dual-source.test.php asserts they
+	 * agree, reading this constant by reflection and that array from source.
 	 *
 	 * @since 1.2.0
 	 * @var int

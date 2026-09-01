@@ -61,6 +61,14 @@ partway through after `sunriseSunsetScore` was renamed, having already printed
 exit code caught it. Never read the summary line alone — the runner's final
 `ALL TESTS PASSED` is the one that counts.
 
+**The PHP/JS window coupling guard was once weaker than advertised.** The
+original assertion lived in `tests/range.test.js` and compared the JS
+constant against `-1` and `2` typed as literals — hand-copied from PHP
+constants Node cannot read. It caught the JS window widening but not the
+PHP window narrowing, which would have degraded every card to
+single-source with the suite still green. It now lives in
+`tests/dual-source.test.php`, which can reach both sides.
+
 **`solar.test.php` compares against one screenshot.** Twelve boundaries for one
 place on one date. It would not catch an error that happens to be right for
 Durrus in August. The year-long sweep checks ordering and day-anchoring
