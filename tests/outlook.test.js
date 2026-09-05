@@ -106,6 +106,37 @@ function runDualSourceChecks(t) {
     t.assert('the notice explains why',
       solo.rendered.includes('Second forecast source unavailable'));
 
+    // Westminster, 2026-09-05 sunset. Band geometry is violated, so the range
+    // spans a blocked horizon and a clear one -- two different bands. One word
+    // cannot describe that honestly whichever end it is taken from.
+    const spanning = install({
+      forecast: buildForecast({
+        skies: fill({ low: 77, mid: 0, high: 0 }),
+        metNoSkies: fill({ low: 0, mid: 0, high: 66 }),
+      }),
+    });
+    await tick();
+    spanning.tabs.outlook();
+
+    t.section('Outlook card, the range crosses a band boundary:');
+    t.assert('names both ends', spanning.rendered.includes('Poor') && spanning.rendered.includes('Good'));
+    // The join comes from formatting the translated '%1$s to %2$s' pattern, so
+    // a locale that orders the ends differently still reads correctly. Wrapping
+    // the word in its own element would have frozen the English order.
+    t.assert('joins them in the pattern\'s own word order',
+      /is-poor">Poor<\/span> to <span class="band-word is-good">Good<\/span>/.test(spanning.rendered));
+    t.assert('marks the container so the joining word is not band-coloured',
+      spanning.rendered.includes('outlook-card-band is-band-range'));
+    t.assert('colours each word by its own band',
+      spanning.rendered.includes('band-word is-poor') && spanning.rendered.includes('band-word is-good'));
+    t.assert('the aria label reads as plain text, not markup',
+      spanning.rendered.includes('Poor to Good') && !spanning.rendered.includes('&lt;span'));
+
+    t.section('Outlook card, both ends in one band:');
+    // ranged is the Kilkenny fixture: a range, but both ends land in Poor.
+    t.assert('collapses to a single word, no range wording',
+      !ranged.rendered.includes('is-band-range'));
+
     // Open-Meteo sees 85% low cloud, so the horizon gate is shut and Met.no's
     // high cloud cannot move the score however much it disagrees. The card
     // must not read as corroborated.

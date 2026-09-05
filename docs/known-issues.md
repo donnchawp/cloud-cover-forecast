@@ -8,8 +8,8 @@ survives; the status line says where each one stands.
 
 ## 1. The dual-source range collapses when the horizon gate shuts
 
-**Status:** understood and signalled, not "fixed" — because there is nothing
-sound to fix in the score. Recorded 2026-09-01, corrected the same day.
+**Status:** fixed for genuine disagreements on 2026-09-05; still collapses, correctly,
+when band geometry explains the gap. Recorded 2026-09-01, twice corrected.
 
 `scoreLightHour()` computes `clarity = max(0, 1 - cloudLow / 70)` and reaches
 high cloud only through `canvas * clarity`. Once Open-Meteo's low cloud hits 70
@@ -69,6 +69,36 @@ found and every sampled hour sat at or above the gate. It drives three things:
 
 No score changed. `tests/range.test.js` covers the flag, including the exact
 threshold boundary, and asserts the flag is never set on a range with width.
+
+### Corrected again, 2026-09-05: the band argument does not cover every case
+
+Real readings from Westminster broke the reasoning above. Open-Meteo read low
+cloud at 77% while Met.no read low 0% **and mid 0%** — its entire 0–5 km column
+empty. No band geometry reconciles that: any cloud in Open-Meteo's 0–3 km band
+must appear in Met.no's 0–2 km or 2–5 km band. One model was simply wrong, and
+the app showed the pessimistic one with no range at all.
+
+Contrast the Ahakista case that motivated the original argument: there Met.no
+read low 10% but mid **100%**, so a deck at 2–3 km explains the whole gap. The
+band argument was right there and was over-generalised to every case.
+
+That gives a discriminator:
+
+```
+band artefact        if OM_low <= max(MET_low, MET_mid)   -> compare high only, as before
+genuine disagreement if OM_low >  max(MET_low, MET_mid)   -> score Met.no's own low and mid too
+```
+
+Westminster sunset scored 28–28 before and 28–78 after. Ahakista is unchanged at
+28–28, and is kept as a control in `tests/range.test.js` precisely so a future
+change that "fixes" it gets caught. Equality is not a violation — the cover is
+exactly accounted for — and that boundary has its own test, because `>` versus
+`>=` passed the first draft of the suite.
+
+`horizonClosed` was narrowed to match: an hour counts as inert only when the gate
+is shut *and* high cloud is the only field being swapped. A geometry violation
+swaps the low too, so the gate itself differs between the two scores and the
+comparison does act.
 
 ### Still open
 

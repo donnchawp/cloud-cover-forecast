@@ -1898,6 +1898,26 @@ select:focus-visible,
   font-size: var(--font-size-sm);
 }
 
+/* When the range crosses a band boundary the label names both ends -- "Poor to
+   Good". Each end carries its own band colour so the words map onto the solid
+   arc and the faded tail; the joining word is neutral, because colouring it
+   after either end would imply a verdict the label is deliberately not giving.
+   The card's own score class still colours a single-word label below. */
+.outlook-card-band.is-band-range,
+.day-hero-band.is-band-range {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.band-word {
+  font-weight: 600;
+}
+
+.band-word.is-excellent { color: var(--color-excellent); }
+.band-word.is-good      { color: var(--color-good); }
+.band-word.is-fair      { color: var(--color-fair); }
+.band-word.is-poor      { color: var(--color-poor); }
+
 .outlook-card.score-excellent .outlook-card-band { color: var(--color-excellent); }
 .outlook-card.score-good .outlook-card-band      { color: var(--color-good); }
 .outlook-card.score-fair .outlook-card-band      { color: var(--color-fair); }

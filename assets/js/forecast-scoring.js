@@ -486,18 +486,31 @@
       openTotal += scoreLightHour(hour, isGlow);
       count++;
 
-      // clarity is max(0, 1 - cloudLow / HORIZON_BLOCKED_AT), so at or above
-      // the threshold the canvas term is multiplied by zero and Met.no's high
-      // cloud provably cannot move this hour's score.
-      if ((hour.cloud_low || 0) >= HORIZON_BLOCKED_AT) shutCount++;
-
       const met = hour.met_no;
       if (!met || met.high == null) continue;
 
-      metTotal += scoreLightHour(Object.assign({}, hour, {
-        cloud_high: met.high,
-      }), isGlow);
+      // Band geometry decides whether Met.no's low cloud is a second opinion
+      // or the same sky measured differently. Open-Meteo's low band is 0-3 km;
+      // Met.no files that same air as low (0-2 km) plus mid (2-5 km), so any
+      // cloud Open-Meteo counts has to show up in one of those two. A gap
+      // within that is definitional and substituting Met.no's number would
+      // reintroduce the unit mismatch. Open-Meteo's low exceeding BOTH of
+      // Met.no's cannot come from band geometry at all -- one model is simply
+      // wrong -- and only then is scoring Met.no's own low and mid sound.
+      const geometryViolated = null != met.low && null != met.mid
+        && (hour.cloud_low || 0) > Math.max(met.low, met.mid);
+
+      metTotal += scoreLightHour(Object.assign({}, hour, geometryViolated
+        ? { cloud_low: met.low, cloud_mid: met.mid, cloud_high: met.high }
+        : { cloud_high: met.high }), isGlow);
       metCount++;
+
+      // clarity is max(0, 1 - cloudLow / HORIZON_BLOCKED_AT), so at or above
+      // the threshold the canvas term is multiplied by zero. That only makes
+      // the comparison inert when high cloud is the only field being swapped:
+      // a geometry violation swaps the low too, so the gate itself differs
+      // between the two scores and the comparison does act.
+      if ((hour.cloud_low || 0) >= HORIZON_BLOCKED_AT && !geometryViolated) shutCount++;
     }
 
     if (!count) return null;

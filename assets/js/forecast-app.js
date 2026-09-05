@@ -1029,9 +1029,32 @@
   function describeRange(range) {
     const band = bandScore(range);
     const isRange = range.high > range.low;
+
+    // When the two sources land in different bands, one word cannot describe
+    // the range honestly from either end. Naming both -- "Poor to Good" -- takes
+    // no side and matches the numbers already on the card. The join comes from
+    // formatting the translated pattern rather than concatenating, so a locale
+    // that orders the ends differently still reads correctly.
+    const lowKey = getScoreLabel(range.low);
+    const highKey = getScoreLabel(range.high);
+    const isBandRange = lowKey !== highKey;
+    const pattern = strings.bandRange || '%1$s to %2$s';
+    const lowWord = scoreBandLabel(range.low);
+    const highWord = scoreBandLabel(range.high);
+    const word = (key, text) =>
+      `<span class="band-word is-${key}">${escapeHtml(text)}</span>`;
+
     return {
       band,
-      label: scoreBandLabel(band),
+      label: isBandRange
+        ? formatString(pattern, lowWord, highWord)
+        : scoreBandLabel(band),
+      // Escaping the pattern before substitution leaves the %1$s placeholders
+      // intact while keeping a hostile translation from injecting markup.
+      labelHtml: isBandRange
+        ? formatString(escapeHtml(pattern), word(lowKey, lowWord), word(highKey, highWord))
+        : escapeHtml(scoreBandLabel(band)),
+      isBandRange,
       isRange,
       // Display form: an en-dash span, or a plain percentage when the
       // sources agree.
@@ -1156,13 +1179,13 @@
       `;
     }
 
-    const { band, label, value, sourceNote } = describeRange(range);
+    const { band, label, labelHtml, isBandRange, value, sourceNote } = describeRange(range);
     const aria = `${eventName} ${dayLabel(day.date, dayIndex)} ${time}, ${label}, ${value}, ${sourceNote}`;
 
     return `
       <button class="outlook-card ${getScoreClass(band)}" data-action="open-day"
         data-day="${dayIndex}" data-event="${event}" aria-label="${escapeHtml(aria)}">
-        <span class="outlook-card-band">${escapeHtml(label)}</span>
+        <span class="outlook-card-band${isBandRange ? ' is-band-range' : ''}">${labelHtml}</span>
         ${renderScoreRing(range)}
         <span class="outlook-card-time">${escapeHtml(time)}</span>
       </button>
@@ -1290,7 +1313,7 @@
       `;
     }
 
-    const { band, label, isRange, text, value, sourceNote } = describeRange(range);
+    const { band, label, labelHtml, isBandRange, isRange, text, value, sourceNote } = describeRange(range);
 
     // The tail runs zero to high behind the solid zero-to-low fill. Visually
     // the same as a low-to-high span, without positioning a floated segment
@@ -1298,7 +1321,7 @@
     return `
       <div class="day-hero ${getScoreClass(band)}">
         <h2 class="day-hero-title">${escapeHtml(name)}</h2>
-        <p class="day-hero-band">${escapeHtml(label)}</p>
+        <p class="day-hero-band${isBandRange ? ' is-band-range' : ''}">${labelHtml}</p>
         <div class="day-hero-meter" role="img" aria-label="${escapeHtml(`${label}, ${value}, ${sourceNote}`)}">
           ${isRange ? `<div class="day-hero-meter-tail" style="width: ${range.high}%"></div>` : ''}
           <div class="day-hero-meter-fill" style="width: ${range.low}%"></div>
