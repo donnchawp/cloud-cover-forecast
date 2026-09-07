@@ -126,20 +126,26 @@ Needs a decision about what the shortcode should show, not just a code change.
 
 ---
 
-## 3. The Day view gives a sighted viewer no single-source signal
+## 3. The Day view gave a sighted viewer no uncorroborated signal
 
-**Status:** open, minor. Found 2026-09-01.
-**Path:** `assets/js/forecast-app.js`, `renderDayHero()`.
+**Status:** fixed 2026-09-07.
 
-The Outlook ring marks a single-source card with a dashed track. The day hero
-meter has no equivalent — `renderDayHero()` draws a tail only when
-`isRange`, and single-source is otherwise indistinguishable from the two
-sources agreeing. The information is in the `aria-label` ("one source"), so a
-screen reader gets it and a sighted viewer does not, which is the wrong way
-round from the usual gap.
+The Outlook ring marks an uncorroborated card on its track: dashed when there
+was no second source, dotted when the horizon gate stopped the second source
+acting. The day hero meter had neither, so three different situations — the
+sources agreeing, only one source, and a shut gate — were drawn identically.
+The distinction lived only in the `aria-label`, which is the wrong way round:
+a screen reader was told and a sighted viewer was not.
 
-The ring track's contrast was fixed on 2026-09-01
-(`--ring-track-uncorroborated`, `tests/theme.test.php`), and the ring gained a
-third state for a shut horizon gate. The day hero still has neither signal:
-it draws a tail or it does not, and every other distinction is in the
-`aria-label` only.
+The meter now carries the same two states, in the same
+`--ring-track-uncorroborated` token and the same two rhythms (1:1 and 1:3),
+painted as a `repeating-linear-gradient` behind the solid ground so the fill
+and tail cover it the way the ring's arcs cover its track. The state itself
+comes from `rangeTrackState()`, shared by both renderers so the views cannot
+drift apart. `tests/theme.test.php` asserts both views use the one token and
+that the two rhythms stay distinguishable.
+
+Note for anyone reading an earlier revision of this file: the day hero *tail*
+was never missing. It has been rendered whenever `isRange` since the range
+feature landed, and `tests/day.test.js` has always covered it. Only the
+uncorroborated signal was absent.

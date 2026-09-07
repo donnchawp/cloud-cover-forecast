@@ -1015,6 +1015,23 @@
   }
 
   /**
+   * Which track treatment a range's confidence earns.
+   *
+   * Three states, shared by the Outlook ring and the day hero meter so the
+   * two views teach one visual language: plain means the comparison ran,
+   * single-source means there was no second reading, horizon-closed means
+   * there was one and the gate stopped it acting. The last two both say
+   * "this number is not corroborated".
+   *
+   * @param {Object} range - A sunriseSunsetRange() result.
+   * @returns {string} Class suffix, empty when the comparison ran.
+   */
+  function rangeTrackState(range) {
+    if (1 === range.sources) return ' is-single-source';
+    return range.horizonClosed ? ' is-horizon-closed' : '';
+  }
+
+  /**
    * Everything the views need to present a score range.
    *
    * Both renderers derived these independently, including the translated
@@ -1046,6 +1063,7 @@
 
     return {
       band,
+      trackState: rangeTrackState(range),
       label: isBandRange
         ? formatString(pattern, lowWord, highWord)
         : scoreBandLabel(band),
@@ -1115,15 +1133,9 @@
    * @returns {string} SVG markup.
    */
   function renderScoreRing(range) {
-    const { low, high, sources, horizonClosed } = range;
+    const { low, high } = range;
     const isRange = high > low;
-    // Three track states, not two. Plain means the comparison ran; dashed
-    // means there was no second source; horizon-closed means there was one
-    // and the gate stopped it acting. The last two both say "this number is
-    // not corroborated", so they share a dash family and differ in rhythm.
-    const trackState = 1 === sources
-      ? ' is-single-source'
-      : (horizonClosed ? ' is-horizon-closed' : '');
+    const trackState = rangeTrackState(range);
     // r chosen so the circumference is 100 and stroke-dasharray takes the
     // score directly.
     return `
@@ -1313,7 +1325,7 @@
       `;
     }
 
-    const { band, label, labelHtml, isBandRange, isRange, text, value, sourceNote } = describeRange(range);
+    const { band, label, labelHtml, isBandRange, isRange, text, value, sourceNote, trackState } = describeRange(range);
 
     // The tail runs zero to high behind the solid zero-to-low fill. Visually
     // the same as a low-to-high span, without positioning a floated segment
@@ -1322,7 +1334,7 @@
       <div class="day-hero ${getScoreClass(band)}">
         <h2 class="day-hero-title">${escapeHtml(name)}</h2>
         <p class="day-hero-band${isBandRange ? ' is-band-range' : ''}">${labelHtml}</p>
-        <div class="day-hero-meter" role="img" aria-label="${escapeHtml(`${label}, ${value}, ${sourceNote}`)}">
+        <div class="day-hero-meter${trackState}" role="img" aria-label="${escapeHtml(`${label}, ${value}, ${sourceNote}`)}">
           ${isRange ? `<div class="day-hero-meter-tail" style="width: ${range.high}%"></div>` : ''}
           <div class="day-hero-meter-fill" style="width: ${range.low}%"></div>
           <span class="day-hero-meter-label">${text}</span>
