@@ -30,6 +30,36 @@ class Cloud_Cover_Forecast_API {
 	 * @since 1.2.0
 	 * @var int
 	 */
+	/**
+	 * Cloud levels where a gap between the two sources means something.
+	 *
+	 * The providers band the sky differently, so most of their levels are not
+	 * the same measurement and a difference between them is definitional
+	 * rather than a forecast disagreement:
+	 *
+	 * | Layer | Open-Meteo | Met.no |
+	 * |-------|------------|--------|
+	 * | low   | 0-3 km     | 0-2 km |
+	 * | mid   | 3-8 km     | 2-5 km |
+	 * | high  | above 8 km | above 5 km |
+	 *
+	 * 'total' is the whole sky to both, and a probe across 20 Irish locations
+	 * found them agreeing on it to 10.1 points mean absolute difference,
+	 * against 51.9 on low. 'high' is banded differently too, but there the
+	 * disagreement is demonstrably real: geometry says Met.no should read
+	 * higher and it read lower in 15 of 20, which band width cannot produce.
+	 *
+	 * Low and mid are excluded. Flagging them presented a units artefact as a
+	 * forecast disagreement, under help text calling low cloud "0-3 km" while
+	 * the figure shown might be Met.no's 0-2 km reading. The PWA path reached
+	 * the same conclusion in sunriseSunsetRange(); see also the band-geometry
+	 * test there, which can tell the two apart per hour where this cannot.
+	 *
+	 * @since 1.2.1
+	 * @var string[]
+	 */
+	private const COMPARABLE_LEVELS = array( 'total', 'high' );
+
 	private const MET_NO_WINDOW_BEFORE = 1;
 
 	/**
@@ -1624,8 +1654,8 @@ class Cloud_Cover_Forecast_API {
 	 * @return array{'rows':array,'summary':array}
 	 */
 	private function merge_cloud_cover_rows( array $rows, array $metno_hourly, int $threshold ): array {
-		$levels   = array( 'total', 'low', 'mid', 'high' );
-		$summary  = array(
+		$levels  = array( 'total', 'low', 'mid', 'high' );
+		$summary = array(
 			'rows_with_differences' => 0,
 			'per_level'             => array_fill_keys( $levels, 0 ),
 		);
@@ -1636,41 +1666,27 @@ class Cloud_Cover_Forecast_API {
 				continue;
 			}
 
-			$met_values  = $metno_hourly[ $hour_key ];
-			$open_values = array(
-				'total' => $row['total'],
-				'low'   => $row['low'],
-				'mid'   => $row['mid'],
-				'high'  => $row['high'],
-			);
-
-			$row['source_values'] = array(
-				'open_meteo' => $open_values,
-				'met_no'     => array(
-					'total' => $met_values['total'],
-					'low'   => $met_values['low'],
-					'mid'   => $met_values['mid'],
-					'high'  => $met_values['high'],
-				),
-			);
-
+			$met_values   = $metno_hourly[ $hour_key ];
 			$row_has_diff = false;
 
 			foreach ( $levels as $level ) {
-				$open_val = $open_values[ $level ];
+				$open_val = $row[ $level ];
 				$met_val  = $met_values[ $level ];
 
 				if ( null === $met_val && null === $open_val ) {
 					continue;
 				}
 
+				// Met.no fills a gap Open-Meteo left, but never replaces a
+				// reading Open-Meteo made. The displayed number and the
+				// stats['avg_*'] the star ratings are computed from stay one
+				// source's, consistently.
 				if ( null === $open_val ) {
 					$row[ $level ] = $met_val;
 					continue;
 				}
 
-				if ( null === $met_val ) {
-					// Keep Open-Meteo value when Met.no lacks data.
+				if ( null === $met_val || ! in_array( $level, self::COMPARABLE_LEVELS, true ) ) {
 					continue;
 				}
 
@@ -1679,14 +1695,11 @@ class Cloud_Cover_Forecast_API {
 					$row_has_diff = true;
 					$summary['per_level'][ $level ]++;
 					$row['provider_diff'][ $level ] = array(
-						'difference'  => $difference,
-						'open_meteo'  => $open_val,
-						'met_no'      => $met_val,
-						'selected'    => ( $met_val >= $open_val ) ? 'met_no' : 'open_meteo',
+						'difference' => $difference,
+						'open_meteo' => $open_val,
+						'met_no'     => $met_val,
 					);
 				}
-
-				$row[ $level ] = max( $open_val, $met_val );
 			}
 
 			if ( $row_has_diff ) {
