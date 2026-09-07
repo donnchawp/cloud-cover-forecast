@@ -149,3 +149,57 @@ Note for anyone reading an earlier revision of this file: the day hero *tail*
 was never missing. It has been rendered whenever `isRange` since the range
 feature landed, and `tests/day.test.js` has always covered it. Only the
 uncorroborated signal was absent.
+
+---
+
+## 4. Mid cloud may be undervalued, and is never compared between sources
+
+**Status:** open, unmeasured. Raised 2026-09-05 from Alpenglow's FAQ.
+
+Alpenglow's own guidance on what produces a colourful sky says: *"Look for mid to
+high-level clouds, such as cirrus or **altocumulus**."* Altocumulus is mid-level.
+The app treats mid as worth roughly half of high — `MID_CLOUD_CURVE` peaks at 15
+against `HIGH_CLOUD_CURVE`'s 30 — and `sunriseSunsetRange()` never compares mid
+between the two sources at all, except when a band-geometry violation pulls
+Met.no's whole lower column in.
+
+Two separate questions, and neither has been measured:
+
+1. **Is the weighting right?** The curves were tuned by judgement, not against
+   observed sunsets. Nothing in the repo records where 15 and 30 came from.
+2. **Should mid join the comparison?** Open-Meteo's mid is 3–8 km against Met.no's
+   2–5 km, so the same band-mismatch argument that kept low out applies. The
+   geometry test in `sunriseSunsetRange()` gives a way to ask the question
+   properly, but nobody has checked whether mid disagreement is real or
+   definitional the way it was checked for low and high.
+
+Answering either needs observation, not code: a log of forecast score against
+what the sky actually did. That does not exist yet and is the blocker for most
+of the interesting questions in this file.
+
+---
+
+## 5. The score bands are not the bands other apps use
+
+**Status:** open, decision needed. Raised 2026-09-05.
+
+`getScoreLabel()` buckets at 80 / 60 / 40 — excellent, good, fair, poor.
+Alpenglow buckets at 70 / 40 — high, moderate, low. So the same underlying
+confidence lands in a different word, and comparing the two numbers side by side
+overstates how far apart the models are before any model difference is involved.
+
+This surfaced when a Westminster sunset read 82% in Alpenglow and 29% here. The
+gap was mostly real — see entry 1 — but part of it is that 82 sits comfortably
+inside Alpenglow's top bucket while 82 here is only just Excellent.
+
+There is no obvious right answer. Matching another app's thresholds is not a
+correctness fix, and the current bands are at least evenly spaced. But the
+thresholds have never been validated against observed sunsets either, and
+`docs/superpowers/specs/2026-09-01-dual-source-confidence-design.md` explicitly
+deferred them: *"band thresholds stay at 80/60/40"*. They are still deferred.
+
+Related limitation, and it caps how good any of this can get: neither Open-Meteo
+nor Met.no reports optical depth, only what fraction of sky is covered. A thin
+cirrus veil and a thick altostratus deck at 60% are identical to both models, and
+Alpenglow's advice to look for *"thin clouds"* is not something either data
+source can express.
