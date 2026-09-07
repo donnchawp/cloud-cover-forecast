@@ -260,6 +260,38 @@ reset them and let the site exceed a provider's limits.
 
 ## Changelog
 
+### Tell a real source disagreement from a units artefact (2026-09-05)
+
+`sunriseSunsetRange()` compared only high cloud between the two sources, on the
+grounds that Open-Meteo's low band (0-3 km) and Met.no's (0-2 km) are not the
+same measurement. Real readings from Westminster showed that argument does not
+cover every case: Open-Meteo read low 77% while Met.no read low 0% *and* mid 0%,
+an empty 0-5 km column. Cloud in Open-Meteo's 0-3 km band has to appear in one of
+Met.no's first two bands, so no band geometry explains that gap and one model is
+simply wrong.
+
+The scorer now applies that as a test, per sampled hour:
+`OM_low > max(MET_low, MET_mid)`. Within the bands' explanatory power it compares
+high cloud only, exactly as before; beyond it, Met.no's own low and mid are
+scored too. Westminster's sunset moved from 28-28 to 28-78. The Ahakista case
+that motivated the original restriction (Met.no mid 100, so a 2-3 km deck
+explains the gap) is unchanged, and is kept as a control in `tests/range.test.js`.
+Equality is not a violation and has its own boundary test.
+
+`horizonClosed` narrowed to match: an hour is inert only when the gate is shut
+*and* high is the only field swapped, since a geometry violation swaps the low
+and so changes the gate itself.
+
+`describeRange()` now names both ends when a range crosses a band boundary --
+"Poor to Good" -- instead of labelling one end and hiding the other. Each word
+carries its own band colour so the label maps onto the solid arc and the faded
+tail; the joining word is neutral. It collapses to a single word when both ends
+share a band, so agreement still reads as one verdict. Built by formatting the
+translated `bandRange` pattern (escaped before substitution) rather than
+concatenating, so locales that order the ends differently still read correctly.
+`describeRange()` returns `labelHtml` for display and keeps the plain `label`
+for the accessible name.
+
 ### Signal a shut horizon gate (2026-09-01)
 
 A collapsed score range meant "the two sources agree". When Open-Meteo's low

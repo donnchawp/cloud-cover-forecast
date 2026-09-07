@@ -209,6 +209,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 				twoSources: <?php echo wp_json_encode( __( 'two sources', 'cloud-cover-forecast' ) ); ?>,
 				twoSourcesHorizonClosed: <?php echo wp_json_encode( __( 'two sources, horizon closed', 'cloud-cover-forecast' ) ); ?>,
 				horizonClosed: <?php echo wp_json_encode( __( 'Low cloud closed the horizon here, so the high row could not change the score. The two numbers match because the comparison had nothing to act on, not because the sources agree.', 'cloud-cover-forecast' ) ); ?>,
+				/* translators: 1: lower band word e.g. "Poor", 2: upper band word e.g. "Good". */
+				bandRange: <?php echo wp_json_encode( __( '%1$s to %2$s', 'cloud-cover-forecast' ) ); ?>,
 				/* translators: 1: low score, 2: high score. */
 				scoreRange: <?php echo wp_json_encode( __( '%1$s to %2$s percent', 'cloud-cover-forecast' ) ); ?>,
 				// Jump button labels

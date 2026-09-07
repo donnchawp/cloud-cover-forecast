@@ -122,6 +122,56 @@ const open = S.sunriseSunsetRange(
 assert('the same disagreement opens a range at 20% low cloud', open.high > open.low);
 console.log(`    gate shut: ${shut.low}-${shut.high}   gate open: ${open.low}-${open.high}`);
 
+console.log('\nBand geometry tells a real disagreement from a units artefact:');
+// Open-Meteo's low band is 0-3 km. Met.no files that same air as low (0-2 km)
+// plus mid (2-5 km), so any cloud Open-Meteo counts must appear in one of
+// those two. When Open-Meteo's low exceeds BOTH of Met.no's, no band geometry
+// explains the gap and one model is simply wrong. Only then is it sound to
+// score Met.no's own low and mid; otherwise the difference is definitional
+// and Met.no's numbers are the same sky measured differently.
+
+// Westminster, 2026-09-05 sunset, as both APIs reported it. Open-Meteo sees a
+// blocked horizon, Met.no sees nothing at all below 5 km.
+const conflicted = S.sunriseSunsetRange(
+  buildHours({ low: 77, mid: 0, high: 0 },
+    bothHours({ low: 0, mid: 0, high: 66 })), day, 'sunset');
+assert('a geometric impossibility opens a range', conflicted.high > conflicted.low);
+assert('and the low end is still Open-Meteo\'s blocked horizon', 28 === conflicted.low);
+assert('while the high end scores Met.no\'s own sky', conflicted.high > 70);
+assert('the gate is not reported shut, because the comparison did act',
+  false === conflicted.horizonClosed);
+console.log(`    Westminster sunset: ${conflicted.low}-${conflicted.high}`);
+
+// Ahakista: Met.no's mid is 100, so a deck at 2-3 km explains the whole gap.
+// Substituting its low here would reintroduce the unit mismatch.
+const artefact = S.sunriseSunsetRange(
+  buildHours({ low: 82, mid: 100, high: 88 },
+    bothHours({ low: 10, mid: 100, high: 100 })), day, 'sunset');
+assert('a gap the bands explain does not open a range', artefact.high === artefact.low);
+assert('and is still reported as a shut gate', true === artefact.horizonClosed);
+
+// Exactly equal is not a violation: Met.no's mid accounts for all of
+// Open-Meteo's low, so the bands explain it and nothing is substituted. Only
+// a strict excess is impossible. Mid differs here (30 against 0) so a wrongly
+// fired substitution would visibly open the range.
+const equalCover = S.sunriseSunsetRange(
+  buildHours({ low: 50, mid: 30, high: 0 },
+    bothHours({ low: 50, mid: 0, high: 0 })), day, 'sunset');
+assert('cover exactly equal to Open-Meteo\'s low is not a violation',
+  equalCover.high === equalCover.low);
+// One point of genuine excess is.
+const oneOver = S.sunriseSunsetRange(
+  buildHours({ low: 51, mid: 30, high: 0 },
+    bothHours({ low: 50, mid: 0, high: 0 })), day, 'sunset');
+assert('one point of excess is', oneOver.high > oneOver.low);
+
+// The test needs both of Met.no's lower bands. Without them it cannot run.
+const noMid = S.sunriseSunsetRange(
+  buildHours({ low: 77, mid: 0, high: 0 },
+    bothHours({ low: 0, mid: null, high: 66 })), day, 'sunset');
+assert('a missing Met.no mid falls back to comparing high only',
+  noMid.high === noMid.low);
+
 console.log('\nThe shut gate is reported, not just suffered:');
 // A collapsed range means "the two sources agree". Under a shut gate it also
 // means "the second source could not act", which is a different claim: the
