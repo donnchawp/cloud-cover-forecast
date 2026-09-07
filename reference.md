@@ -260,6 +260,24 @@ reset them and let the site exceed a provider's limits.
 
 ## Changelog
 
+### Carry the uncorroborated signal into the day hero (2026-09-07)
+
+The Outlook ring marked a card whose score no second source could corroborate
+-- dashed for single-source, dotted for a shut horizon gate -- and the day hero
+meter marked nothing, so agreement, a missing source and a shut gate were drawn
+identically there. Only the `aria-label` distinguished them.
+
+`rangeTrackState()` now derives that state once and both renderers use it, so
+the ring and the meter cannot drift apart. The meter paints the same two
+rhythms as a `repeating-linear-gradient` in `--ring-track-uncorroborated`,
+layered over the solid track background so the fill and tail occlude it the way
+the ring's arcs occlude its track. `tests/theme.test.php` checks both views draw
+from the one token and that the rhythms stay distinguishable; `tests/day.test.js`
+covers all three meter states.
+
+The day hero tail was not involved and was never missing -- it has rendered
+whenever `isRange` since the range feature landed.
+
 ### Tell a real source disagreement from a units artefact (2026-09-05)
 
 `sunriseSunsetRange()` compared only high cloud between the two sources, on the

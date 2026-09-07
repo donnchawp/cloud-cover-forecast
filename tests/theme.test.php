@@ -129,6 +129,24 @@ foreach ( array( 'is-single-source', 'is-horizon-closed' ) as $state ) {
 		)
 	);
 }
+// The day hero meter carries the same two states. If it drifts to a different
+// token the two views stop teaching the same visual language.
+foreach ( array( 'is-single-source', 'is-horizon-closed' ) as $state ) {
+	$assert(
+		sprintf( 'the day hero meter .%s uses the same token', $state ),
+		(bool) preg_match(
+			'/\.day-hero-meter\.' . preg_quote( $state, '/' ) . '\s*\{[^}]*var\(\s*--ring-track-uncorroborated\s*\)/s',
+			$stylesheet
+		)
+	);
+}
+preg_match( '/\.day-hero-meter\.is-single-source\s*\{(.*?)\n\}/s', $stylesheet, $m1 );
+preg_match( '/\.day-hero-meter\.is-horizon-closed\s*\{(.*?)\n\}/s', $stylesheet, $m2 );
+$assert(
+	'and its two rhythms differ from each other',
+	isset( $m1[1], $m2[1] ) && trim( $m1[1] ) !== trim( $m2[1] )
+);
+
 // Both states say "not corroborated". They must stay tellable apart, or the
 // second one is just the first one drawn badly.
 preg_match( '/\.score-ring-track\.is-single-source\s*\{[^}]*stroke-dasharray:\s*([^;]+);/s', $stylesheet, $one );

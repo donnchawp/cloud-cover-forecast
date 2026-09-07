@@ -2011,6 +2011,28 @@ select:focus-visible,
   position: relative;
 }
 
+/* The bar equivalent of the ring's dashed and dotted tracks, in the same
+   token and the same two rhythms: 1:1 for single-source, 1:3 for a shut
+   horizon gate. Painted as a background-image so the solid --bg-secondary
+   ground stays underneath, and so the fill and tail cover it exactly the way
+   the ring's arcs cover its track -- the marks show in the unfilled remainder,
+   which is the part of the bar the score did not earn. */
+.day-hero-meter.is-single-source {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--ring-track-uncorroborated) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.day-hero-meter.is-horizon-closed {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--ring-track-uncorroborated) 0 3px,
+    transparent 3px 12px
+  );
+}
+
 .day-hero-meter-tail {
   position: absolute;
   top: 0;

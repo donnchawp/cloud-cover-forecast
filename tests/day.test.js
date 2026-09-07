@@ -126,6 +126,15 @@ function runDualSourceChecks(t) {
     closed.tabs.outlook();
     closed.click({ action: 'open-day', day: '0', event: 'sunset' });
 
+    t.section('Day hero meter, horizon gate shut:');
+    // The Outlook ring marks this with a dotted track. The meter said nothing,
+    // so on the day view a shut gate, a single source and genuine agreement
+    // were three different situations drawn identically.
+    t.assert('the meter track is marked horizon-closed',
+      /day-hero-meter [^"]*is-horizon-closed/.test(closed.rendered));
+    t.assert('and not single-source, which it is not',
+      !closed.rendered.includes('is-single-source'));
+
     t.section('Cloud by source, horizon gate shut:');
     t.assert('says the high row could not move the score',
       closed.rendered.includes('could not change the score'));
@@ -141,6 +150,8 @@ function runDualSourceChecks(t) {
 
     t.section('Day view, sources agree:');
     t.assert('draws no tail fill', !agreed.rendered.includes('day-hero-meter-tail'));
+    t.assert('and the meter track carries no uncorroborated mark',
+      !agreed.rendered.includes('is-single-source') && !agreed.rendered.includes('is-horizon-closed'));
     t.assert('but still shows the comparison panel', agreed.rendered.includes('cloud-by-source'));
 
     const solo = install({
@@ -152,6 +163,8 @@ function runDualSourceChecks(t) {
 
     t.section('Day view, second source unavailable:');
     t.assert('draws no tail fill', !solo.rendered.includes('day-hero-meter-tail'));
+    t.assert('the meter track is marked single-source',
+      /day-hero-meter [^"]*is-single-source/.test(solo.rendered));
     t.assert('shows no comparison panel', !solo.rendered.includes('cloud-by-source'));
     t.assert('the aria label says one source', solo.rendered.includes('one source'));
 
