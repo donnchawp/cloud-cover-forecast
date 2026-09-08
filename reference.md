@@ -260,6 +260,32 @@ reset them and let the site exceed a provider's limits.
 
 ## Changelog
 
+### Stop presenting a band mismatch as disagreement on the shortcode path (2026-09-07)
+
+`merge_cloud_cover_rows()`, which serves `[cloud_cover]`, the public lookup block
+and the sunrise/sunset block, compared all four cloud levels between Open-Meteo
+and Met.no and overwrote each with `max()` of the two. Low and mid are banded
+over different altitudes by the two providers, so flagging them presented a units
+artefact as a forecast disagreement; and the overwrite ran unconditionally, the
+threshold gating only the badge.
+
+That was not cosmetic. The overwritten values feed `stats['avg_*']`, which feeds
+`rate_photography_conditions()`, whose four ratings are monotonic in `avg_total`.
+`max()` can only inflate it, so every star rating on those three surfaces was
+biased pessimistic, as were the sunrise/sunset block's condition summary and the
+per-hour condition strings.
+
+Open-Meteo's readings are now never replaced -- Met.no only fills a null.
+Comparison is limited to the new `COMPARABLE_LEVELS` constant (`total`, `high`),
+whose docblock records why each is in and low and mid are out. Unread
+`source_values` and `provider_diff['selected']` are dropped. Help text and the
+disagreement notice no longer claim the sources are merged or name low and mid.
+
+Star ratings change, mostly upward. Deliberate: the 80/60/40/20 bands were tuned
+against Open-Meteo alone.
+
+New `tests/shortcode-merge.test.php`, the first test of any kind on that path.
+
 ### Carry the uncorroborated signal into the day hero (2026-09-07)
 
 The Outlook ring marked a card whose score no second source could corroborate

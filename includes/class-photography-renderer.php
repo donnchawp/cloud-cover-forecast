@@ -846,7 +846,11 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 	private function render_instructions_section( array $stats, bool $show_other_forecast_apps ): string {
 		$diff_summary = $stats['provider_diff_summary'] ?? array();
 		$diff_hours = intval( $diff_summary['rows_with_differences'] ?? 0 );
-		$variance_sentence = esc_html__( 'We merge hourly cloud cover from Open-Meteo and Met.no and highlight disagreements with Δ badges.', 'cloud-cover-forecast' );
+		// The numbers shown are Open-Meteo's throughout. Met.no is a second
+		// opinion on overall and high cloud only -- the two providers band low
+		// and mid cloud over different altitudes, so a gap on those rows would
+		// be a units artefact rather than a disagreement about the weather.
+		$variance_sentence = esc_html__( 'Cloud cover comes from Open-Meteo. We compare it against Met.no and mark overall and high cloud with a Δ badge where the two forecasts disagree.', 'cloud-cover-forecast' );
 
 		if ( $diff_hours > 0 ) {
 			$hours_label = sprintf(
@@ -1059,10 +1063,10 @@ class Cloud_Cover_Forecast_Photography_Renderer {
 		);
 
 		$per_level = $summary['per_level'] ?? array();
+		// Only the levels COMPARABLE_LEVELS admits can carry a count, so low
+		// and mid are absent by construction rather than by filtering here.
 		$level_labels = array(
 			'total' => esc_html__( 'overall cloud cover', 'cloud-cover-forecast' ),
-			'low'   => esc_html__( 'low cloud', 'cloud-cover-forecast' ),
-			'mid'   => esc_html__( 'mid-level cloud', 'cloud-cover-forecast' ),
 			'high'  => esc_html__( 'high cloud', 'cloud-cover-forecast' ),
 		);
 		$highlights = array();

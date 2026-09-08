@@ -107,22 +107,55 @@ Whether the range is worth its complexity at all. The design doc measured
 never changes the word shown to the reader. That is a product question, not a
 bug.
 
-## 2. The shortcode path presents a band mismatch as forecast disagreement
+## 2. The shortcode path presented a band mismatch as forecast disagreement
 
-**Status:** open. Found 2026-09-01 during the dual-source cleanup.
-**Path:** `includes/class-api.php`, `merge_cloud_cover_rows()`;
-`includes/class-photography-renderer.php:1147`.
+**Status:** fixed 2026-09-07.
 
-`merge_cloud_cover_rows()` still takes `max()` across low and mid from both
-sources and the renderer shows the result as a "Δ 47%" badge with an
-"Open-Meteo: X% · Met.no: Y%" tooltip — presenting a definitional artefact as
-though it were the two services disagreeing about the weather. The help text
-alongside calls low cloud "0–3 km" while the figure displayed may be Met.no's
-0–2 km reading.
+`merge_cloud_cover_rows()` served `[cloud_cover]`, the public lookup block and the
+sunrise/sunset block, and did two things wrong.
 
-This is the same band mismatch the PWA path fixed by comparing only high cloud.
-It was fixed only in the new consumer; the shortcode and blocks still ship it.
-Needs a decision about what the shortcode should show, not just a code change.
+**It compared all four cloud levels.** Open-Meteo's low band is 0–3 km against
+Met.no's 0–2 km, mid is 3–8 km against 2–5 km, so a gap on those rows is mostly
+definitional. The `Δ 47%` badge and the "the forecast models disagree" notice
+presented that units artefact as a forecast disagreement, under help text calling
+low cloud "0–3 km" while the number displayed might be Met.no's 0–2 km reading.
+With a mean absolute difference of 51.9 points on low against a hardcoded
+threshold of 20, it fired on nearly every render.
+
+**It overwrote every value with `max(open, met)`.** Unconditionally — the
+threshold gated only the badge, so most substitutions were silent. That was not
+cosmetic: those values feed `stats['avg_*']` (`class-api.php:367-370`), which
+feeds `rate_photography_conditions()`, whose sunrise, sunset, astro and Milky Way
+ratings are all monotonic in `avg_total`. `max()` can only inflate it, so **every
+star rating on those three surfaces was biased pessimistic by construction**, as
+was `get_shooting_condition_summary()` in the sunrise/sunset block and the
+per-hour condition strings from `get_hour_photo_condition()`.
+
+### What was done
+
+Open-Meteo's readings are never replaced; Met.no only fills a gap Open-Meteo left
+as null. Comparison is limited to `COMPARABLE_LEVELS` — `total`, which means the
+whole sky to both and where the probe found them agreeing to 10.1 points, and
+`high`, which is banded differently but where geometry says Met.no should read
+higher and it read lower in 15 of 20, so the disagreement is real. The unread
+`source_values` and `provider_diff['selected']` are gone. The help text no longer
+claims the sources are merged.
+
+**Ratings changed.** Mostly upward, because `max()` was inflating `avg_total`.
+This was a deliberate decision: the 80/60/40/20 bands were tuned against
+Open-Meteo alone, so the corrected values are what they were designed for.
+
+`tests/shortcode-merge.test.php` is new — that path had no test of any kind, on
+any of its three surfaces. It covers the overwrite, which levels are comparable,
+the threshold, null handling, and uncovered hours.
+
+### Not done
+
+The PWA's band-geometry test (entry 1) can tell a real low-cloud disagreement
+from an artefact per hour. This path cannot, because it has no equivalent of the
+sampled-hour structure to hang it on, so it excludes low and mid outright rather
+than testing them. That is the conservative choice, and it means the shortcode
+will miss a genuine low-cloud disagreement the PWA would catch.
 
 ---
 
